@@ -27,13 +27,13 @@ export function Preloader() {
   return (
     <div className={`preloader${hidden ? " hidden" : ""}`}>
       <div className="preloader-inner" aria-hidden={hidden}>
-        <svg className="arc arc1" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="110" cy="110" r="90" strokeWidth="3" strokeDasharray="280 400" transform="rotate(-20 110 110)" />
+        <svg className="arc arc1" viewBox="0 0 380 380" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="190" cy="190" r="170" strokeWidth="3" strokeDasharray="520 700" transform="rotate(-20 190 190)" />
         </svg>
-        <svg className="arc arc2" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="80" cy="80" r="60" strokeWidth="2" strokeDasharray="160 400" transform="rotate(10 80 80)" />
+        <svg className="arc arc2" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="150" cy="150" r="130" strokeWidth="2" strokeDasharray="380 600" transform="rotate(10 150 150)" />
         </svg>
-        <span className="text-4xl sm:text-5xl font-black tracking-widest text-[var(--cr-accent)] font-sans select-none animate-pulse">TEST</span>
+        <span className="relative z-10 text-4xl sm:text-5xl font-black tracking-widest text-[var(--cr-accent)] font-sans select-none animate-pulse">TEST</span>
       </div>
     </div>
   );

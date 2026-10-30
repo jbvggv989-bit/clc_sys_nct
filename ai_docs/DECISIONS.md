@@ -4358,3 +4358,24 @@ The user requested rebranding all brand names from "Revera" / "ريفيرا" to 
    - Updated `Navbar.tsx`, `Preloader.tsx`, `DoctorSidebar.tsx`, `BookingPageClient.tsx`, `AuthModal.tsx`, `BookingModal.tsx`, `TermsModal.tsx`, and `admin/page.tsx` to render big bold `"TEST"` typography directly.
 4. **Verification**:
    - Verified `npm run build` succeeds cleanly with zero compiler or TypeScript errors.
+
+
+## DEC-144: Enlarge Splash Preloader Circles
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+Following the brand mark update to the bold text "TEST", the preloader's dual spinning SVG arcs (arc1 at 220px and arc2 at 160px) were too small and cut through the horizontal bounds of the letters.
+
+**Decision:**
+1. **SVG ViewBox & Radius Enlargement (`src/components/Preloader.tsx`)**:
+   - `arc1` enlarged from `viewBox="0 0 220 220"` (r=90) to `viewBox="0 0 380 380"` (r=170) with proportional dash array (`520 700`).
+   - `arc2` enlarged from `viewBox="0 0 160 160"` (r=60) to `viewBox="0 0 300 300"` (r=130) with proportional dash array (`380 600`).
+   - Added `relative z-10` to the brand text.
+2. **Container Dimensions (`src/app/globals.css`)**:
+   - `.preloader-inner` enlarged to `420px x 420px` (with `max-width: 92vw`).
+   - `.arc1` enlarged to `380px x 380px` (`85vw`).
+   - `.arc2` enlarged to `300px x 300px` (`68vw`).
+3. **Verification**:
+   - Tested and verified with `npm run build`.
