@@ -194,7 +194,7 @@ export default function ServicesPageSettingsView({
           <button
             disabled={savingPageSettings}
             onClick={() => savePageSettings()}
-            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50"
           >
             {savingPageSettings ? "Saving..." : "Save All Changes"}
           </button>
@@ -511,7 +511,7 @@ export default function ServicesPageSettingsView({
           <button
             disabled={savingPageSettings}
             onClick={() => savePageSettings()}
-            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50"
           >
             {savingPageSettings ? "Saving..." : "Save All Changes"}
           </button>

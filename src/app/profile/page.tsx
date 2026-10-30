@@ -322,7 +322,7 @@ export default function ProfilePage() {
             </p>
             <button
               onClick={() => router.push("/")}
-              className="mt-8 w-full bg-[var(--cr-primary)] text-[var(--color-brand-light)] py-3.5 rounded-2xl font-bold hover:bg-[#2e3a26] transition shadow-md"
+              className="mt-8 w-full bg-[var(--cr-primary)] text-[var(--color-brand-light)] py-3.5 rounded-2xl font-bold hover:bg-[#0E1F36] transition shadow-md"
             >
               {profileT.goLogin}
             </button>
@@ -500,7 +500,7 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       disabled={savingForm}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
                     >
                       <Save size={16} />
                       {savingForm ? "Saving..." : profileT.saveBtn}
@@ -561,12 +561,12 @@ export default function ProfilePage() {
                       <div className="w-8 h-8 border-4 border-[var(--cr-primary)]/20 border-t-[var(--cr-primary)] rounded-full animate-spin"></div>
                     </div>
                   ) : bookings.length === 0 ? (
-                    <div className="text-center py-12 rounded-3xl bg-[#F9F9F7] border border-[var(--cr-primary)]/10 px-4">
+                    <div className="text-center py-12 rounded-3xl bg-[#F8FAFC] border border-[var(--cr-primary)]/10 px-4">
                       <Calendar className="mx-auto text-[var(--color-brand-secondary)]/40 mb-4" size={40} />
                       <p className="text-[var(--color-brand-secondary)] text-sm font-medium">{profileT.emptyBookings}</p>
                       <button
                         onClick={() => router.push("/book")}
-                        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+                        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
                       >
                         {profileT.bookNow}
                       </button>

@@ -61,7 +61,7 @@ export default function NotificationSettingsView({
         <button
           onClick={handleSaveNotificationSettings}
           disabled={savingNotificationSettings}
-          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-md w-full sm:w-auto"
+          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 shadow-md w-full sm:w-auto"
         >
           {savingNotificationSettings ? t.savingBtn : t.saveBtn}
         </button>
@@ -165,7 +165,7 @@ export default function NotificationSettingsView({
               rows={3}
               className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition font-mono"
             />
-            <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.smsTemplateEnHint} <code>{`{name}`}</code>, <code>{`{service}`}</code>, <code>{`{date}`}</code>, <code>{`{time}`}</code>.</span>
+            <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.smsTemplateEnHint} <code>{`{name}`}</code>, <code>{`{service}`}</code>, <code>{`{date}`}</code>, <code>{`{time}`}</code>.</span>
           </div>
 
           <div>
@@ -190,7 +190,7 @@ export default function NotificationSettingsView({
               dir="rtl"
               className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition font-mono text-right"
             />
-            <span className="text-[11px] text-[#8A9A81] mt-1 block text-right">{t.smsTemplateArHint} <code>{`{name}`}</code>، <code>{`{service}`}</code>، <code>{`{date}`}</code>، <code>{`{time}`}</code>.</span>
+            <span className="text-[11px] text-[#8FA3B8] mt-1 block text-right">{t.smsTemplateArHint} <code>{`{name}`}</code>، <code>{`{service}`}</code>، <code>{`{date}`}</code>، <code>{`{time}`}</code>.</span>
           </div>
         </div>
 
@@ -244,7 +244,7 @@ export default function NotificationSettingsView({
               onChange={(e) => setNotifStaffEmail(e.target.value)}
               className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition"
             />
-            <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.staffEmailHint}</span>
+            <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.staffEmailHint}</span>
           </div>
         </div>
       </div>

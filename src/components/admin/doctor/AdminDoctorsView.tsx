@@ -162,7 +162,7 @@ export default function AdminDoctorsView({
                 value={providerSearchQuery}
                 onChange={(e) => setProviderSearchQuery(e.target.value)}
                 placeholder={t.searchPlaceholder}
-                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] py-2.5 ps-10 pe-4 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:bg-white focus:ring-2 focus:ring-[var(--cr-accent)]/15"
+                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] py-2.5 ps-10 pe-4 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:bg-white focus:ring-2 focus:ring-[var(--cr-accent)]/15"
               />
             </div>
             <button
@@ -170,7 +170,7 @@ export default function AdminDoctorsView({
               title={t.filterTitle}
               className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer ${
                 showProviderFilterPanel || providerFilterBranchId !== "All" || providerFilterSpecialty !== "All" || providerFilterGender !== "All"
-                  ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                  ? "border-[var(--cr-accent)] bg-[#F1F5F9] text-[var(--cr-primary)]"
                   : "border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[var(--color-brand-light)]"
               }`}
             >
@@ -183,7 +183,7 @@ export default function AdminDoctorsView({
 
           {/* Dynamic Filters Drawer */}
           {showProviderFilterPanel && (
-            <div className="mb-6 grid grid-cols-1 gap-4 rounded-3xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-5 md:grid-cols-3 items-end shadow-sm animate-fadeIn">
+            <div className="mb-6 grid grid-cols-1 gap-4 rounded-3xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-5 md:grid-cols-3 items-end shadow-sm animate-fadeIn">
               {/* Branch Dropdown */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.branchFilterLabel}</label>
@@ -247,7 +247,7 @@ export default function AdminDoctorsView({
           <div className="hidden md:block overflow-x-auto rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm [scrollbar-width:thin]">
             <table className="w-full min-w-[700px] text-sm">
               <thead>
-                <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+                <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
                   <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.colDoctorName}</th>
                   <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.colBookings}</th>
                   <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.colServices}</th>
@@ -275,7 +275,7 @@ export default function AdminDoctorsView({
                       <tr
                         key={docKey}
                         onClick={() => setViewingDoctorDetails(provider)}
-                        className="transition hover:bg-[#F9F9F7] cursor-pointer"
+                        className="transition hover:bg-[#F8FAFC] cursor-pointer"
                       >
                         <td className="px-5 py-4 font-semibold text-[var(--cr-dark)]">
                           <div className="flex items-center gap-3">

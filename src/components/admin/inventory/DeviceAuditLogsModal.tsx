@@ -92,7 +92,7 @@ export default function DeviceAuditLogsModal({ open, onClose, authHeaders, devic
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn" dir={lang === "ar" ? "rtl" : "ltr"}>
-      <div className="w-full max-w-5xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-5xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4 shrink-0">
           <div>
@@ -105,14 +105,14 @@ export default function DeviceAuditLogsModal({ open, onClose, authHeaders, devic
             <button
               type="button"
               onClick={fetchLogs}
-              className="rounded-full bg-[#EBF0E6] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#d8e3d2]"
+              className="rounded-full bg-[#F1F5F9] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               title={t.refreshTitle}
             >
               <RotateCcw size={18} className={loading ? "animate-spin" : ""} />
             </button>
             <button
               onClick={onClose}
-              className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
             >
               <X size={20} />
             </button>
@@ -122,13 +122,13 @@ export default function DeviceAuditLogsModal({ open, onClose, authHeaders, devic
         {/* Filter controls bar */}
         <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-[#E6E9EB]">
           <div className="relative flex-1">
-            <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-[#8C9A84]" />
+            <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-[#8FA3B8]" />
             <input
               type="text"
               placeholder={t.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-[#E6E9EB] bg-[var(--color-brand-light)] ps-9 pe-3 py-2 text-xs text-[var(--cr-dark)] placeholder-[#8C9A84] focus:outline-none focus:ring-2 focus:ring-[var(--cr-primary)]"
+              className="w-full rounded-xl border border-[#E6E9EB] bg-[var(--color-brand-light)] ps-9 pe-3 py-2 text-xs text-[var(--cr-dark)] placeholder-[#8FA3B8] focus:outline-none focus:ring-2 focus:ring-[var(--cr-primary)]"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -257,7 +257,7 @@ export default function DeviceAuditLogsModal({ open, onClose, authHeaders, devic
           </span>
           <button
             onClick={onClose}
-            className="rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] px-8 py-2.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+            className="rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] px-8 py-2.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition"
           >
             {t.closeBtn}
           </button>

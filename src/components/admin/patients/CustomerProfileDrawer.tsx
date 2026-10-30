@@ -553,7 +553,7 @@ export default function CustomerProfileDrawer({
                 )}
               </div>
               <label
-                className="absolute -bottom-1 -end-1 p-1.5 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-md hover:bg-[#2e3a26] transition flex items-center justify-center"
+                className="absolute -bottom-1 -end-1 p-1.5 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-md hover:bg-[#0E1F36] transition flex items-center justify-center"
                 title={t.uploadPhotoTitle}
               >
                 <Camera size={12} />
@@ -876,19 +876,19 @@ export default function CustomerProfileDrawer({
                   <>
                     <div>
                       <span className="block text-xs font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.cityLabel}</span>
-                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F9F9F7] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
+                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F8FAFC] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
                         {cCity || "—"}
                       </span>
                     </div>
                     <div>
                       <span className="block text-xs font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.streetLabel}</span>
-                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F9F9F7] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
+                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F8FAFC] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
                         {cStreet || "—"}
                       </span>
                     </div>
                     <div className="col-span-2 sm:col-span-1">
                       <span className="block text-xs font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.buildingLabel}</span>
-                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F9F9F7] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
+                      <span className="font-semibold text-[var(--cr-dark)] block bg-[#F8FAFC] px-3 py-2 rounded-lg border border-[var(--cr-primary)]/5">
                         {cBuilding || "—"}
                       </span>
                     </div>
@@ -1004,7 +1004,7 @@ export default function CustomerProfileDrawer({
                         <tr
                           key={res.id}
                           onClick={() => onViewBooking && onViewBooking(res)}
-                          className={`hover:bg-[#F9F9F7] ${onViewBooking ? "cursor-pointer" : ""}`}
+                          className={`hover:bg-[#F8FAFC] ${onViewBooking ? "cursor-pointer" : ""}`}
                         >
                           <td className="px-4 py-3">
                             <span className="block font-semibold text-[var(--cr-dark)]">{formattedDate}</span>
@@ -1105,7 +1105,7 @@ export default function CustomerProfileDrawer({
                 <button
                   type="button"
                   onClick={handleStartCreatePrescription}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm shrink-0"
                 >
                   <Plus size={14} /> {t.writePrescriptionBtn}
                 </button>
@@ -1115,7 +1115,7 @@ export default function CustomerProfileDrawer({
                 <button
                   type="button"
                   onClick={handleOpenMedicalReportModal}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm shrink-0"
                 >
                   <Plus size={14} /> {t.uploadReportBtn}
                 </button>
@@ -1125,7 +1125,7 @@ export default function CustomerProfileDrawer({
                 <button
                   type="button"
                   onClick={handleOpenMedicalFormModal}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm shrink-0"
                 >
                   <Pencil size={13} /> {medicalRecordForm ? t.editIntakeBtn : t.fillIntakeBtn}
                 </button>
@@ -1229,7 +1229,7 @@ export default function CustomerProfileDrawer({
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-white rounded-2xl border border-[var(--cr-primary)]/10 space-y-3">
-                    <FileText size={36} className="mx-auto text-[#8A9A81]" />
+                    <FileText size={36} className="mx-auto text-[#8FA3B8]" />
                     <div>
                       <p className="text-sm font-semibold text-[var(--cr-dark)]">{t.noIntakeTitle}</p>
                       <p className="text-xs text-[var(--color-brand-secondary)]">{t.noIntakeSubtitle}</p>
@@ -1237,7 +1237,7 @@ export default function CustomerProfileDrawer({
                     <button
                       type="button"
                       onClick={handleOpenMedicalFormModal}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm"
                     >
                       {t.fillIntakeBtn}
                     </button>
@@ -1281,7 +1281,7 @@ export default function CustomerProfileDrawer({
                             <input type="text" placeholder={t.medNamePlaceholder} value={rxMedInput} onChange={(e) => setRxMedInput(e.target.value)} className="flex-1 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition" />
                           </div>
                         </div>
-                        <button type="button" onClick={handleAddMedication} className="rounded-xl bg-[var(--cr-primary)] px-4 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shrink-0">{t.addBtn}</button>
+                        <button type="button" onClick={handleAddMedication} className="rounded-xl bg-[var(--cr-primary)] px-4 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shrink-0">{t.addBtn}</button>
                       </div>
                       {rxMedications.length > 0 ? (
                         <div className="space-y-2 pt-2 border-t border-[var(--cr-primary)]/5">
@@ -1296,7 +1296,7 @@ export default function CustomerProfileDrawer({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-[#8A9A81] italic text-center py-2">{t.noMedsYet}</p>
+                        <p className="text-xs text-[#8FA3B8] italic text-center py-2">{t.noMedsYet}</p>
                       )}
                     </div>
                     <div>
@@ -1316,7 +1316,7 @@ export default function CustomerProfileDrawer({
                     </div>
                     <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4">
                       <button type="button" onClick={() => setPrescriptionEditMode(false)} className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)]">{t.cancelBtn}</button>
-                      <button type="button" onClick={handleSavePrescription} disabled={savingPrescription} className="rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] disabled:opacity-60">{savingPrescription ? t.savingBtn : (editingPrescription ? (t.saveAsNewVersionBtn || "Save Changes as New Version") : t.saveRecordBtn)}</button>
+                      <button type="button" onClick={handleSavePrescription} disabled={savingPrescription} className="rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] disabled:opacity-60">{savingPrescription ? t.savingBtn : (editingPrescription ? (t.saveAsNewVersionBtn || "Save Changes as New Version") : t.saveRecordBtn)}</button>
                     </div>
                   </div>
                 ) : (
@@ -1325,7 +1325,7 @@ export default function CustomerProfileDrawer({
                       <div className="text-center py-12 text-[var(--color-brand-secondary)] text-sm">{t.loadingRecords}</div>
                     ) : customerPrescriptions.length === 0 ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-[var(--cr-primary)]/10 space-y-3">
-                        <FileText size={36} className="mx-auto text-[#8A9A81]" />
+                        <FileText size={36} className="mx-auto text-[#8FA3B8]" />
                         <div>
                           <p className="text-sm font-semibold text-[var(--cr-dark)]">{t.noPrescriptionsTitle}</p>
                           <p className="text-xs text-[var(--color-brand-secondary)]">{t.noPrescriptionsSubtitle}</p>
@@ -1334,7 +1334,7 @@ export default function CustomerProfileDrawer({
                           <button
                             type="button"
                             onClick={handleStartCreatePrescription}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm"
                           >
                             <Plus size={14} /> {t.writePrescriptionBtn}
                           </button>
@@ -1360,7 +1360,7 @@ export default function CustomerProfileDrawer({
                                       )}
                                     </span>
                                   </div>
-                                  <span className="text-xs text-[#8A9A81] block">
+                                  <span className="text-xs text-[#8FA3B8] block">
                                     {rx.doctor_name ? (
                                       <span>{t.editedByDoctor || "Doctor / Staff:"} <strong className="text-[var(--cr-dark)] font-semibold">{rx.doctor_name}</strong></span>
                                     ) : (
@@ -1417,7 +1417,7 @@ export default function CustomerProfileDrawer({
               <div className="space-y-4">
                 {medicalReports.length === 0 ? (
                   <div className="text-center py-12 bg-white rounded-2xl border border-[var(--cr-primary)]/10 space-y-3">
-                    <FileText size={36} className="mx-auto text-[#8A9A81]" />
+                    <FileText size={36} className="mx-auto text-[#8FA3B8]" />
                     <div>
                       <p className="text-sm font-semibold text-[var(--cr-dark)]">{t.noReportsTitle}</p>
                       <p className="text-xs text-[var(--color-brand-secondary)]">{t.noReportsSubtitle}</p>
@@ -1425,7 +1425,7 @@ export default function CustomerProfileDrawer({
                     <button
                       type="button"
                       onClick={handleOpenMedicalReportModal}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm"
                     >
                       <Plus size={14} /> {t.uploadReportBtn}
                     </button>
@@ -1452,7 +1452,7 @@ export default function CustomerProfileDrawer({
                         {report.notes && (
                           <p className="text-xs text-[var(--color-brand-secondary)] line-clamp-2">{report.notes}</p>
                         )}
-                        <div className="flex items-center justify-between pt-2 border-t border-[var(--cr-primary)]/5 text-xs text-[#8A9A81]">
+                        <div className="flex items-center justify-between pt-2 border-t border-[var(--cr-primary)]/5 text-xs text-[#8FA3B8]">
                           <span>{report.report_date ? new Date(report.report_date).toLocaleDateString() : new Date(report.created_at).toLocaleDateString()}</span>
                           {report.file_url && (
                             <a
@@ -1531,7 +1531,7 @@ export default function CustomerProfileDrawer({
                       setSelectedAddProductUnitPrice(0);
                       setShowAddPatientProductModal(true);
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm w-fit"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm w-fit"
                   >
                     <Plus size={14} /> {t.addProductBtn}
                   </button>
@@ -1590,7 +1590,7 @@ export default function CustomerProfileDrawer({
                         setSelectedAddProductUnitPrice(0);
                         setShowAddPatientProductModal(true);
                       }}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition"
                     >
                       <Plus size={14} /> {t.sellAssignProductBtn}
                     </button>
@@ -1650,7 +1650,7 @@ export default function CustomerProfileDrawer({
                                       setLogUsageQty(1);
                                       setLogUsageNotes("");
                                     }}
-                                    className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-xs"
+                                    className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-xs"
                                   >
                                     {t.deductLogUsageBtn}
                                   </button>
@@ -1680,7 +1680,7 @@ export default function CustomerProfileDrawer({
                   )}
                 </div>
                 {combinedPatientProductSales.length === 0 ? (
-                  <p className="text-xs text-[#8A9A81] italic text-center py-6">{t.noSalesHistory}</p>
+                  <p className="text-xs text-[#8FA3B8] italic text-center py-6">{t.noSalesHistory}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-start text-xs border-collapse min-w-[600px]">
@@ -1763,7 +1763,7 @@ export default function CustomerProfileDrawer({
                     setSelectedSellPackageId("");
                     setShowSellPackageModal(true);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm w-fit"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm w-fit"
                 >
                   <Plus size={14} /> {t.sellPackageBtn}
                 </button>
@@ -1789,7 +1789,7 @@ export default function CustomerProfileDrawer({
                         setSelectedSellPackageId("");
                         setShowSellPackageModal(true);
                       }}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition"
                     >
                       <Plus size={14} /> {t.sellPackageShortBtn}
                     </button>
@@ -1888,7 +1888,7 @@ export default function CustomerProfileDrawer({
                           ) : (
                             <div className="flex flex-wrap gap-2">
                               {(pkg.items || []).map((it: any) => (
-                                <span key={it.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#F9F9F7] border border-[var(--cr-primary)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--cr-primary)]">
+                                <span key={it.id} className="inline-flex items-center gap-1.5 rounded-full bg-[#F8FAFC] border border-[var(--cr-primary)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--cr-primary)]">
                                   {it.serviceName || `Service #${it.serviceId}`}
                                   <span className={`font-bold ${it.qtyRemaining > 0 ? "text-emerald-700" : "text-gray-400"}`}>
                                     {it.qtyUsed}/{it.qtyTotal} {t.usedSuffix}
@@ -1909,7 +1909,7 @@ export default function CustomerProfileDrawer({
               <div className="bg-white rounded-2xl border border-[var(--cr-primary)]/10 overflow-hidden shadow-sm p-6 space-y-4">
                 <h5 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.expiredPackagesHeading}</h5>
                 {customerProfilePackages.filter((p: any) => p.status !== "active").length === 0 ? (
-                  <p className="text-xs text-[#8A9A81] italic text-center py-6">{t.noPackageHistory}</p>
+                  <p className="text-xs text-[#8FA3B8] italic text-center py-6">{t.noPackageHistory}</p>
                 ) : (
                   <div className="space-y-3">
                     {customerProfilePackages.filter((p: any) => p.status !== "active").map((pkg: any) => (
@@ -2080,7 +2080,7 @@ export default function CustomerProfileDrawer({
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[#8A9A81]">—</span>
+                                <span className="text-[#8FA3B8]">—</span>
                               )}
                             </td>
                             <td className="py-3.5 px-4 text-center font-semibold">
@@ -2089,7 +2089,7 @@ export default function CustomerProfileDrawer({
                                   {Number(log.remaining_balance_after).toLocaleString()} left
                                 </span>
                               ) : (
-                                <span className="text-[#8A9A81] text-[11px]">N/A (Fixed Service)</span>
+                                <span className="text-[#8FA3B8] text-[11px]">N/A (Fixed Service)</span>
                               )}
                             </td>
                             <td className="py-3.5 px-4 text-end">
@@ -2172,7 +2172,7 @@ export default function CustomerProfileDrawer({
                 type="button"
                 onClick={handleSaveUsageLog}
                 disabled={savingUsageLog}
-                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
               >
                 {savingUsageLog ? t.deductingBtn : t.confirmUsageBtn}
               </button>
@@ -2282,7 +2282,7 @@ export default function CustomerProfileDrawer({
                 type="button"
                 onClick={handleAddProductToPatient}
                 disabled={addingProductToPatient || !selectedAddProductName}
-                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
               >
                 {addingProductToPatient ? t.addingBtn : t.addToPatientCartBtn}
               </button>
@@ -2410,7 +2410,7 @@ export default function CustomerProfileDrawer({
                 type="button"
                 onClick={handleSellPackageToCustomer}
                 disabled={sellingPackage || !selectedSellPackageId}
-                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
               >
                 {sellingPackage ? t.sellingBtn : t.sellPackageShortBtn}
               </button>
@@ -2525,7 +2525,7 @@ export default function CustomerProfileDrawer({
                                 {t.readOnlyHistoryBadge || "Read-Only History"}
                               </span>
                             )}
-                            <span className="text-xs text-[#8A9A81]">{histDate}</span>
+                            <span className="text-xs text-[#8FA3B8]">{histDate}</span>
                           </div>
                           <button
                             type="button"
@@ -2589,7 +2589,7 @@ export default function CustomerProfileDrawer({
               <button
                 type="button"
                 onClick={handleClosePrescriptionHistory}
-                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-xs"
+                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-xs"
               >
                 {t.cancelBtn || "Close"}
               </button>

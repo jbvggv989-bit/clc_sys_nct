@@ -91,7 +91,7 @@ export const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = (
         {/* Printable Receipt Body */}
         <div ref={printRef} className="space-y-6">
           {/* Top Amount Banner */}
-          <div className="rounded-2xl bg-[#F9F9F7] p-5 border border-gray-100 flex items-center justify-between">
+          <div className="rounded-2xl bg-[#F8FAFC] p-5 border border-gray-100 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
                 {isAr ? "مبلغ المعاملة" : "Transaction Amount"}

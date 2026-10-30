@@ -159,13 +159,13 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-3 sm:p-6 backdrop-blur-xs overflow-y-auto animate-fadeIn">
       <div 
-        className={`relative w-full max-w-4xl rounded-3xl bg-[#FAFCFA] p-6 sm:p-10 shadow-2xl border border-[var(--cr-primary)]/15 my-6 max-h-[92vh] overflow-y-auto text-[var(--cr-dark)] ${isAr ? "rtl text-right" : "ltr text-left"}`}
+        className={`relative w-full max-w-4xl rounded-3xl bg-[#FFFFFF] p-6 sm:p-10 shadow-2xl border border-[var(--cr-primary)]/15 my-6 max-h-[92vh] overflow-y-auto text-[var(--cr-dark)] ${isAr ? "rtl text-right" : "ltr text-left"}`}
         dir={isAr ? "rtl" : "ltr"}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className={`absolute top-6 ${isAr ? "left-6" : "right-6"} rounded-full p-2.5 text-gray-400 hover:bg-[#E2EBE2] hover:text-[var(--cr-dark)] transition cursor-pointer`}
+          className={`absolute top-6 ${isAr ? "left-6" : "right-6"} rounded-full p-2.5 text-gray-400 hover:bg-[#E6F6F5] hover:text-[var(--cr-dark)] transition cursor-pointer`}
           aria-label="Close"
         >
           <X size={20} />
@@ -196,7 +196,7 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
 
         {/* Header Title Section */}
         <div className="flex items-start gap-4 mb-8">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#EEF5EE] p-2 border border-[var(--cr-primary)]/15 shadow-sm">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F0FDFA] p-2 border border-[var(--cr-primary)]/15 shadow-sm">
             <span className="text-2xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span>
           </div>
           <div>
@@ -223,7 +223,7 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
 
             return (
               <div key={item.id || idx} className="flex items-start gap-4 pb-5 border-b border-gray-100 last:border-b-0 last:pb-0">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E2EBE2] text-[#2D522D] font-bold text-xs sm:text-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6F6F5] text-[#36A6A0] font-bold text-xs sm:text-sm">
                   {num}
                 </div>
                 <div className="space-y-1.5 pt-0.5 w-full">
@@ -231,7 +231,7 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
                   <p className="text-xs sm:text-sm text-gray-600 leading-relaxed font-normal">
                     {content}{" "}
                     {linkText && (
-                      <a href={item.link_url || "#"} className="text-[#2D522D] font-semibold underline underline-offset-2 hover:opacity-80 mx-1">
+                      <a href={item.link_url || "#"} className="text-[#36A6A0] font-semibold underline underline-offset-2 hover:opacity-80 mx-1">
                         {linkText}
                       </a>
                     )}
@@ -239,18 +239,18 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
 
                   {/* Contact Us Sub-info inside Contact section */}
                   {isContactSection && (
-                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#2D522D] pt-2">
-                      <a href={`tel:${contactPhone}`} className="flex items-center gap-1.5 hover:underline bg-[#F2F7F2] px-3 py-1.5 rounded-full border border-[#D5E3D5]">
+                    <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#36A6A0] pt-2">
+                      <a href={`tel:${contactPhone}`} className="flex items-center gap-1.5 hover:underline bg-[#F0FDFA] px-3 py-1.5 rounded-full border border-[#CCEDEB]">
                         <Phone size={13} />
                         <span>{contactPhone}</span>
                       </a>
                       <span className="text-gray-300 hidden sm:inline">|</span>
-                      <a href={`mailto:${contactEmail}`} className="flex items-center gap-1.5 hover:underline bg-[#F2F7F2] px-3 py-1.5 rounded-full border border-[#D5E3D5]">
+                      <a href={`mailto:${contactEmail}`} className="flex items-center gap-1.5 hover:underline bg-[#F0FDFA] px-3 py-1.5 rounded-full border border-[#CCEDEB]">
                         <Mail size={13} />
                         <span>{contactEmail}</span>
                       </a>
                       <span className="text-gray-300 hidden sm:inline">|</span>
-                      <a href={`https://${contactWeb}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:underline bg-[#F2F7F2] px-3 py-1.5 rounded-full border border-[#D5E3D5]">
+                      <a href={`https://${contactWeb}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 hover:underline bg-[#F0FDFA] px-3 py-1.5 rounded-full border border-[#CCEDEB]">
                         <Globe size={13} />
                         <span>{contactWeb}</span>
                       </a>
@@ -263,9 +263,9 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
         </div>
 
         {/* Bottom Trust Banner */}
-        <div className="mt-6 flex items-center gap-3.5 rounded-2xl border border-[#D0E2D0] bg-[#EEF5EE] p-4 text-xs sm:text-sm text-[#2D522D]">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#DBE8DB]">
-            <ShieldCheck size={20} className="text-[#2D522D]" />
+        <div className="mt-6 flex items-center gap-3.5 rounded-2xl border border-[#CCEDEB] bg-[#F0FDFA] p-4 text-xs sm:text-sm text-[#36A6A0]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#CCEDEB]">
+            <ShieldCheck size={20} className="text-[#36A6A0]" />
           </div>
           <p className="font-medium leading-relaxed">
             {isAr 
@@ -278,7 +278,7 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 pt-4 border-t border-gray-200/60 font-medium">
           <p>{isAr ? "© 2025 عيادة clc-sys. جميع الحقوق محفوظة." : `© 2025 ${CLIENT.nameShort} Clinic. All rights reserved.`}</p>
           <div className="flex items-center gap-1.5 text-gray-600 font-semibold">
-            <Lock size={14} className="text-[#2D522D]" />
+            <Lock size={14} className="text-[#36A6A0]" />
             <span>{isAr ? "آمن ومشفّر" : "Secure & Encrypted"}</span>
           </div>
         </div>

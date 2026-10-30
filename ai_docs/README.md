@@ -1,6 +1,6 @@
 # ai_docs — Revera Clinics Agent Knowledge Base
 
-> **Last Updated:** 2026-10-30 (DEC-145: Multi-Specialty Polyclinic Content & Clinical Stock Photos Update)
+> **Last Updated:** 2026-10-30 (DEC-146: Purge Legacy Olive Green and Sage Palette Remnants)
 > **Branch:** dev (these docs do not belong on main/production)
 > **Maintained by:** Project manager. Updated whenever architecture, decisions, or risks change.
 

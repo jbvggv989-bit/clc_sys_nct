@@ -125,7 +125,7 @@ export default function DoctorPatientsTab({
                   <p className="text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-brand-secondary)]/70">{t.servicesReceivedHeader}</p>
                   <div className="flex flex-wrap gap-1">
                     {patient.recentServices.slice(0, 3).map((srv, idx) => (
-                      <span key={idx} className="rounded-lg bg-[#F4F5F1] px-2 py-0.5 text-[10px] font-semibold text-[var(--cr-primary)] truncate max-w-[180px]">
+                      <span key={idx} className="rounded-lg bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[var(--cr-primary)] truncate max-w-[180px]">
                         {srv}
                       </span>
                     ))}

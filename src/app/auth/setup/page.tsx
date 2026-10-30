@@ -253,7 +253,7 @@ function SetupContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                   disabled={loading}
                   autoFocus
                 />
@@ -291,7 +291,7 @@ function SetupContent() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter your password"
-                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                   disabled={loading}
                 />
               </div>
@@ -305,7 +305,7 @@ function SetupContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[var(--cr-primary)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#2e3a26] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full rounded-xl bg-[var(--cr-primary)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#0E1F36] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">

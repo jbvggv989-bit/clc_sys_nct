@@ -169,7 +169,7 @@ export default function UnifiedStaffLoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F1EA] px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 rounded-full border-4 border-[var(--cr-accent)] border-t-transparent animate-spin" />
           <p className="text-sm font-semibold tracking-wider text-[var(--cr-primary)]">
@@ -181,17 +181,17 @@ export default function UnifiedStaffLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[#F4F1EA] text-[var(--cr-dark)] py-6 px-6 sm:px-10 lg:px-12">
+    <div className="min-h-screen flex flex-col justify-between bg-[#F8FAFC] text-[var(--cr-dark)] py-6 px-6 sm:px-10 lg:px-12">
       {/* Top Bar */}
       <header className="w-full flex items-center justify-between">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] transition-colors py-2 px-3.5 rounded-xl hover:bg-white/60 shadow-2xs border border-transparent hover:border-[#D9D3C7]"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] transition-colors py-2 px-3.5 rounded-xl hover:bg-white/60 shadow-2xs border border-transparent hover:border-[#E2E8F0]"
         >
           <ArrowLeft size={16} />
           <span>Return to Website</span>
         </Link>
-        <div className="flex items-center gap-2 text-xs font-semibold text-[#8B9882] py-2 px-3.5">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#8FA3B8] py-2 px-3.5">
           <ShieldCheck size={16} className="text-[var(--cr-accent)]" />
           <span>Secure Staff Portal</span>
         </div>
@@ -199,7 +199,7 @@ export default function UnifiedStaffLoginPage() {
 
       {/* Main Form Container */}
       <div className="max-w-md w-full mx-auto my-auto py-6">
-        <div className="bg-[#FAF9F5] border border-[#E7E2D6] rounded-[28px] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.08)]">
+        <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[28px] p-8 shadow-[0_20px_60px_rgba(20,43,74,0.08)]">
           {/* Logo & Header */}
           <div className="flex flex-col items-center text-center mb-8">
             <div className="h-16 w-16 rounded-2xl bg-[var(--cr-primary)] p-3 shadow-md flex items-center justify-center mb-4 ring-1 ring-white/10">
@@ -210,13 +210,13 @@ export default function UnifiedStaffLoginPage() {
                 className="w-full h-full object-contain brightness-0 invert"
               />
             </div>
-            <span className="text-[11px] uppercase tracking-[0.25em] font-bold text-[#8B9882]">
+            <span className="text-[11px] uppercase tracking-[0.25em] font-bold text-[#8FA3B8]">
               {CLIENT.name}
             </span>
             <h1 className="text-2xl font-serif font-bold text-[var(--cr-dark)] mt-1">
               Staff &amp; Doctors Portal
             </h1>
-            <p className="text-xs text-[#6B7564] mt-1.5 max-w-xs">
+            <p className="text-xs text-[#64748B] mt-1.5 max-w-xs">
               Unified login for Doctors, Receptionists, HR, and System Administrators.
             </p>
           </div>
@@ -238,7 +238,7 @@ export default function UnifiedStaffLoginPage() {
                     setIdentifier(e.target.value);
                     if (error) setError("");
                   }}
-                  className="w-full rounded-2xl border border-[#D9D3C7] bg-white pl-11 pr-4 py-3.5 text-sm font-medium text-[var(--cr-dark)] placeholder-[#8B9882] shadow-2xs outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/15"
+                  className="w-full rounded-2xl border border-[#E2E8F0] bg-white pl-11 pr-4 py-3.5 text-sm font-medium text-[var(--cr-dark)] placeholder-[#8FA3B8] shadow-2xs outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/15"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-brand-secondary)] z-10">
                   <Mail size={18} />
@@ -262,7 +262,7 @@ export default function UnifiedStaffLoginPage() {
                     setPassword(e.target.value);
                     if (error) setError("");
                   }}
-                  className="w-full rounded-2xl border border-[#D9D3C7] bg-white pl-11 pr-11 py-3.5 text-sm font-medium text-[var(--cr-dark)] placeholder-[#8B9882] shadow-2xs outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/15"
+                  className="w-full rounded-2xl border border-[#E2E8F0] bg-white pl-11 pr-11 py-3.5 text-sm font-medium text-[var(--cr-dark)] placeholder-[#8FA3B8] shadow-2xs outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/15"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--color-brand-secondary)] z-10">
                   <Lock size={18} />
@@ -270,7 +270,7 @@ export default function UnifiedStaffLoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#8B9882] hover:text-[var(--cr-dark)] cursor-pointer z-10"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#8FA3B8] hover:text-[var(--cr-dark)] cursor-pointer z-10"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -297,7 +297,7 @@ export default function UnifiedStaffLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[#FAF9F5] shadow hover:bg-[#343F2C] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2 cursor-pointer"
+              className="w-full rounded-xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[#FFFFFF] shadow hover:bg-[#142B4A] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -316,7 +316,7 @@ export default function UnifiedStaffLoginPage() {
       </div>
 
       {/* Footer */}
-      <div className="max-w-6xl w-full mx-auto text-center text-xs text-[#8B9882] py-2">
+      <div className="max-w-6xl w-full mx-auto text-center text-xs text-[#8FA3B8] py-2">
         &copy; {new Date().getFullYear()} {CLIENT.name}. All rights reserved. Confidential staff portal.
       </div>
     </div>

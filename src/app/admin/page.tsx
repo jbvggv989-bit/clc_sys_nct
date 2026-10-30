@@ -561,7 +561,7 @@ function PatientPackagePromoBanner({
   if (activeItems.length === 0 && promotions.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[var(--cr-accent)]/30 bg-[#FBF8F0] p-4 space-y-2.5 text-xs">
+    <div className="rounded-2xl border border-[var(--cr-accent)]/30 bg-[#FFFFFF] p-4 space-y-2.5 text-xs">
       {activeItems.length > 0 && (
         <div>
           <p className="font-bold text-[var(--cr-primary)] uppercase tracking-wider text-[10px] mb-1.5">Active Packages</p>
@@ -6062,7 +6062,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
   if (session && !adminRole) {
     return (
       <div id="admin-root" className="admin-view flex min-h-screen items-center justify-center bg-[var(--color-brand-sand)] px-4">
-        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.15)] text-center space-y-4">
+        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(13,28,48,0.15)] text-center space-y-4">
           <h2 className="text-xl font-bold text-[var(--cr-dark)]">Could not verify your session right now</h2>
           <p className="text-xs text-[var(--color-brand-secondary)] font-medium leading-relaxed">
             You are still signed in. The connection to the server was interrupted, so the page could not load your permissions. It will retry automatically.
@@ -6070,7 +6070,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           <button
             type="button"
             onClick={() => retryVerifyRef.current?.()}
-            className="mt-2 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+            className="mt-2 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
           >
             Try again
           </button>
@@ -6085,7 +6085,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
   if (!session || !adminRole) {
     return (
       <div id="admin-root" className="admin-view flex min-h-screen items-center justify-center bg-[var(--color-brand-sand)] px-4">
-        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.15)] text-center space-y-4">
+        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(13,28,48,0.15)] text-center space-y-4">
           <div className="mx-auto relative h-16 w-16 overflow-hidden rounded-2xl bg-[var(--cr-primary)] p-2.5 shadow-md">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <span className="text-2xl font-black tracking-wider text-white font-sans flex items-center justify-center h-full">TEST</span>
@@ -6101,7 +6101,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           </p>
           <Link
             href="/login"
-            className="mt-4 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+            className="mt-4 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
           >
             Go to Staff Login
           </Link>
@@ -6521,7 +6521,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="md:hidden flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[var(--cr-primary)]/15 text-[var(--cr-primary)] hover:bg-[#F9F9F7] shadow-sm transition"
+                className="md:hidden flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[var(--cr-primary)]/15 text-[var(--cr-primary)] hover:bg-[#F8FAFC] shadow-sm transition"
                 title="Open sidebar"
               >
                 <Menu size={16} className="sm:w-[18px] sm:h-[18px]" />
@@ -6567,7 +6567,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     setShowNotificationMenu(false);
                   }}
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--color-brand-light)] shadow-sm transition ${
-                    showQuickActionMenu ? "bg-[#2e3a26]" : "bg-[var(--cr-primary)] hover:bg-[#2e3a26]"
+                    showQuickActionMenu ? "bg-[#0E1F36]" : "bg-[var(--cr-primary)] hover:bg-[#0E1F36]"
                   }`}
                   title="Quick Actions"
                 >
@@ -6683,7 +6683,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                             key={n.id}
                             onClick={() => handleMarkAsRead(n.id)}
                             className={`p-3 text-left transition hover:bg-[var(--color-brand-tint)]/40 cursor-pointer ${
-                              !n.read ? "bg-[#EDE4C8]/10" : ""
+                              !n.read ? "bg-[#F1F5F9]/10" : ""
                             }`}
                           >
                             <div className="flex items-start gap-2.5">
@@ -6714,7 +6714,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                           setShowNotificationMenu(false);
                           setActiveNav("Bookings");
                         }}
-                        className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26]"
+                        className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#0E1F36]"
                       >
                         View all bookings
                       </button>
@@ -7772,7 +7772,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     type="button"
                     disabled={runningAllDiagnostics}
                     onClick={runAllDiagnosticTests}
-                    className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-white shadow-lg shadow-[var(--cr-primary)]/20 transition-all hover:bg-[#343F2B] disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-white shadow-lg shadow-[var(--cr-primary)]/20 transition-all hover:bg-[#142B4A] disabled:opacity-50"
                   >
                     {runningAllDiagnostics ? (
                       <>
@@ -7886,7 +7886,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                                     <span className="font-mono text-[11px] text-[var(--color-brand-secondary)] bg-[var(--color-brand-tint)] px-2 py-0.5 rounded-md">
                                       {tc.endpoint}
                                     </span>
-                                    <span className="text-[11px] text-[#8C9A84]">{tc.description}</span>
+                                    <span className="text-[11px] text-[#8FA3B8]">{tc.description}</span>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4">
@@ -8148,7 +8148,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                 </div>
                 <button
                   onClick={() => setPresenceModalOpen(false)}
-                  className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+                  className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
                 >
                   ✓ I am Present &amp; Working
                 </button>
@@ -8335,7 +8335,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4">
-          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)]">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80">
@@ -8348,7 +8348,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-3 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-3 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8444,14 +8444,14 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                 type="button"
                 onClick={approve}
                 disabled={approveUnavailableSlots.includes(slot) || !slot}
-                className="rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm approve
               </button>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-3 text-sm font-semibold text-[var(--cr-primary)] transition hover:bg-[#f7f6f2]"
+                className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-3 text-sm font-semibold text-[var(--cr-primary)] transition hover:bg-[#F8FAFC]"
               >
                 Cancel
               </button>
@@ -8463,7 +8463,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* Date bookings selector modal */}
       {dayBookingsSelector.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] border border-[var(--cr-primary)]/10">
+          <div className="w-full max-w-lg rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] border border-[var(--cr-primary)]/10">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Select Appointment</p>
@@ -8552,7 +8552,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* 1. Cancellations Modal */}
       {showCancellationsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-          <div className="w-full max-w-4xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-4xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[85vh] overflow-y-auto">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
@@ -8560,7 +8560,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setShowCancellationsModal(false)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8601,7 +8601,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                                 fetchAllReservations();
                                 alert(`Restored request for ${r.name}`);
                               }}
-                              className="rounded-3xl border border-[var(--cr-primary)]/20 bg-white px-4 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+                              className="rounded-3xl border border-[var(--cr-primary)]/20 bg-white px-4 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition"
                             >
                               Restore Request
                             </button>
@@ -8620,7 +8620,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* 2. Today's Bookings Modal */}
       {showTodayBookingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)]">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
@@ -8630,7 +8630,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setShowTodayBookingsModal(false)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8690,7 +8690,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* 3. Filter Bookings Modal */}
       {showFilterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)]">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
@@ -8698,7 +8698,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setShowFilterModal(false)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8715,7 +8715,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                       className={`rounded-2xl border px-3 py-2.5 text-xs font-bold transition ${
                         statusFilter === st
                           ? 'border-[var(--cr-primary)] bg-[var(--cr-primary)] text-[var(--color-brand-light)]'
-                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#f7f6f2]'
+                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#F8FAFC]'
                       }`}
                     >
                       {st === 'approved' ? 'Approved' : st === 'pending' ? 'Pending' : st === 'rejected' ? 'Rejected' : st === 'pending_deposit' ? 'Pending Deposit' : st === 'postponed' ? 'Postponed' : st === 'no_show' ? 'No Show' : 'All'}
@@ -8734,7 +8734,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                       className={`rounded-2xl border px-3 py-2.5 text-xs font-bold transition ${
                         typeFilter === ty
                           ? 'border-[var(--cr-primary)] bg-[var(--cr-primary)] text-[var(--color-brand-light)]'
-                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#f7f6f2]'
+                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#F8FAFC]'
                       }`}
                     >
                       {ty === 'in_person' ? 'In Person' : ty === 'online' ? 'Online' : 'All'}
@@ -8769,7 +8769,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   {dateFilter !== "All" && (
                     <button
                       onClick={() => setDateFilter('All')}
-                      className="rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-xs font-bold text-[var(--color-brand-secondary)] transition hover:bg-[#f7f6f2]"
+                      className="rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-xs font-bold text-[var(--color-brand-secondary)] transition hover:bg-[#F8FAFC]"
                     >
                       Clear
                     </button>
@@ -8780,7 +8780,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <div className="border-t border-[var(--cr-primary)]/10 pt-4 flex gap-3">
                 <button
                   onClick={() => setShowFilterModal(false)}
-                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition text-center"
+                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition text-center"
                 >
                   Apply Filters
                 </button>
@@ -8792,7 +8792,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     setDateFilter('All');
                     setShowFilterModal(false);
                   }}
-                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-white py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition text-center"
+                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-white py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition text-center"
                 >
                   Reset Filters
                 </button>
@@ -8805,7 +8805,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* 4. Actions Menu Modal */}
       {showActionsMenuModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-          <div className="w-full max-w-sm rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+          <div className="w-full max-w-sm rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)]">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
@@ -8813,7 +8813,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setShowActionsMenuModal(false)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8825,7 +8825,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   setShowActionsMenuModal(false);
                   setShowAddBookingModal(true);
                 }}
-                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition"
               >
                 + Add Manual Booking
               </button>
@@ -8860,7 +8860,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   document.body.removeChild(link);
                   setShowActionsMenuModal(false);
                 }}
-                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white py-3.5 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white py-3.5 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition"
               >
                 Export Bookings to CSV
               </button>
@@ -8873,7 +8873,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* 5. Add Booking Modal */}
       {showAddBookingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4">
-          <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[90vh] overflow-y-auto">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
@@ -8881,7 +8881,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setShowAddBookingModal(false)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -8927,7 +8927,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   return (
                     <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-2xl border border-[var(--cr-primary)]/15 bg-white shadow-lg">
                       {matches.length === 0 ? (
-                        <p className="px-4 py-3 text-xs text-[#8A9A81] italic">No matching patients — filling in the fields below will create a new one.</p>
+                        <p className="px-4 py-3 text-xs text-[#8FA3B8] italic">No matching patients — filling in the fields below will create a new one.</p>
                       ) : (
                         matches.map((c: any) => (
                           <button
@@ -9176,13 +9176,13 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <div className="border-t border-[var(--cr-primary)]/10 pt-4 flex gap-3">
                 <button
                   onClick={handleCreateManualBooking}
-                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] text-center"
+                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] text-center"
                 >
                   Create Booking
                 </button>
                 <button
                   onClick={() => setShowAddBookingModal(false)}
-                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] text-center"
+                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] text-center"
                 >
                   Cancel
                 </button>
@@ -9194,7 +9194,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       {/* Search Modal */}
       {showSearchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[85vh] overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[85vh] overflow-y-auto">
             <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Search</p>
@@ -9205,7 +9205,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   setShowSearchModal(false);
                   setSearchQuery("");
                 }}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={20} />
               </button>
@@ -9320,7 +9320,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
         >
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-[var(--cr-primary)]/10 overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)]">
                   <Download size={18} />
@@ -9358,7 +9358,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
 
               {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4">
+              <div className="grid grid-cols-3 gap-3 rounded-xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-4">
                 <div className="text-center">
                   <p className="text-xl font-bold text-[var(--cr-dark)]">{customers.length}</p>
                   <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">Total Patients</p>
@@ -9380,7 +9380,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               <button
                 onClick={() => setShowExportCustomersModal(false)}
                 className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)]"
@@ -9390,7 +9390,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <button
                 onClick={handleExportCustomersCSV}
                 disabled={loadingCustomers}
-                className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Download size={15} />
                 {loadingCustomers ? "Loading..." : "Export CSV"}
@@ -9408,7 +9408,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
         >
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-[var(--cr-primary)]/10 overflow-hidden my-8 animate-fadeIn">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)]">
                   <Upload size={18} />
@@ -9431,7 +9431,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
               {!importFile ? (
                 // Step 1: Upload File Instructions and Box
-                <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--cr-primary)]/25 rounded-2xl p-8 bg-[var(--color-brand-light)] hover:bg-[#F5F4F0] transition group relative">
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--cr-primary)]/25 rounded-2xl p-8 bg-[var(--color-brand-light)] hover:bg-[#F8FAFC] transition group relative">
                   <input
                     type="file"
                     accept=".csv"
@@ -9449,7 +9449,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                 // Step 2: File Selected and Parsed
                 <div className="space-y-4">
                   {/* File Info Card */}
-                  <div className="flex items-center justify-between rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-3">
+                  <div className="flex items-center justify-between rounded-xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-3">
                     <div className="flex items-center gap-3">
                       <FileText size={24} className="text-[var(--cr-accent)]" />
                       <div>
@@ -9569,7 +9569,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               <button
                 disabled={importLoading}
                 onClick={handleCloseImportModal}
@@ -9581,7 +9581,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                 <button
                   onClick={handleStartImport}
                   disabled={importLoading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] disabled:opacity-60"
                 >
                   {importLoading ? (
                     <>
@@ -9783,7 +9783,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                       value={setupPassword}
                       onChange={(e) => setSetupPassword(e.target.value)}
                       placeholder="At least 8 characters"
-                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                       disabled={setupLoading}
                       autoFocus
                     />
@@ -9821,7 +9821,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                       value={setupConfirmPassword}
                       onChange={(e) => setSetupConfirmPassword(e.target.value)}
                       placeholder="Re-enter your password"
-                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                       disabled={setupLoading}
                     />
                   </div>
@@ -9835,7 +9835,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   <button
                     type="submit"
                     disabled={setupLoading}
-                    className="w-full rounded-xl bg-[var(--cr-primary)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#2e3a26] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full rounded-xl bg-[var(--cr-primary)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#0E1F36] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {setupLoading ? (
                       <span className="flex items-center justify-center gap-2">
@@ -9865,7 +9865,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
               <button
                 onClick={() => setPostponeBooking(null)}
-                className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
               >
                 <X size={18} />
               </button>
@@ -9923,7 +9923,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     onChange={(e) => setPostponeFollowUpDate(e.target.value)}
                     className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
                   />
-                  <p className="text-[11px] text-[#8A9A81] mt-1.5">
+                  <p className="text-[11px] text-[#8FA3B8] mt-1.5">
                     The booking will be marked Postponed with no confirmed date until you come back and reschedule it.
                   </p>
                 </div>
@@ -9962,7 +9962,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     setSavingPostpone(false);
                   }
                 }}
-                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
               >
                 {savingPostpone ? "Saving..." : postponeMode === "reschedule" ? "Reschedule Booking" : "Mark as Postponed"}
               </button>
@@ -10612,7 +10612,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                       setDepositChangeToWallet(false);
                       setRedeemedPackageItems({});
                     }}
-                    className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                    className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
                   >
                     <X size={18} />
                   </button>
@@ -10805,7 +10805,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
 
                     {/* Additional Services */}
                     {checkoutAdditionalServicesList.length > 0 && (
-                      <div className="mt-2.5 rounded-xl border border-[var(--cr-accent)]/30 bg-[#FAF5EB]/50 p-3 space-y-2 text-xs">
+                      <div className="mt-2.5 rounded-xl border border-[var(--cr-accent)]/30 bg-[#F8FAFC]/50 p-3 space-y-2 text-xs">
                         <div className="flex items-center justify-between border-b border-[var(--cr-accent)]/20 pb-1.5">
                           <span className="font-bold text-[var(--cr-primary)] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                             <span>✨</span> Additional Services / الخدمات الإضافية
@@ -11026,7 +11026,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   <button
                     disabled={savingCheckout}
                     onClick={handleConfirmCheckout}
-                    className="rounded-xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-60 flex items-center gap-1.5 shadow-md"
+                    className="rounded-xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-60 flex items-center gap-1.5 shadow-md"
                   >
                     {savingCheckout ? (
                       <>
@@ -11262,7 +11262,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     </button>
                     <button
                       onClick={() => handlePrintInvoice(invoiceBooking, allInvoiceItems, totalCost, walletUsed, branchName, invoiceNo)}
-                      className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                      className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition flex items-center gap-1.5 shadow-md cursor-pointer"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="6 9 6 2 18 2 18 9" />
@@ -11736,7 +11736,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   </button>
                   <button
                     onClick={() => handlePrintInvoice(invoiceBooking, allInvoiceItems, totalCost, walletUsed, branchName, invoiceNo)}
-                    className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="6 9 6 2 18 2 18 9" />
@@ -11768,7 +11768,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               <button
                 type="button"
                 onClick={() => setActiveInfoFeature(null)}
-                className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+                className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
               >
                 Got it
               </button>

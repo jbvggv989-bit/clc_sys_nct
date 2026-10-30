@@ -247,11 +247,11 @@ export default function DoctorPatientHistoryDrawer({
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <div className="flex-1 sm:flex-initial rounded-2xl bg-[#F4F5F1] p-2.5 sm:p-3 px-3 sm:px-5 text-center border border-[var(--cr-primary)]/10">
+              <div className="flex-1 sm:flex-initial rounded-2xl bg-[#F8FAFC] p-2.5 sm:p-3 px-3 sm:px-5 text-center border border-[var(--cr-primary)]/10">
                 <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.completedPatientVisits}</span>
                 <span className="text-sm sm:text-lg font-black text-[var(--cr-dark)]">{selectedPatientHistory.totalVisits} Sessions</span>
               </div>
-              <div className="flex-1 sm:flex-initial rounded-2xl bg-[#F4F5F1] p-2.5 sm:p-3 px-3 sm:px-5 text-center border border-[var(--cr-primary)]/10">
+              <div className="flex-1 sm:flex-initial rounded-2xl bg-[#F8FAFC] p-2.5 sm:p-3 px-3 sm:px-5 text-center border border-[var(--cr-primary)]/10">
                 <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.lastVisitLabel}</span>
                 <span className="text-sm sm:text-lg font-black text-[var(--cr-primary)]">{selectedPatientHistory.lastVisitDate || "N/A"}</span>
               </div>
@@ -267,7 +267,7 @@ export default function DoctorPatientHistoryDrawer({
             className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === "history"
                 ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
             }`}
           >
             <Clock size={16} />
@@ -280,7 +280,7 @@ export default function DoctorPatientHistoryDrawer({
             className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === "laser"
                 ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
             }`}
           >
             <Zap size={16} className="text-amber-500" />
@@ -293,7 +293,7 @@ export default function DoctorPatientHistoryDrawer({
             className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === "medical"
                 ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
             }`}
           >
             <ShieldAlert size={16} />
@@ -309,7 +309,7 @@ export default function DoctorPatientHistoryDrawer({
             className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === "reports"
                 ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
             }`}
           >
             <FileText size={16} />
@@ -322,7 +322,7 @@ export default function DoctorPatientHistoryDrawer({
             className={`flex-1 py-2.5 sm:py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-extrabold rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === "personal"
                 ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
             }`}
           >
             <User size={16} />
@@ -744,7 +744,7 @@ export default function DoctorPatientHistoryDrawer({
               <button
                 type="button"
                 onClick={() => setShowMedicalReportModal(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs font-bold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm shrink-0 cursor-pointer w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs font-bold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm shrink-0 cursor-pointer w-full sm:w-auto"
               >
                 <Plus size={16} /> Upload Report
               </button>
@@ -769,7 +769,7 @@ export default function DoctorPatientHistoryDrawer({
                 <button
                   type="button"
                   onClick={() => setShowMedicalReportModal(true)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs font-bold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs font-bold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm cursor-pointer"
                 >
                   <Plus size={16} /> Upload Report
                 </button>
@@ -791,7 +791,7 @@ export default function DoctorPatientHistoryDrawer({
                             <h5 className="font-extrabold text-[var(--cr-dark)] text-xs sm:text-sm truncate">
                               {report.title || report.report_title || "Medical Document"}
                             </h5>
-                            <span className="text-[9px] sm:text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase bg-[#F4F5F1] px-2 py-0.5 rounded-md inline-block mt-0.5 truncate">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase bg-[#F8FAFC] px-2 py-0.5 rounded-md inline-block mt-0.5 truncate">
                               {report.doctor_name ? `Uploaded by ${report.doctor_name}` : report.report_type || "Clinical Report"}
                             </span>
                           </div>
@@ -813,7 +813,7 @@ export default function DoctorPatientHistoryDrawer({
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-[var(--cr-primary)]/8 text-xs text-[#8A9A81] gap-2 flex-wrap">
+                    <div className="flex items-center justify-between pt-2.5 border-t border-[var(--cr-primary)]/8 text-xs text-[#8FA3B8] gap-2 flex-wrap">
                       <span className="font-medium text-[11px] sm:text-xs">
                         {report.date || (report.created_at ? new Date(report.created_at).toLocaleDateString() : "Recent")}
                       </span>

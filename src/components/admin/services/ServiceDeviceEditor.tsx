@@ -110,7 +110,7 @@ export default function ServiceDeviceEditor({ serviceId, authHeaders }: Props) {
       <div className="flex items-center gap-2 text-[var(--cr-primary)] font-semibold text-xs uppercase tracking-wider">
         <Cpu size={14} /> Connected Equipment &amp; Devices
       </div>
-      <p className="text-[11px] text-[#8C9A84]">
+      <p className="text-[11px] text-[#8FA3B8]">
         Clinic laser and medical machines connected to this clinical service.
       </p>
 
@@ -166,7 +166,7 @@ export default function ServiceDeviceEditor({ serviceId, authHeaders }: Props) {
               type="button"
               onClick={addLink}
               disabled={!newDeviceId}
-              className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#2e3a26] disabled:opacity-40 cursor-pointer shrink-0 shadow-xs"
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#0E1F36] disabled:opacity-40 cursor-pointer shrink-0 shadow-xs"
             >
               <Plus size={13} /> Connect
             </button>
@@ -176,7 +176,7 @@ export default function ServiceDeviceEditor({ serviceId, authHeaders }: Props) {
             type="button"
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="w-full rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white transition hover:bg-[#2e3a26] disabled:opacity-40 cursor-pointer shadow-sm"
+            className="w-full rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white transition hover:bg-[#0E1F36] disabled:opacity-40 cursor-pointer shadow-sm"
           >
             {saving ? "Saving Changes..." : "Save Connected Devices"}
           </button>

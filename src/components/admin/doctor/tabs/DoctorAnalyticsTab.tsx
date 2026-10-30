@@ -145,7 +145,7 @@ export default function DoctorAnalyticsTab({
                         {srv.revenue.toLocaleString()} EGP <span className="text-[10px] text-[var(--color-brand-secondary)] font-normal">({srv.count} {t.sessionsUnit})</span>
                       </span>
                     </div>
-                    <div className="h-2.5 w-full rounded-full bg-[#F4F5F1] overflow-hidden">
+                    <div className="h-2.5 w-full rounded-full bg-[#F8FAFC] overflow-hidden">
                       <div
                         className="h-full rounded-full bg-[var(--cr-primary)] transition-all duration-500"
                         style={{ width: `${Math.max(pct, 5)}%` }}
@@ -212,7 +212,7 @@ export default function DoctorAnalyticsTab({
 
         <div className="overflow-x-auto w-full [scrollbar-width:thin]">
           <table className="w-full min-w-[500px] text-left text-xs text-[var(--cr-dark)]">
-            <thead className="bg-[#F9F9F7] text-[10px] uppercase tracking-wider font-extrabold text-[var(--color-brand-secondary)] border-b border-[var(--cr-primary)]/10">
+            <thead className="bg-[#F8FAFC] text-[10px] uppercase tracking-wider font-extrabold text-[var(--color-brand-secondary)] border-b border-[var(--cr-primary)]/10">
               <tr>
                 <th className="py-3 px-3 sm:px-4 rounded-s-xl">{t.dateHeader}</th>
                 <th className="py-3 px-3 sm:px-4">{t.patientNameHeader}</th>
@@ -232,7 +232,7 @@ export default function DoctorAnalyticsTab({
                 reservations.filter(r => r.status === "completed").map((r, idx) => {
                   const price = Number(r.total_price || r.amount || r.price || 0);
                   return (
-                    <tr key={r.id || idx} className="hover:bg-[#F9F9F7] transition-colors">
+                    <tr key={r.id || idx} className="hover:bg-[#F8FAFC] transition-colors">
                       <td className="py-3 px-3 sm:px-4 font-semibold text-[var(--color-brand-secondary)]">{r.date || "N/A"}</td>
                       <td className="py-3 px-3 sm:px-4 font-bold text-[var(--cr-dark)]">{r.name || r.customer_name || "Patient"}</td>
                       <td className="py-3 px-3 sm:px-4 text-[var(--cr-primary)] font-semibold">{r.service_name || r.service || "Clinical Session"}</td>

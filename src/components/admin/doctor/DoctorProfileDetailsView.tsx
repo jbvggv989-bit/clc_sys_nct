@@ -461,7 +461,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                   className="h-20 w-20 rounded-full object-cover border-2 border-white shadow-md"
                 />
               ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1E3A2B] text-white text-2xl font-bold uppercase border-2 border-white shadow-md">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#142B4A] text-white text-2xl font-bold uppercase border-2 border-white shadow-md">
                   {doctorName ? doctorName.replace(/^Dr\.\s*/i, "").charAt(0) : "D"}
                 </div>
               )}
@@ -526,7 +526,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)] w-full">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-4 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#1E3A2B]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">
               <Clock size={16} />
             </div>
             <div>
@@ -557,7 +557,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                 onClick={() => setScheduleType("In-Clinic")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition ${
                   scheduleType === "In-Clinic"
-                    ? "bg-white text-[#1E3A2B] shadow-xs border border-gray-200"
+                    ? "bg-white text-[#142B4A] shadow-xs border border-gray-200"
                     : "text-[#6B7280] hover:text-[var(--cr-dark)]"
                 }`}
               >
@@ -568,7 +568,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                 onClick={() => setScheduleType("Online")}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold transition ${
                   scheduleType === "Online"
-                    ? "bg-white text-[#1E3A2B] shadow-xs border border-gray-200"
+                    ? "bg-white text-[#142B4A] shadow-xs border border-gray-200"
                     : "text-[#6B7280] hover:text-[var(--cr-dark)]"
                 }`}
               >
@@ -616,7 +616,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                                   {shiftObj.branchName}
                                 </span>
                               ) : null}
-                              <span className="text-xs font-semibold text-[#1E3A2B]">
+                              <span className="text-xs font-semibold text-[#142B4A]">
                                 {shiftObj.timeStr}
                               </span>
                             </div>
@@ -635,7 +635,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       {/* ── SERVICES PROVIDED CARD ── */}
       <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)] w-full">
         <div className="flex items-center gap-2.5 border-b border-gray-100 pb-4 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#1E3A2B]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">
             <ShoppingBag size={16} />
           </div>
           <h2 className="text-base font-bold text-[var(--cr-dark)]">Services Provided</h2>
@@ -663,7 +663,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-5 mb-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#1E3A2B]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">
               <ClipboardList size={16} />
             </div>
             <h2 className="text-base font-bold text-[var(--cr-dark)]">Patient Visit History</h2>
@@ -722,7 +722,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                   setCurrentPage(1);
                 }}
                 placeholder="Search by patient name or phone..."
-                className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-9 pr-4 text-xs outline-none transition focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                className="w-full rounded-2xl border border-gray-200 bg-white py-2 pl-9 pr-4 text-xs outline-none transition focus:border-[#142B4A] focus:ring-1 focus:ring-[#142B4A]"
               />
             </div>
 
@@ -737,7 +737,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                   }}
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                     dateFilter === tab
-                      ? "bg-white text-[#1E3A2B] border border-gray-200 shadow-xs"
+                      ? "bg-white text-[#142B4A] border border-gray-200 shadow-xs"
                       : "text-[#6B7280] hover:text-[var(--cr-dark)]"
                   }`}
                 >
@@ -760,7 +760,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                     setCustomStartDate(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="rounded-xl border border-gray-200 bg-[#FFFFFF] px-3 py-1.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#1E3A2B]"
+                  className="rounded-xl border border-gray-200 bg-[#FFFFFF] px-3 py-1.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#142B4A]"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -772,7 +772,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                     setCustomEndDate(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="rounded-xl border border-gray-200 bg-[#FFFFFF] px-3 py-1.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#1E3A2B]"
+                  className="rounded-xl border border-gray-200 bg-[#FFFFFF] px-3 py-1.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#142B4A]"
                 />
               </div>
               {(customStartDate || customEndDate) && (
@@ -894,7 +894,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
                   onClick={() => setCurrentPage(pg)}
                   className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold transition ${
                     pg === safePage
-                      ? "bg-[#1E3A2B] text-white shadow-xs"
+                      ? "bg-[#142B4A] text-white shadow-xs"
                       : "border border-gray-200 text-[#374151] hover:bg-gray-50"
                   }`}
                 >
@@ -976,7 +976,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setSelectedVisit(null)}
-                className="rounded-xl bg-[#1E3A2B] px-4 py-2 text-xs font-semibold text-white hover:bg-[#14261d] transition"
+                className="rounded-xl bg-[#142B4A] px-4 py-2 text-xs font-semibold text-white hover:bg-[#142B4A] transition"
               >
                 Close
               </button>

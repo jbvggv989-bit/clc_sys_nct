@@ -144,7 +144,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
           <button
             type="button"
             onClick={openAddModal}
-            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26]`}
+            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36]`}
           >
             <Plus size={14} /> {t.addSupplierBtn}
           </button>
@@ -178,7 +178,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <Truck size={32} className="text-[#A3B19B]" />
+                    <Truck size={32} className="text-[#8FA3B8]" />
                     <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
                     <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
                   </div>
@@ -186,7 +186,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
               </tr>
             ) : (
               filteredSuppliers.map((s) => (
-                <tr key={s.id} className="transition hover:bg-[#F9F9F7]">
+                <tr key={s.id} className="transition hover:bg-[#F8FAFC]">
                   <td className="px-6 py-4 font-semibold text-[var(--cr-dark)]">{s.name}</td>
                   <td className="px-6 py-4 text-[var(--color-brand-secondary)]">{s.contact || "—"}</td>
                   <td className="px-6 py-4 text-[var(--color-brand-secondary)]">{s.payment_terms || "—"}</td>
@@ -206,7 +206,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
                       <button
                         type="button"
                         onClick={() => openEditModal(s)}
-                        className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#EBF0E6] hover:text-[var(--cr-primary)]`}
+                        className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#F1F5F9] hover:text-[var(--cr-primary)]`}
                         title={t.editTitle}
                       >
                         <Pencil size={15} />
@@ -237,7 +237,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
         ) : filteredSuppliers.length === 0 ? (
           <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-[var(--color-brand-secondary)]">
             <div className="flex flex-col items-center justify-center gap-2">
-              <Truck size={32} className="text-[#A3B19B]" />
+              <Truck size={32} className="text-[#8FA3B8]" />
               <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
               <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
             </div>
@@ -267,7 +267,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
               </div>
 
               {s.payment_terms && (
-                <div className="rounded-xl bg-[#FAFBF9] px-3 py-2 text-xs border border-[#E6E9EB]/60">
+                <div className="rounded-xl bg-[#FFFFFF] px-3 py-2 text-xs border border-[#E6E9EB]/60">
                   <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block">{t.thPaymentTerms}</span>
                   <span className="text-[var(--cr-dark)] font-medium">{s.payment_terms}</span>
                 </div>
@@ -278,7 +278,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
                   <button
                     type="button"
                     onClick={() => openEditModal(s)}
-                    className="inline-flex items-center gap-1 rounded-xl border border-[#E6E9EB] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-secondary)] hover:bg-[#EBF0E6] hover:text-[var(--cr-primary)] transition"
+                    className="inline-flex items-center gap-1 rounded-xl border border-[#E6E9EB] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-secondary)] hover:bg-[#F1F5F9] hover:text-[var(--cr-primary)] transition"
                   >
                     <Pencil size={13} />
                     <span>{t.editTitle}</span>
@@ -361,7 +361,7 @@ export default function SuppliersScreen({ authHeaders, canManage = true, lang, t
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-2"
+                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 mt-2"
               >
                 {saving ? t.savingBtn : modal.mode === "add" ? t.createBtn : t.saveChangesBtn}
               </button>

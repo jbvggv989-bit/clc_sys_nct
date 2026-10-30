@@ -448,7 +448,7 @@ export function LoansScreen({ accessToken }: LoansScreenProps) {
       {viewing && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(31, 37, 26, 0.4)" }}
+          style={{ backgroundColor: "rgba(13, 28, 48, 0.45)" }}
           onClick={() => setViewing(null)}
         >
           <div

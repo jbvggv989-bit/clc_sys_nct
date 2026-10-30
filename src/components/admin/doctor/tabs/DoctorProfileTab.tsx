@@ -89,7 +89,7 @@ export default function DoctorProfileTab({
             setNewPassword("");
             setConfirmPassword("");
           }}
-          className="w-full sm:w-auto rounded-xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition cursor-pointer"
+          className="w-full sm:w-auto rounded-xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition cursor-pointer"
         >
           {t.updatePasswordBtn}
         </button>

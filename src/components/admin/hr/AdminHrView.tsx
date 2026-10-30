@@ -262,7 +262,7 @@ export default function AdminHrView({
             <div className="overflow-x-auto [scrollbar-width:thin]">
               <table className="w-full border-collapse text-left text-sm min-w-[700px]">
                 <thead>
-                   <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+                   <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.overview.employeeInfo}</th>
                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.overview.department}</th>
                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.overview.systemRole}</th>
@@ -279,7 +279,7 @@ export default function AdminHrView({
                     </tr>
                   ) : (
                     employeesList.map((emp: any) => (
-                       <tr key={emp.id} className="transition hover:bg-[#F9F9F7]">
+                       <tr key={emp.id} className="transition hover:bg-[#F8FAFC]">
                          <td className="px-5 py-4">
                            <div className="flex items-center gap-3">
                              <div className="h-8 w-8 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-xs font-bold font-serif shrink-0">
@@ -373,7 +373,7 @@ export default function AdminHrView({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h2 className="text-4xl font-semibold text-[var(--cr-dark)]">{t.payroll.heading}</h2>
-                <p className="mt-1 text-xs text-[#8A9A81] font-medium">{t.payroll.breadcrumb}</p>
+                <p className="mt-1 text-xs text-[#8FA3B8] font-medium">{t.payroll.breadcrumb}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -405,7 +405,7 @@ export default function AdminHrView({
                       alert(t.payroll.apiFailed);
                     }
                   }}
-                  className="rounded-xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-2 shadow-xs"
+                  className="rounded-xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition flex items-center gap-2 shadow-xs"
                 >
                   <Plus size={14} /> {t.payroll.addPayroll}
                 </button>
@@ -510,7 +510,7 @@ export default function AdminHrView({
               <div className="overflow-x-auto [scrollbar-width:thin]">
                 <table className="w-full border-collapse text-left text-sm min-w-[950px]">
                   <thead>
-                     <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+                     <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
                        <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.payroll.employee}</th>
                        <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.payroll.department}</th>
                        <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.payroll.role}</th>
@@ -544,7 +544,7 @@ export default function AdminHrView({
                         const initials = empObj.name ? empObj.name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase() : "EM";
     
                         return (
-                          <tr key={pay.id} className="transition hover:bg-[#F9F9F7]">
+                          <tr key={pay.id} className="transition hover:bg-[#F8FAFC]">
                             {/* Employee Name (Avatar + Name + Email) */}
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
@@ -663,7 +663,7 @@ export default function AdminHrView({
                                   ? "bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/15"
                                   : statusLabel === "Overdue"
                                   ? "bg-red-50 text-red-700 border border-red-100"
-                                  : "bg-[#EDE4C8] text-[#8B7544] border border-[var(--cr-accent)]/30"
+                                  : "bg-[#F1F5F9] text-[#8B7544] border border-[var(--cr-accent)]/30"
                               }`}>
                                 <span className={`h-1.5 w-1.5 rounded-full ${
                                   statusLabel === "Paid" ? "bg-[var(--cr-primary)]" : statusLabel === "Overdue" ? "bg-red-650" : "bg-[var(--cr-accent)]"
@@ -827,7 +827,7 @@ export default function AdminHrView({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h2 className="text-4xl font-semibold text-[var(--cr-dark)]">{t.doctorPayroll.heading}</h2>
-                <p className="mt-1 text-xs text-[#8A9A81] font-medium">{t.doctorPayroll.breadcrumb}</p>
+                <p className="mt-1 text-xs text-[#8FA3B8] font-medium">{t.doctorPayroll.breadcrumb}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -856,7 +856,7 @@ export default function AdminHrView({
                       alert(t.doctorPayroll.apiFailed);
                     }
                   }}
-                  className="rounded-xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-2 shadow-xs"
+                  className="rounded-xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition flex items-center gap-2 shadow-xs"
                 >
                   <Plus size={14} /> {t.doctorPayroll.add}
                 </button>
@@ -1009,7 +1009,7 @@ export default function AdminHrView({
                               <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
                                 isPaid
                                   ? "bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/15"
-                                  : "bg-[#EDE4C8] text-[#8B7544] border border-[var(--cr-accent)]/30"
+                                  : "bg-[#F1F5F9] text-[#8B7544] border border-[var(--cr-accent)]/30"
                               }`}>
                                 <span className={`h-1.5 w-1.5 rounded-full ${
                                   isPaid ? "bg-[var(--cr-primary)]" : "bg-[var(--cr-accent)]"
@@ -1042,7 +1042,7 @@ export default function AdminHrView({
                                         alert(t.doctorPayroll.payFailed);
                                       }
                                     }}
-                                    className="rounded-lg bg-[var(--cr-primary)] hover:bg-[#2e3a26] text-[var(--color-brand-light)] px-3.5 py-1.5 text-xs font-bold transition shadow-xs"
+                                    className="rounded-lg bg-[var(--cr-primary)] hover:bg-[#0E1F36] text-[var(--color-brand-light)] px-3.5 py-1.5 text-xs font-bold transition shadow-xs"
                                   >
                                     {t.doctorPayroll.pay}
                                   </button>
@@ -1120,7 +1120,7 @@ export default function AdminHrView({
               </div>
               <table className="w-full min-w-[700px] text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+                  <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
                     <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.leaves.employee}</th>
                     <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.leaves.type}</th>
                     <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.leaves.dates}</th>
@@ -1139,7 +1139,7 @@ export default function AdminHrView({
                     </tr>
                   ) : (
                     leavesList.map((leave: any) => (
-                      <tr key={leave.id} className="transition hover:bg-[#F9F9F7]">
+                      <tr key={leave.id} className="transition hover:bg-[#F8FAFC]">
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-xs font-bold font-serif shrink-0">
@@ -1323,7 +1323,7 @@ export default function AdminHrView({
     
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition"
               >
                 {t.leaves.submit}
               </button>
@@ -1488,7 +1488,7 @@ export default function AdminHrView({
     
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition"
               >
                 {t.performance.submit}
               </button>
@@ -1644,7 +1644,7 @@ export default function AdminHrView({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-4xl font-semibold text-[var(--cr-dark)]">{t.targets.heading}</h2>
-              <p className="mt-1 text-xs text-[#8A9A81] font-medium">{t.targets.breadcrumb}</p>
+              <p className="mt-1 text-xs text-[#8FA3B8] font-medium">{t.targets.breadcrumb}</p>
             </div>
           </div>
     
@@ -1895,7 +1895,7 @@ export default function AdminHrView({
               </button>
               <button
                 type="submit"
-                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+                className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-md"
               >
                 {t.editTargetModal.save}
               </button>

@@ -200,7 +200,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
           <button
             type="button"
             onClick={openModal}
-            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26]`}
+            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36]`}
           >
             <Plus size={14} /> {t.recordPurchaseBtn}
           </button>
@@ -235,7 +235,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <PackageCheck size={32} className="text-[#A3B19B]" />
+                    <PackageCheck size={32} className="text-[#8FA3B8]" />
                     <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
                     <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
                   </div>
@@ -246,7 +246,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
                 const isPaid = p.paid >= p.total;
                 const isPartial = p.paid > 0 && p.paid < p.total;
                 return (
-                  <tr key={p.id} className="transition hover:bg-[#F9F9F7]">
+                  <tr key={p.id} className="transition hover:bg-[#F8FAFC]">
                     <td className="px-6 py-4 font-mono text-xs text-[var(--color-brand-secondary)]">
                       {new Date(p.purchased_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
                     </td>
@@ -292,7 +292,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
         ) : filteredPurchases.length === 0 ? (
           <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-[var(--color-brand-secondary)]">
             <div className="flex flex-col items-center justify-center gap-2">
-              <PackageCheck size={32} className="text-[#A3B19B]" />
+              <PackageCheck size={32} className="text-[#8FA3B8]" />
               <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
               <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
             </div>
@@ -327,7 +327,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
                 </div>
 
                 {/* Items */}
-                <div className="rounded-xl bg-[#FAFBF9] p-2.5 text-xs border border-[#E6E9EB]/60">
+                <div className="rounded-xl bg-[#FFFFFF] p-2.5 text-xs border border-[#E6E9EB]/60">
                   <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block mb-1">{t.thItems}</span>
                   <div className="flex flex-wrap gap-1">
                     {(p.purchase_lines || []).map((l, idx) => (
@@ -433,7 +433,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
                 <button
                   type="button"
                   onClick={addLine}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:bg-[#EBF0E6]"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:bg-[#F1F5F9]"
                 >
                   <Plus size={13} /> {t.addLineBtn}
                 </button>
@@ -477,7 +477,7 @@ export default function PurchasesScreen({ authHeaders, canManage = true, lang, t
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-2"
+                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 mt-2"
               >
                 {saving ? t.recordingBtn : t.recordPurchaseBtn}
               </button>

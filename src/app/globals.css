@@ -31,17 +31,17 @@
   --radius-xl: calc(var(--radius) * 1.4);
 }
 
-/* ── Revera Design Tokens ──────────────────────────────── */
+/* ── clc-sys Design Tokens ──────────────────────────────── */
 :root {
   /* Brand colors */
-  --color-brand-primary: #142B4A;    /* Deep Olive Green */
-  --color-brand-dark: #0D1C30;       /* Deepest Olive-Black */
-  --color-brand-secondary: #8FA3B8;  /* Muted Sage Olive */
-  --color-brand-sand: #E2E8F0;       /* Sophisticated Sand */
-  --color-brand-light: #FFFFFF;      /* Luxurious Warm Ivory */
-  --color-brand-tint: #F8FAFC;       /* Sage Tint Canvas */
-  --color-brand-accent: #36A6A0;     /* Warm Royal Gold */
-  --color-brand-primary-hover: #0E1F36; /* Deeper Sage hover tone */
+  --color-brand-primary: #142B4A;    /* Navy Blue (Primary) */
+  --color-brand-dark: #0D1C30;       /* Dark Navy */
+  --color-brand-secondary: #8FA3B8;  /* Slate Blue (Secondary) */
+  --color-brand-sand: #E2E8F0;       /* Slate 200 Border */
+  --color-brand-light: #FFFFFF;      /* Pure White */
+  --color-brand-tint: #F8FAFC;       /* Slate 50 Soft Tint Canvas */
+  --color-brand-accent: #36A6A0;     /* Teal Accent */
+  --color-brand-primary-hover: #0E1F36; /* Navy Blue Hover Tone */
 
   /* Aliases for existing component tokens */
   --cr-primary: var(--color-brand-primary);

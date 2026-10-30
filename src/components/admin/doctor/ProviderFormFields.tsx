@@ -170,7 +170,7 @@ export default function ProviderFormFields({
         {/* Left: Avatar, Name & Status */}
         <div className="flex items-center gap-3.5">
           <div className="relative">
-            <div className="h-12 w-12 rounded-full bg-[#2A3423] text-white flex items-center justify-center text-base font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/15 shadow-2xs">
+            <div className="h-12 w-12 rounded-full bg-[#142B4A] text-white flex items-center justify-center text-base font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/15 shadow-2xs">
               {providerFormImage ? (
                 <img src={providerFormImage} alt={doctorName} className="h-full w-full object-cover" />
               ) : (
@@ -191,7 +191,7 @@ export default function ProviderFormFields({
                 {doctorActive ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "غير نشط" : "Inactive")}
               </span>
             </div>
-            <span className="inline-block text-xs font-semibold text-[var(--color-brand-secondary)] bg-[#F7F9F6] px-2 py-0.5 rounded-md border border-[var(--cr-primary)]/10">
+            <span className="inline-block text-xs font-semibold text-[var(--color-brand-secondary)] bg-[#F8FAFC] px-2 py-0.5 rounded-md border border-[var(--cr-primary)]/10">
               Employee ID: {doctorEmployeeId}
             </span>
           </div>
@@ -243,7 +243,7 @@ export default function ProviderFormFields({
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-[var(--cr-dark)]">{t.profilePhotoLabel || "Profile Photo"}</label>
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-[#2A3423] text-white flex items-center justify-center text-lg font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/15 shadow-2xs">
+              <div className="h-16 w-16 rounded-full bg-[#142B4A] text-white flex items-center justify-center text-lg font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/15 shadow-2xs">
                 {providerFormImage ? (
                   <img src={providerFormImage} alt={doctorName} className="h-full w-full object-cover" />
                 ) : (
@@ -585,7 +585,7 @@ export default function ProviderFormFields({
                   onClick={() => setProviderFormSessionType(sess.id as any)}
                   className={`flex items-center justify-center gap-2 rounded-2xl border py-2.5 px-3 cursor-pointer transition select-none ${
                     providerFormSessionType === sess.id
-                      ? "border-[var(--cr-primary)] bg-[#F2F5F0] text-[var(--cr-primary)] font-bold ring-1 ring-[var(--cr-primary)]"
+                      ? "border-[var(--cr-primary)] bg-[#F8FAFC] text-[var(--cr-primary)] font-bold ring-1 ring-[var(--cr-primary)]"
                       : "border-gray-200 bg-white text-[var(--color-brand-secondary)] hover:border-gray-300 font-medium"
                   }`}
                 >
@@ -668,7 +668,7 @@ export default function ProviderFormFields({
               </div>
             )}
 
-            <div className="flex rounded-xl border border-[var(--cr-primary)]/15 p-0.5 bg-[#F9F9F7] text-[11px] font-bold">
+            <div className="flex rounded-xl border border-[var(--cr-primary)]/15 p-0.5 bg-[#F8FAFC] text-[11px] font-bold">
               <button
                 type="button"
                 onClick={() => setProviderFormScheduleTab("in_person")}
@@ -699,7 +699,7 @@ export default function ProviderFormFields({
         <div className="overflow-x-auto rounded-2xl border border-[var(--cr-primary)]/10 bg-white scrollbar-none">
           <table className="w-full min-w-[700px] text-xs">
             <thead>
-              <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7] text-[var(--color-brand-secondary)] uppercase font-bold text-[10px] tracking-wider">
+              <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC] text-[var(--color-brand-secondary)] uppercase font-bold text-[10px] tracking-wider">
                 <th className="px-4 py-3 text-start w-[14%]">{t.colDay || "DAY"}</th>
                 <th className="px-4 py-3 text-center w-[12%]">{t.colWorking || "WORKING"}</th>
                 <th className="px-4 py-3 text-start w-[44%]">{t.colShifts || "SHIFTS"}</th>
@@ -828,7 +828,7 @@ export default function ProviderFormFields({
                                   }
                                 });
                               }}
-                              className="self-start inline-flex items-center gap-1 text-[11px] font-bold text-[var(--cr-primary)] hover:text-[#2e3a26] transition cursor-pointer mt-0.5"
+                              className="self-start inline-flex items-center gap-1 text-[11px] font-bold text-[var(--cr-primary)] hover:text-[#0E1F36] transition cursor-pointer mt-0.5"
                             >
                               <Plus size={12} /> {t.addShiftBtn || "Add Shift"}
                             </button>
@@ -934,7 +934,7 @@ export default function ProviderFormFields({
           type="button"
           onClick={handleSaveProvider}
           disabled={savingProvider}
-          className="rounded-xl bg-[#37442D] px-7 py-2.5 text-xs font-bold text-white hover:bg-[#2A3423] shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+          className="rounded-xl bg-[#142B4A] px-7 py-2.5 text-xs font-bold text-white hover:bg-[#142B4A] shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
         >
           {savingProvider ? (t.savingBtn || "Saving...") : (t.saveChangesBtn || "Save Changes")}
         </button>

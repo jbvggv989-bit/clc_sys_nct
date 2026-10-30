@@ -49,7 +49,7 @@ export default function ProviderFormModal({
 
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-      <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[90vh] flex flex-col">
         
         {/* Header */}
         <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4 shrink-0">
@@ -63,7 +63,7 @@ export default function ProviderFormModal({
           </div>
           <button
             onClick={() => setShowProviderModal(false)}
-            className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+            className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
           >
             <X size={20} />
           </button>
@@ -88,13 +88,13 @@ export default function ProviderFormModal({
           <button
             onClick={handleSaveProvider}
             disabled={savingProvider}
-            className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] disabled:opacity-50 text-center"
+            className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] disabled:opacity-50 text-center"
           >
             {savingProvider ? t.savingBtn : providerModalMode === "edit" ? t.saveChangesBtn : t.addProviderBtn}
           </button>
           <button
             onClick={() => setShowProviderModal(false)}
-            className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] text-center"
+            className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] text-center"
           >
             {t.cancelBtn}
           </button>

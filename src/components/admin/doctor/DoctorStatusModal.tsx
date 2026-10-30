@@ -68,8 +68,8 @@ export default function DoctorStatusModal({
         {/* Doctor Info Card */}
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-semibold text-[var(--cr-dark)]">{t.doctorLabel}</span>
-          <div className="flex items-center gap-3.5 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-3.5">
-            <div className="h-10 w-10 rounded-full bg-[#E5EAE3] text-[var(--cr-primary)] flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/10">
+          <div className="flex items-center gap-3.5 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-3.5">
+            <div className="h-10 w-10 rounded-full bg-[#E2E8F0] text-[var(--cr-primary)] flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden border border-[var(--cr-primary)]/10">
               {doctor.avatar_url || doctor.image ? (
                 <img src={doctor.avatar_url || doctor.image} alt={doctorName} className="h-full w-full object-cover" />
               ) : (
@@ -92,7 +92,7 @@ export default function DoctorStatusModal({
               onClick={() => setSelectedStatus(true)}
               className={`flex flex-col gap-2 rounded-2xl border p-4 cursor-pointer transition select-none ${
                 selectedStatus === true
-                  ? "border-[var(--cr-primary)] bg-[#F2F5F0] ring-1 ring-[var(--cr-primary)]"
+                  ? "border-[var(--cr-primary)] bg-[#F8FAFC] ring-1 ring-[var(--cr-primary)]"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
@@ -114,7 +114,7 @@ export default function DoctorStatusModal({
               onClick={() => setSelectedStatus(false)}
               className={`flex flex-col gap-2 rounded-2xl border p-4 cursor-pointer transition select-none ${
                 selectedStatus === false
-                  ? "border-[var(--cr-primary)] bg-[#F2F5F0] ring-1 ring-[var(--cr-primary)]"
+                  ? "border-[var(--cr-primary)] bg-[#F8FAFC] ring-1 ring-[var(--cr-primary)]"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
@@ -155,7 +155,7 @@ export default function DoctorStatusModal({
             type="button"
             onClick={handleConfirmSave}
             disabled={saving}
-            className="rounded-xl bg-[#37442D] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#2A3423] shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[72px]"
+            className="rounded-xl bg-[#142B4A] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#142B4A] shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[72px]"
           >
             {saving ? t.savingBtn : t.saveBtn}
           </button>

@@ -51,7 +51,7 @@ export function WhyChooseUs() {
             position: "relative",
             backgroundColor: "var(--cr-secondary, var(--color-brand-tint))",
             borderRadius: "32px",
-            border: "1px solid rgba(196,174,124,0.35)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 80px) clamp(24px, 5vw, 72px)",
           }}

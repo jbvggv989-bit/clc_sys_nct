@@ -849,7 +849,7 @@ export default function DoctorOngoingSessionTab({
                 className={`w-full sm:w-auto justify-center flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold transition cursor-pointer shadow-md ${
                   isFirstVisit && !medicalRecord
                     ? "bg-amber-700 hover:bg-amber-800 text-white"
-                    : "bg-[var(--cr-primary)] hover:bg-[#343F2B] text-white"
+                    : "bg-[var(--cr-primary)] hover:bg-[#142B4A] text-white"
                 }`}
                 title={isFirstVisit && !medicalRecord ? "Medical Intake Required (First Visit)" : "Complete Treatment"}
               >
@@ -1105,7 +1105,7 @@ export default function DoctorOngoingSessionTab({
                             previous_treatments_details: dynamicResponses.previous_treatments || dynamicResponses.previous_injectables || formPreviousTreatmentsDetails
                           });
                         }}
-                        className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                        className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                       >
                         <Save size={14} /> {savingMedicalRecord ? "..." : t.saveMedicalRecordBtn}
                       </button>
@@ -1123,7 +1123,7 @@ export default function DoctorOngoingSessionTab({
                       type="button"
                       onClick={() => handleSaveClinicalNote(activeSessionBooking)}
                       disabled={savingNote}
-                      className="rounded-xl bg-[var(--cr-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1"
+                      className="rounded-xl bg-[var(--cr-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1"
                     >
                       <Save size={12} /> {savingNote ? "..." : t.saveDoctorNotesBtn}
                     </button>
@@ -1139,7 +1139,7 @@ export default function DoctorOngoingSessionTab({
 
                 <div className="mt-4 border-t border-[var(--cr-primary)]/10 pt-4 space-y-2">
                   <span className="text-xs font-bold text-[var(--color-brand-secondary)]">{t.bookingNotesTitle}</span>
-                  <p className="text-xs text-[var(--cr-dark)] leading-relaxed bg-[#F4F5F1] p-3 rounded-2xl font-mono">
+                  <p className="text-xs text-[var(--cr-dark)] leading-relaxed bg-[#F8FAFC] p-3 rounded-2xl font-mono">
                     {(activeSessionBooking.receptionNotes ?? activeSessionBooking.reception_notes) || activeSessionBooking.notes || t.noBookingNotes}
                   </p>
                 </div>
@@ -1345,7 +1345,7 @@ export default function DoctorOngoingSessionTab({
                     <button
                       type="submit"
                       disabled={savingRxInline}
-                      className="w-full sm:w-auto justify-center rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                      className="w-full sm:w-auto justify-center rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                     >
                       <Printer size={14} /> {savingRxInline ? "..." : t.saveAndPrintRxBtn}
                     </button>
@@ -1616,7 +1616,7 @@ export default function DoctorOngoingSessionTab({
                       type="button"
                       onClick={handleAddServiceToSession}
                       disabled={!selectedServiceIdToAdd}
-                      className="w-full sm:w-auto rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shrink-0 shadow-xs"
+                      className="w-full sm:w-auto rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center justify-center gap-1 cursor-pointer shrink-0 shadow-xs"
                     >
                       <Plus size={14} /> {t.addAdditionalServiceBtn}
                     </button>
@@ -1686,7 +1686,7 @@ export default function DoctorOngoingSessionTab({
                   <button
                     type="button"
                     onClick={handleAddProductToSession}
-                    className="w-full rounded-xl bg-[var(--cr-primary)] py-2 text-xs font-bold text-white hover:bg-[#343F2B] transition cursor-pointer"
+                    className="w-full rounded-xl bg-[var(--cr-primary)] py-2 text-xs font-bold text-white hover:bg-[#142B4A] transition cursor-pointer"
                   >
                     {t.addProductToInvoiceBtn}
                   </button>
@@ -1738,7 +1738,7 @@ export default function DoctorOngoingSessionTab({
                 <button
                   type="button"
                   onClick={() => setActiveSessionBooking?.(activeSessionsList[0])}
-                  className="w-full sm:w-auto justify-center rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#343F2B] transition flex items-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto justify-center rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#142B4A] transition flex items-center gap-2 cursor-pointer"
                 >
                   <UserCheck size={16} /> {t.openActiveSessionBtn}
                 </button>
@@ -1823,7 +1823,7 @@ export default function DoctorOngoingSessionTab({
                                     setActiveSessionBooking?.(item);
                                   }
                                 }}
-                                className="inline-flex items-center gap-1 rounded-xl bg-[var(--cr-primary)] text-white px-3 py-1.5 text-xs font-bold shadow-sm hover:bg-[#343F2B] active:scale-95 transition cursor-pointer"
+                                className="inline-flex items-center gap-1 rounded-xl bg-[var(--cr-primary)] text-white px-3 py-1.5 text-xs font-bold shadow-sm hover:bg-[#142B4A] active:scale-95 transition cursor-pointer"
                               >
                                 <Play size={12} />
                                 <span>{isStarted ? (t.openSessionBtn || "Open") : (t.startOngoingSessionBtn || "Start Session")}</span>

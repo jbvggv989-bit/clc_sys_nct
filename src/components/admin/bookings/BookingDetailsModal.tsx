@@ -2252,7 +2252,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 sm:p-5 animate-fadeIn">
-            <div className="w-full max-w-6xl rounded-[32px] bg-[var(--color-brand-light)] p-6 sm:p-8 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[92vh] overflow-y-auto custom-scrollbar border border-[var(--cr-primary)]/15 space-y-6">
+            <div className="w-full max-w-6xl rounded-[32px] bg-[var(--color-brand-light)] p-6 sm:p-8 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[92vh] overflow-y-auto custom-scrollbar border border-[var(--cr-primary)]/15 space-y-6">
               
               {viewMode === "end_session" ? (
                 /* ── COMPREHENSIVE CLINICAL INTAKE & SESSION FINALIZATION VIEW ── */
@@ -2263,7 +2263,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                       <button
                         type="button"
                         onClick={() => setViewMode("details")}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white hover:bg-[#F4F5F1] text-[var(--cr-primary)] border border-[var(--cr-primary)]/20 font-bold text-xs transition shadow-2xs cursor-pointer group"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-white hover:bg-[#F8FAFC] text-[var(--cr-primary)] border border-[var(--cr-primary)]/20 font-bold text-xs transition shadow-2xs cursor-pointer group"
                       >
                         <ChevronLeft size={16} className={`transition-transform group-hover:-translate-x-0.5 ${isRTL ? "rotate-180 group-hover:translate-x-0.5" : ""}`} />
                         <span>{isRTL ? "العودة إلى تفاصيل الحجز" : "Back to Booking Details"}</span>
@@ -2295,7 +2295,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   </div>
 
                   {/* PATIENT HEADER BANNER */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-emerald-900 via-[#2C3524] to-[var(--cr-primary)] p-5 sm:p-6 text-white shadow-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl bg-gradient-to-r from-emerald-900 via-[#142B4A] to-[var(--cr-primary)] p-5 sm:p-6 text-white shadow-md">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex h-13 w-13 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md text-white font-black text-xl border border-white/20 shadow-inner">
                         {(booking.name || "P").slice(0, 2).toUpperCase()}
@@ -2580,7 +2580,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                 type="button"
                                 disabled={savingMedicalRecord}
                                 onClick={() => handleSaveMedicalRecordStandalone()}
-                                className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                                className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                               >
                                 <Save size={14} /> {savingMedicalRecord ? "..." : (isRTL ? "حفظ السجل الطبي" : "Save Medical Record")}
                               </button>
@@ -2599,7 +2599,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               type="button"
                               onClick={handleSaveClinicalNoteStandalone}
                               disabled={savingClinicalNote}
-                              className="rounded-xl bg-[var(--cr-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                              className="rounded-xl bg-[var(--cr-primary)] px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                             >
                               <Save size={12} /> {savingClinicalNote ? "..." : (isRTL ? "حفظ الملاحظات" : "Save Notes")}
                             </button>
@@ -2616,7 +2616,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                         {/* RECEPTION BOOKING NOTES PREVIEW */}
                         <div className="mt-3 border-t border-[var(--cr-primary)]/10 pt-3 space-y-1.5">
                           <span className="text-[11px] font-bold text-[var(--color-brand-secondary)]">{isRTL ? "ملاحظات الاستقبال الأصلية" : "Original Booking Notes"}</span>
-                          <p className="text-xs text-[var(--cr-dark)] bg-[#F4F5F1] p-3 rounded-2xl font-mono leading-relaxed">
+                          <p className="text-xs text-[var(--cr-dark)] bg-[#F8FAFC] p-3 rounded-2xl font-mono leading-relaxed">
                             {(booking.receptionNotes ?? (booking as any).reception_notes) || booking.notes || (isRTL ? "لا توجد ملاحظات سابقة" : "No booking notes")}
                           </p>
                         </div>
@@ -2843,7 +2843,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                             <button
                               type="submit"
                               disabled={savingRxInline}
-                              className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                              className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                             >
                               <Printer size={14} /> {savingRxInline ? "..." : (isRTL ? "حفظ وطباعة الروشتة" : "Save & Print")}
                             </button>
@@ -2994,7 +2994,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                       type="button"
                                       onClick={handleAddServiceToSession}
                                       disabled={!selectedServiceIdToAdd}
-                                      className="w-full sm:w-auto px-5 py-2 rounded-xl bg-[var(--cr-primary)] text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                      className="w-full sm:w-auto px-5 py-2 rounded-xl bg-[var(--cr-primary)] text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                                     >
                                       <Plus size={14} /> {isRTL ? "إضافة الخدمة" : "Add Service"}
                                     </button>
@@ -3048,7 +3048,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                         type="button"
                                         onClick={handleAddServiceToSession}
                                         disabled={!selectedServiceIdToAdd}
-                                        className="w-full sm:w-auto px-5 py-2 rounded-xl bg-[var(--cr-primary)] text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                        className="w-full sm:w-auto px-5 py-2 rounded-xl bg-[var(--cr-primary)] text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
                                       >
                                         <Plus size={14} /> {isRTL ? "تسجيل الخدمة الإضافية" : "Record Additional Service"}
                                       </button>
@@ -3140,7 +3140,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                             type="button"
                             onClick={handleAddProductToSession}
                             disabled={!selectedSessionProductId}
-                            className="w-full rounded-xl bg-[var(--cr-primary)] py-2 text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1"
+                            className="w-full rounded-xl bg-[var(--cr-primary)] py-2 text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1"
                           >
                             <Plus size={14} /> {isRTL ? "إضافة المنتج للجلسة وخصمه من المخزون" : "Add Product & Deduct Stock"}
                           </button>
@@ -3352,7 +3352,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     <span className={`rounded-full px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${
                       booking.isManual 
                         ? 'bg-[#E8F0FE] text-[#1967D2]' 
-                        : 'bg-[#FAF5EB] text-[var(--cr-accent)]'
+                        : 'bg-[#F8FAFC] text-[var(--cr-accent)]'
                     }`}>
                       {booking.isManual ? "MANUAL BOOKING" : "WEBSITE BOOKING"}
                     </span>
@@ -3370,7 +3370,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               onClose();
                               onEditPreviousBooking(booking);
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-full bg-[#2D3F2A] hover:bg-[#1E2D1C] text-white px-3 py-0.5 text-[11px] font-bold shadow-2xs transition cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#142B4A] hover:bg-[#142B4A] text-white px-3 py-0.5 text-[11px] font-bold shadow-2xs transition cursor-pointer"
                             title={isRTL ? "تعديل الحجز السابق" : "Edit Previous Booking"}
                           >
                             <Pencil size={11} />
@@ -3416,8 +3416,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   {/* 1. PATIENT INFORMATION CARD */}
                   <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-5 space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[11px] uppercase tracking-wider">
-                        <User size={14} className="text-[#0F3826]" />
+                      <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[11px] uppercase tracking-wider">
+                        <User size={14} className="text-[#142B4A]" />
                         <span>PATIENT INFORMATION</span>
                       </div>
                       <button
@@ -3588,8 +3588,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     {/* Card A: SERVICE */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-1 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                          <ShoppingBag size={13} className="text-[#0F3826]" />
+                        <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                          <ShoppingBag size={13} className="text-[#142B4A]" />
                           <span>SERVICE</span>
                         </div>
                         {hasPermission("bookings.edit") && booking.status !== 'completed' && (
@@ -3617,8 +3617,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
                     {/* Card B: DATE & TIME */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-1 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                        <Calendar size={13} className="text-[#0F3826]" />
+                      <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                        <Calendar size={13} className="text-[#142B4A]" />
                         <span>DATE &amp; TIME</span>
                       </div>
                       <p className="font-bold text-xs text-[var(--cr-dark)] flex items-center gap-1.5 pt-0.5">
@@ -3646,8 +3646,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     {/* Card C: SESSION TYPE & PAYMENT MODE */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-1 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                          <User size={13} className="text-[#0F3826]" />
+                        <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                          <User size={13} className="text-[#142B4A]" />
                           <span>SESSION TYPE</span>
                         </div>
                         {isLaserPerPulse ? (
@@ -3682,8 +3682,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Card A: DOCTOR */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-1 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                        <User size={13} className="text-[#0F3826]" />
+                      <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                        <User size={13} className="text-[#142B4A]" />
                         <span>DOCTOR</span>
                       </div>
                       <p className="font-black text-sm text-[var(--cr-dark)] pt-0.5">
@@ -3697,8 +3697,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
                     {/* Card B: LOCATION */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-1 shadow-2xs">
-                      <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                        <MapPin size={13} className="text-[#0F3826]" />
+                      <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                        <MapPin size={13} className="text-[#142B4A]" />
                         <span>LOCATION</span>
                       </div>
                       <p className="font-black text-sm text-[var(--cr-dark)] pt-0.5">
@@ -3722,8 +3722,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   {/* 4. SERVICE DETAILS CARD */}
                   <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-5 space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[11px] uppercase tracking-wider">
-                        <Box size={14} className="text-[#0F3826]" />
+                      <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[11px] uppercase tracking-wider">
+                        <Box size={14} className="text-[#142B4A]" />
                         <span>SERVICE DETAILS</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -3871,8 +3871,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     {/* Card A: PRODUCTS & CONSUMABLES */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-2 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                          <Box size={13} className="text-[#0F3826]" />
+                        <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                          <Box size={13} className="text-[#142B4A]" />
                           <span>PRODUCTS &amp; CONSUMABLES</span>
                         </div>
                         <button
@@ -3903,8 +3903,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     {/* Card B: PRESCRIPTION */}
                     <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-2.5 shadow-2xs">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                          <FileText size={13} className="text-[#0F3826]" />
+                        <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                          <FileText size={13} className="text-[#142B4A]" />
                           <span>PRESCRIPTION</span>
                         </div>
                         {drawerPrescriptions.length > 0 ? (
@@ -3960,7 +3960,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                           <div className="space-y-2.5">
                             {/* Diagnosis Box */}
                             {rx.diagnosis && (
-                              <div className="rounded-xl bg-[#F4F5F1] p-2.5 border border-[var(--cr-primary)]/10">
+                              <div className="rounded-xl bg-[#F8FAFC] p-2.5 border border-[var(--cr-primary)]/10">
                                 <span className="text-[10px] font-extrabold text-[var(--color-brand-secondary)] uppercase tracking-wider block">
                                   Diagnosis
                                 </span>
@@ -3984,13 +3984,13 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                     >
                                       <div className="flex items-center justify-between gap-1">
                                         <span className="font-extrabold text-[var(--cr-dark)] flex items-center gap-1.5 truncate">
-                                          <span className="h-4 w-4 rounded-full bg-[#0F3826]/10 text-[#0F3826] flex items-center justify-center text-[10px] font-bold shrink-0">
+                                          <span className="h-4 w-4 rounded-full bg-[#142B4A]/10 text-[#142B4A] flex items-center justify-center text-[10px] font-bold shrink-0">
                                             {mIdx + 1}
                                           </span>
                                           <span className="truncate">{med.name || med.medicine_name || med.medicine || "Medication"}</span>
                                         </span>
                                         {med.dosage && (
-                                          <span className="text-[10px] font-bold text-[#0F3826] bg-[#EBF7EE] px-1.5 py-0.5 rounded shrink-0">
+                                          <span className="text-[10px] font-bold text-[#142B4A] bg-[#EBF7EE] px-1.5 py-0.5 rounded shrink-0">
                                             {med.dosage}
                                           </span>
                                         )}
@@ -4005,7 +4005,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                       )}
 
                                       {med.instructions && (
-                                        <p className="text-[11px] text-[#7A8A71] italic ps-5">
+                                        <p className="text-[11px] text-[#8FA3B8] italic ps-5">
                                           ↳ {med.instructions}
                                         </p>
                                       )}
@@ -4058,7 +4058,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               <button
                                 type="button"
                                 onClick={() => printPrescription(rx, booking)}
-                                className="flex-1 rounded-xl bg-[#0F3826] text-white py-1.5 px-2.5 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-[#0A271A] transition shadow-2xs cursor-pointer"
+                                className="flex-1 rounded-xl bg-[#142B4A] text-white py-1.5 px-2.5 text-[11px] font-bold flex items-center justify-center gap-1 hover:bg-[#0A271A] transition shadow-2xs cursor-pointer"
                               >
                                 <Printer size={12} />
                                 <span>Print</span>
@@ -4077,8 +4077,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
                   {/* 6. BOOKING INFORMATION CARD */}
                   <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-3 shadow-2xs">
-                    <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[10px] uppercase tracking-wider">
-                      <Info size={13} className="text-[#0F3826]" />
+                    <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[10px] uppercase tracking-wider">
+                      <Info size={13} className="text-[#142B4A]" />
                       <span>BOOKING INFORMATION</span>
                     </div>
 
@@ -4148,7 +4148,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                         <Calendar size={20} />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-[#0F3826]">
+                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-[#142B4A]">
                           SESSION FLOW
                         </h4>
                         <p className="text-xs text-[var(--color-brand-secondary)] font-medium leading-tight mt-0.5">
@@ -4185,7 +4185,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               console.error(err);
                             }
                           }}
-                          className="w-full rounded-2xl bg-[#0F3826] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                          className="w-full rounded-2xl bg-[#142B4A] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                         >
                           <User size={14} />
                           <span>Check In</span>
@@ -4212,7 +4212,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               console.error(err);
                             }
                           }}
-                          className="w-full rounded-2xl bg-[#0F3826] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                          className="w-full rounded-2xl bg-[#142B4A] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                         >
                           <Play size={14} />
                           <span>Start Session</span>
@@ -4252,7 +4252,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               onClose();
                               setCheckoutBooking(b);
                             }}
-                            className="w-full rounded-2xl bg-[#0F3826] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                            className="w-full rounded-2xl bg-[#142B4A] text-white py-3 text-xs font-bold hover:bg-[#0A271A] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                           >
                             <Receipt size={14} />
                             <span>Pay &amp; Settle Invoice</span>
@@ -4334,8 +4334,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
                   {/* 3. PAYMENT SUMMARY CARD */}
                   <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-5 space-y-4 shadow-2xs">
-                    <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[11px] uppercase tracking-wider">
-                      <Wallet size={14} className="text-[#0F3826]" />
+                    <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[11px] uppercase tracking-wider">
+                      <Wallet size={14} className="text-[#142B4A]" />
                       <span>PAYMENT SUMMARY</span>
                     </div>
 
@@ -4451,8 +4451,8 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                     return (
                       <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-5 space-y-3 shadow-2xs">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-[#0F3826] font-extrabold text-[11px] uppercase tracking-wider">
-                            <FileText size={14} className="text-[#0F3826]" />
+                          <div className="flex items-center gap-1.5 text-[#142B4A] font-extrabold text-[11px] uppercase tracking-wider">
+                            <FileText size={14} className="text-[#142B4A]" />
                             <span>NOTES</span>
                           </div>
                           {hasPermission("bookings.edit") && booking.status !== 'completed' && !isEditingNotes && (
@@ -4477,7 +4477,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               value={notesDraft}
                               onChange={(e) => setNotesDraft(e.target.value)}
                               placeholder="Enter notes, observations, or instructions..."
-                              className="w-full rounded-xl border border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] p-2.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#0F3826]"
+                              className="w-full rounded-xl border border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] p-2.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#142B4A]"
                             />
                             <div className="flex items-center justify-end gap-2">
                               <button
@@ -4495,7 +4495,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                   setBooking((prev: any) => prev ? { ...prev, receptionNotes: cleanNote } : null);
                                   setIsEditingNotes(false);
                                 }}
-                                className="px-3.5 py-1.5 rounded-xl bg-[#0F3826] text-white text-xs font-bold hover:bg-[#0A271A] transition shadow-xs cursor-pointer"
+                                className="px-3.5 py-1.5 rounded-xl bg-[#142B4A] text-white text-xs font-bold hover:bg-[#0A271A] transition shadow-xs cursor-pointer"
                               >
                                 Save Note
                               </button>
@@ -4620,7 +4620,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                 type="button"
                 disabled={!selectedDrawerProductId}
                 onClick={handleAddProductToBooking}
-                className="w-1/2 rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 shadow-sm"
+                className="w-1/2 rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 shadow-sm"
               >
                 Add to Invoice
               </button>
@@ -4866,7 +4866,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                 <button
                   type="submit"
                   disabled={savingDrawerRx}
-                  className="w-1/2 rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white hover:bg-[#343F2B] transition disabled:opacity-50 shadow-sm"
+                  className="w-1/2 rounded-xl bg-[var(--cr-primary)] py-2.5 text-xs font-bold text-white hover:bg-[#142B4A] transition disabled:opacity-50 shadow-sm"
                 >
                   {savingDrawerRx ? "Saving..." : "Save Prescription"}
                 </button>
@@ -4982,7 +4982,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                             ? "bg-[#EBF7EE] border-[#1E7E34] shadow-xs"
                             : isCurrent
                               ? "bg-amber-50/70 border-amber-200 hover:bg-amber-50"
-                              : "bg-white border-[var(--cr-primary)]/10 hover:border-[var(--cr-primary)]/30 hover:bg-[#F4F5F1]"
+                              : "bg-white border-[var(--cr-primary)]/10 hover:border-[var(--cr-primary)]/30 hover:bg-[#F8FAFC]"
                         }`}
                       >
                         <div className="min-w-0 pr-2">
@@ -5042,7 +5042,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   type="button"
                   disabled={!selectedNewServiceId || String(selectedNewServiceId) === String(primaryServiceId || booking.serviceId)}
                   onClick={() => setShowPriceConfirmModal(true)}
-                  className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-black text-white hover:bg-[#343F2B] transition disabled:opacity-40 cursor-pointer shadow-sm"
+                  className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-black text-white hover:bg-[#142B4A] transition disabled:opacity-40 cursor-pointer shadow-sm"
                 >
                   <span>{isRTL ? "مراجعة وتأكيد السعر" : "Review & Confirm Price"}</span>
                   <ArrowRight size={14} className={isRTL ? "rotate-180" : ""} />
@@ -5168,7 +5168,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   type="button"
                   disabled={isSavingServiceChange}
                   onClick={handleConfirmServiceChange}
-                  className="flex items-center gap-2 rounded-2xl bg-[#0F3826] px-6 py-2.5 text-xs font-black text-white hover:bg-[#0A271A] transition disabled:opacity-50 cursor-pointer shadow-md"
+                  className="flex items-center gap-2 rounded-2xl bg-[#142B4A] px-6 py-2.5 text-xs font-black text-white hover:bg-[#0A271A] transition disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   {isSavingServiceChange ? (
                     <>

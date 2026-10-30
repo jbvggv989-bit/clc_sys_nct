@@ -39,7 +39,7 @@ export function AboutPageIntro() {
           style={{
             position: "relative",
             backgroundColor: "var(--cr-secondary, var(--color-brand-tint))",
-            border: "1px solid rgba(196,174,124,0.35)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 80px) clamp(24px, 5vw, 72px)",
           }}
@@ -151,7 +151,7 @@ export function AboutPageIntro() {
               width: 22px;
               height: 22px;
               border-radius: 6px;
-              background-color: rgba(196,174,124,0.25);
+              background-color: rgba(54,166,160,0.20);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -326,7 +326,7 @@ export function AboutPageIntro() {
                       width: "44px",
                       height: "44px",
                       borderRadius: "50%",
-                      backgroundColor: "rgba(196,174,124,0.2)",
+                      backgroundColor: "rgba(54,166,160,0.15)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -382,7 +382,7 @@ export function AboutPageIntro() {
                     transition: "all 0.3s ease",
                     letterSpacing: "0.02em",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#B59E6A"}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2D8B86"}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--cr-accent, var(--cr-accent))"}
                 >
                   {t.nav.makeAppointment}

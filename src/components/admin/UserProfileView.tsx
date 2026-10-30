@@ -927,12 +927,12 @@ export default function UserProfileView({
     <div dir={dir} className="w-full max-w-7xl mx-auto space-y-6 pb-12 animate-fadeIn text-[var(--cr-dark)] print:p-0 print:m-0 print:max-w-none">
       
       {/* ── HEADER USER PROFILE CARD ── */}
-      <div className="rounded-[32px] border border-[var(--cr-primary)]/12 bg-[#F9F9F7] p-4 sm:p-6 md:p-8 shadow-xs space-y-6">
+      <div className="rounded-[32px] border border-[var(--cr-primary)]/12 bg-[#F8FAFC] p-4 sm:p-6 md:p-8 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-5">
             {/* Avatar Container with Camera Icon Overlay */}
             <div className="relative group shrink-0">
-              <div className="h-24 w-24 rounded-full bg-[#EBEFE9] text-[var(--cr-primary)] border-2 border-white shadow-md flex items-center justify-center text-3xl font-extrabold font-sans overflow-hidden">
+              <div className="h-24 w-24 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] border-2 border-white shadow-md flex items-center justify-center text-3xl font-extrabold font-sans overflow-hidden">
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
                 ) : (
@@ -941,7 +941,7 @@ export default function UserProfileView({
               </div>
               {onAvatarUpload && (
                 <label
-                  className="absolute bottom-0 right-0 p-2 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-lg hover:scale-105 hover:bg-[#2e3a26] transition flex items-center justify-center border-2 border-white"
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-lg hover:scale-105 hover:bg-[#0E1F36] transition flex items-center justify-center border-2 border-white"
                   title={tr?.uploadProfilePicture ?? "Upload Profile Picture"}
                 >
                   <Camera size={14} />
@@ -962,7 +962,7 @@ export default function UserProfileView({
             <div className="text-center sm:text-start space-y-1.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                 <h1 className="text-2xl md:text-3xl font-black text-[var(--cr-dark)] tracking-tight">{displayName}</h1>
-                <span className="rounded-xl bg-[#EDE4C8] px-3 py-1 text-xs font-bold text-[var(--cr-primary)] border border-[var(--cr-accent)]/30 capitalize">
+                <span className="rounded-xl bg-[#F1F5F9] px-3 py-1 text-xs font-bold text-[var(--cr-primary)] border border-[var(--cr-accent)]/30 capitalize">
                   {displayRole}
                 </span>
               </div>
@@ -1178,7 +1178,7 @@ export default function UserProfileView({
             <button
               type="submit"
               disabled={updatingPassword}
-              className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 font-bold text-white hover:bg-[#2e3a26] disabled:opacity-60"
+              className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 font-bold text-white hover:bg-[#0E1F36] disabled:opacity-60"
             >
               {updatingPassword ? (tr?.updating ?? "Updating...") : (tr?.updatePassword ?? "Update Password")}
             </button>
@@ -1202,7 +1202,7 @@ export default function UserProfileView({
           {/* Quick Badges in Header */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Shift Badge */}
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#F9F9F7] border border-[var(--cr-primary)]/15 px-3 py-1 text-xs font-extrabold text-[var(--cr-primary)] shadow-2xs">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#F8FAFC] border border-[var(--cr-primary)]/15 px-3 py-1 text-xs font-extrabold text-[var(--cr-primary)] shadow-2xs">
               {weeklyScheduleData.shiftType.toLowerCase().includes("night") || weeklyScheduleData.shiftType.toLowerCase().includes("evening") || weeklyScheduleData.shiftType.includes("مسائية") ? (
                 <Moon size={13} className="text-indigo-500" />
               ) : weeklyScheduleData.shiftType.toLowerCase().includes("multi") || weeklyScheduleData.shiftType.includes("متعدد") ? (
@@ -1214,7 +1214,7 @@ export default function UserProfileView({
             </span>
 
             {/* Total Weekly Hours Badge */}
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#EDE4C8] border border-[var(--cr-accent)]/40 px-3 py-1 text-xs font-black text-[var(--cr-primary)] shadow-2xs">
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#F1F5F9] border border-[var(--cr-accent)]/40 px-3 py-1 text-xs font-black text-[var(--cr-primary)] shadow-2xs">
               <Timer size={13} className="text-[var(--cr-primary)]" />
               <span>{weeklyScheduleData.totalWeeklyHours} {tr?.hoursPerWeek ?? "hrs/week"}</span>
             </span>
@@ -1317,7 +1317,7 @@ export default function UserProfileView({
                     className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition whitespace-nowrap ${
                       selectedScheduleBranch === b.id
                         ? "bg-[var(--cr-primary)] text-white shadow-xs"
-                        : "bg-[#F5F5F3] text-[var(--color-brand-secondary)] hover:bg-[#EBEFE9] hover:text-[var(--cr-dark)]"
+                        : "bg-[#F8FAFC] text-[var(--color-brand-secondary)] hover:bg-[#F1F5F9] hover:text-[var(--cr-dark)]"
                     }`}
                   >
                     {b.name}
@@ -1341,7 +1341,7 @@ export default function UserProfileView({
                   } ${
                     day.isOpen
                       ? "border-emerald-200/90 bg-emerald-50/25 hover:bg-emerald-50/50"
-                      : "border-[var(--cr-primary)]/10 bg-[#F9F9F7]/70 text-[var(--color-brand-secondary)]"
+                      : "border-[var(--cr-primary)]/10 bg-[#F8FAFC]/70 text-[var(--color-brand-secondary)]"
                   }`}
                 >
                   {/* Top Day Header & Status */}
@@ -1551,7 +1551,7 @@ export default function UserProfileView({
         </div>
 
         {/* Net Salary Highlight Card */}
-        <div className="rounded-2xl bg-[#EDE4C8]/40 border border-[var(--cr-accent)]/40 p-5 flex items-center justify-between">
+        <div className="rounded-2xl bg-[#F1F5F9]/40 border border-[var(--cr-accent)]/40 p-5 flex items-center justify-between">
           <span className="text-sm font-extrabold text-[var(--cr-primary)]">{tr?.netSalary ?? "Net Salary"}</span>
           <span className="text-xl md:text-2xl font-black text-[var(--cr-primary)]">{netSalaryNotSet ? "—" : `${netSalary.toLocaleString()} EGP`}</span>
         </div>
@@ -1628,7 +1628,7 @@ export default function UserProfileView({
                 <button
                   type="submit"
                   disabled={savingUser}
-                  className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 font-bold text-white hover:bg-[#2e3a26] transition disabled:opacity-50"
+                  className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 font-bold text-white hover:bg-[#0E1F36] transition disabled:opacity-50"
                 >
                   {savingUser ? (tr?.saving ?? "Saving...") : (tr?.saveChanges ?? "Save Changes")}
                 </button>

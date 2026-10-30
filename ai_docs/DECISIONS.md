@@ -4404,3 +4404,33 @@ The website copy and visual assets were originally tailored around dermatology a
    - Removed all remaining instances of "Revera" / "ريفيرا" in `LaserLanding.tsx`, `DoctorAccountView.tsx`, `useCustomerProfile.ts`, `AdminBookingsView.tsx`, and `ServicesPageSettingsView.tsx`.
 4. **Verification**:
    - Verified through full Next.js production build (`npm run build`) with zero TypeScript, compiler, or lint errors.
+
+
+## DEC-146: Purge Legacy Olive Green and Sage Palette Remnants
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+Following the primary color palette rebrand (DEC-142), legacy olive green, sage, and khaki design tokens still lingered in several core user-facing and admin components:
+- `HeroSlider.tsx`: Hero slide dark gradient overlay still used old deep olive `rgba(31,37,26,...)`, casting a green tint over hero images.
+- Section Card Borders: Curved section frames in `AboutPageIntro.tsx`, `AppointmentSection.tsx`, `OurApproachSection.tsx`, `SiteFooter.tsx`, `TestimonialsSection.tsx`, and `WhyChooseUs.tsx` used old olive-gold `rgba(196,174,124,...)`.
+- `BookingModal.tsx`: Terms banner, legal agreement links, and checkboxes used olive green `#2D522D` with light olive backgrounds `#E2EBE2` and `#F4F8F4`.
+- `TermsModal.tsx` & `/terms`: Section number badges, contact buttons, and trust banners were styled in `#2D522D`, `#E2EBE2`, `#DBE8DB`, and `#EEF5EE`.
+- `/login`: The entire staff login portal retained legacy khaki backgrounds (`#F4F1EA`, `#FAF9F5`), borders (`#E7E2D6`, `#D9D3C7`), and sage text (`#8B9882`, `#6B7564`).
+- Admin & Staff Views: Over 118 button hover instances of `#2e3a26`, 66 sage text instances of `#8A9A81`, and deep olive headers (`#0F3826`, `#343F2B`).
+
+**Decision:**
+1. **Public Components & Hero Overlay**:
+   - Replaced hero overlay gradient in `HeroSlider.tsx` from `rgba(31,37,26,...)` to crisp dark navy `rgba(13,28,48,...)`.
+   - Replaced section card borders across all sections from `rgba(196,174,124,...)` to accent teal `rgba(54,166,160,0.25)`.
+   - Replaced `BookingModal.tsx` and `TermsModal.tsx` badges and active states with Teal `#36A6A0` on soft teal `#E6F6F5` / `#CCEDEB`.
+   - Redesigned `/login` to use clean Slate 50 canvas `#F8FAFC`, Pure White card `#FFFFFF`, Slate border `#E2E8F0`, and Slate Blue text `#8FA3B8`.
+2. **Global Hover & Admin System Cleanup**:
+   - Mapped all button hovers from `#2e3a26` to Navy hover tone `#0E1F36`.
+   - Mapped all deep olive headings and active states to Primary Navy `#142B4A`.
+   - Mapped all sage secondary text to Slate Blue `#8FA3B8` / `#64748B`.
+   - Updated token documentation in `src/app/globals.css`.
+3. **Verification**:
+   - Automated codebase scan verified 0 remaining occurrences of legacy olive/sage hexes and rgb patterns.
+   - Verified clean Next.js production build (`npm run build`) with zero compiler or TypeScript errors.

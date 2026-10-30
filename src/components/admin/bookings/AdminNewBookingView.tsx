@@ -1509,7 +1509,7 @@ export default function AdminNewBookingView({
                 <button
                   type="button"
                   onClick={() => setShowAdditionalPatientFields(!showAdditionalPatientFields)}
-                  className="text-xs font-bold text-[#0F3826] hover:underline bg-[#EBF2EB] px-3 py-1.5 rounded-xl flex items-center gap-1 transition cursor-pointer"
+                  className="text-xs font-bold text-[#142B4A] hover:underline bg-[#F1F5F9] px-3 py-1.5 rounded-xl flex items-center gap-1 transition cursor-pointer"
                 >
                   <User size={13} />
                   <span>{showAdditionalPatientFields ? (tr.hideAccountDetailsBtn || "Hide Account Details") : (tr.patientAccountDetailsBtn || "+ Patient Account Details")}</span>
@@ -1855,7 +1855,7 @@ export default function AdminNewBookingView({
                         placeholder={tr.agePlaceholder || "e.g. 28"}
                         className={`w-full rounded-2xl border px-3.5 py-2.5 font-bold outline-none text-xs ${
                           dob
-                            ? "border-gray-200 bg-[#F7F7F6] text-gray-700 cursor-not-allowed select-none"
+                            ? "border-gray-200 bg-[#F8FAFC] text-gray-700 cursor-not-allowed select-none"
                             : "border-[var(--cr-primary)]/20 bg-white text-[var(--cr-dark)] focus:border-emerald-700"
                         }`}
                       />
@@ -1867,8 +1867,8 @@ export default function AdminNewBookingView({
 
                   {/* ADDRESS INFORMATION SECTION (Photo 2) */}
                   <div className="pt-3 space-y-3">
-                    <div className="flex items-center gap-2 text-[#0F3826] font-black text-xs uppercase tracking-wider">
-                      <div className="h-6 w-6 rounded-full bg-[#EBF2EB] flex items-center justify-center text-[#0F3826]">
+                    <div className="flex items-center gap-2 text-[#142B4A] font-black text-xs uppercase tracking-wider">
+                      <div className="h-6 w-6 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#142B4A]">
                         <MapPin size={13} />
                       </div>
                       <span>{tr.addressInformationHeading || "ADDRESS INFORMATION"}</span>
@@ -1920,8 +1920,8 @@ export default function AdminNewBookingView({
 
                   {/* FINANCIAL INFORMATION SECTION (OPTIONAL - Photo 2) */}
                   <div className="pt-3 space-y-3">
-                    <div className="flex items-center gap-2 text-[#0F3826] font-bold text-xs">
-                      <div className="h-6 w-6 rounded-full bg-[#EBF2EB] flex items-center justify-center text-[#0F3826]">
+                    <div className="flex items-center gap-2 text-[#142B4A] font-bold text-xs">
+                      <div className="h-6 w-6 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#142B4A]">
                         <Wallet size={13} />
                       </div>
                       <span>{tr.financialInformationHeading || "Financial Information (Optional)"}</span>
@@ -2038,7 +2038,7 @@ export default function AdminNewBookingView({
               </div>
 
               {/* ── ADDITIONAL SERVICES SECTION (MULTI-SERVICE SUPPORT) ── */}
-              <div className="space-y-2.5 rounded-2xl border border-[var(--cr-primary)]/15 bg-[#F8FAF7] p-3.5 sm:p-4">
+              <div className="space-y-2.5 rounded-2xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] p-3.5 sm:p-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Layers size={16} className="text-emerald-800 shrink-0" />
@@ -2441,7 +2441,7 @@ export default function AdminNewBookingView({
                 <div className="pt-1 pb-1">
                   {!foundCustomer && !phone ? (
                     <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/10 text-xs text-[var(--color-brand-secondary)]">
-                      <Package size={16} className="shrink-0 text-[#8B9882]" />
+                      <Package size={16} className="shrink-0 text-[#8FA3B8]" />
                       <span className="font-medium">
                         {tr.selectPatientForPackagesHint || "Select or enter a patient above to check available packages and session balances."}
                       </span>
@@ -2528,7 +2528,7 @@ export default function AdminNewBookingView({
                                           {isSelected ? (
                                             <Check size={13} className="text-emerald-700 shrink-0" />
                                           ) : (
-                                            <Sparkles size={13} className="text-[#8B9882] shrink-0" />
+                                            <Sparkles size={13} className="text-[#8FA3B8] shrink-0" />
                                           )}
                                           <span className="truncate">{svcName}</span>
                                         </div>
@@ -2746,7 +2746,7 @@ export default function AdminNewBookingView({
                                     title={isDisabled && !isSelected ? tr.slotUnavailableTitle : undefined}
                                     className={`h-11 rounded-xl border px-3 text-xs font-bold transition flex items-center justify-between gap-1.5 select-none ${
                                       isSelected
-                                        ? "border-[var(--cr-primary)] bg-[#1E3A2B] text-white shadow-sm ring-2 ring-emerald-700/20"
+                                        ? "border-[var(--cr-primary)] bg-[#142B4A] text-white shadow-sm ring-2 ring-emerald-700/20"
                                         : isDisabled
                                         ? "cursor-not-allowed border-[var(--cr-divider)] bg-[var(--cr-white)] text-[var(--cr-secondary)] opacity-50"
                                         : "cursor-pointer border-[var(--cr-primary)]/15 bg-white text-[var(--cr-dark)] hover:border-emerald-700 hover:bg-emerald-50/50"
@@ -2756,7 +2756,7 @@ export default function AdminNewBookingView({
                                     {isSelected ? (
                                       <Check size={14} className="shrink-0 text-white" />
                                     ) : (
-                                      <Clock size={14} className="shrink-0 text-[#8B9882]" />
+                                      <Clock size={14} className="shrink-0 text-[#8FA3B8]" />
                                     )}
                                   </button>
                                 );
@@ -2978,7 +2978,7 @@ export default function AdminNewBookingView({
           type="button"
           disabled={submitting || selectedTimes.length === 0 || isBranchClosedToday || isDoctorClosedToday || availableTimeSlots.length === 0}
           onClick={handleOpenSummaryModal}
-          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#1E3A2B] text-white font-extrabold text-xs hover:bg-[#162C20] transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+          className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#142B4A] text-white font-extrabold text-xs hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
         >
           {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
           <span>{tr.createBookingBtn}</span>
@@ -2991,7 +2991,7 @@ export default function AdminNewBookingView({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-[var(--cr-primary)]/15 space-y-6 relative">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
-              <div className="flex items-center gap-2.5 text-[#1E3A2B]">
+              <div className="flex items-center gap-2.5 text-[#142B4A]">
                 <div className="h-9 w-9 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-800 shrink-0">
                   <CheckCircle2 size={20} />
                 </div>
@@ -3151,7 +3151,7 @@ export default function AdminNewBookingView({
                   await handleCreateBooking("normal");
                   setShowConfirmModal(false);
                 }}
-                className="px-6 py-3 rounded-2xl bg-[#1E3A2B] text-white font-extrabold text-xs hover:bg-[#162C20] transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                className="px-6 py-3 rounded-2xl bg-[#142B4A] text-white font-extrabold text-xs hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
                 {submitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
                 <span>{submitting ? tr.creatingBtn : tr.confirmCreateBookingBtn}</span>
@@ -3166,8 +3166,8 @@ export default function AdminNewBookingView({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center space-y-6 animate-scaleIn border border-[var(--cr-primary)]/15">
             {/* Top Avatar Icon */}
-            <div className="h-20 w-20 rounded-full bg-[#EBF2EB] mx-auto flex items-center justify-center text-[#1E4D38] shadow-inner">
-              <ShieldCheck size={38} className="text-[#0F3826]" />
+            <div className="h-20 w-20 rounded-full bg-[#F1F5F9] mx-auto flex items-center justify-center text-[#142B4A] shadow-inner">
+              <ShieldCheck size={38} className="text-[#142B4A]" />
             </div>
 
             {/* Title & Question */}
@@ -3188,7 +3188,7 @@ export default function AdminNewBookingView({
                   setShowAdditionalPatientFields(true);
                   setShowPatientAccountModal(false);
                 }}
-                className="flex-1 py-3 px-5 rounded-2xl bg-[#0F3826] text-white font-bold text-sm hover:bg-[#0A271A] transition shadow-md cursor-pointer"
+                className="flex-1 py-3 px-5 rounded-2xl bg-[#142B4A] text-white font-bold text-sm hover:bg-[#0A271A] transition shadow-md cursor-pointer"
               >
                 {tr.patientAccountModalNo || "No"}
               </button>

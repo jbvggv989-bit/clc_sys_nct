@@ -402,7 +402,7 @@ export function printPrescription(rx: any, booking?: any) {
           .rx-symbol { font-family: serif; font-size: 32px; font-weight: bold; color: var(--cr-primary); margin-bottom: 8px; line-height: 1; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; }
           th { background: var(--color-brand-tint); color: var(--cr-primary); font-weight: 700; padding: 10px 12px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; border-bottom: 1px solid #E5E7EB; }
-          .instructions-box { margin-top: 20px; font-size: 12px; background: #FAF5EB; border: 1px solid var(--cr-accent); padding: 14px 18px; border-radius: 10px; color: var(--cr-primary); }
+          .instructions-box { margin-top: 20px; font-size: 12px; background: #F8FAFC; border: 1px solid var(--cr-accent); padding: 14px 18px; border-radius: 10px; color: var(--cr-primary); }
           .instructions-box strong { color: var(--cr-dark); display: block; margin-bottom: 4px; font-size: 13px; }
           .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px dashed #D1D5DB; padding-top: 20px; font-size: 12px; color: #6B7280; }
           .doctor-sig { text-align: right; width: 200px; }

@@ -58,7 +58,7 @@ export default function ServiceHoursView({
         <button
           onClick={() => handleSaveBranchServiceHours()}
           disabled={savingBranchHours || !selectedBranchForHoursId}
-          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50"
+          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50"
         >
           {savingBranchHours ? t.savingBtn : t.saveBtn}
         </button>

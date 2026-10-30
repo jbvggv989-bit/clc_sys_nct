@@ -306,9 +306,9 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={onAddPreviousBooking}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-[#F4F7F2] hover:text-[#2D3F2A] text-gray-700 font-bold text-xs shadow-2xs transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-[#F8FAFC] hover:text-[#142B4A] text-gray-700 font-bold text-xs shadow-2xs transition-colors"
             >
-              <History size={15} className="text-[#3D5A45]" />
+              <History size={15} className="text-[#142B4A]" />
               <span>{lang === "ar" ? "إضافة حجز سابق" : "Add Previous Booking"}</span>
             </button>
           )}
@@ -317,7 +317,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             <button
               type="button"
               onClick={onNewTransaction}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#313A28] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs shadow-sm transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#142B4A] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs shadow-sm transition-all"
             >
               <Plus size={15} />
               <span>{lang === "ar" ? "معاملة جديدة" : "New Transaction"}</span>
@@ -457,7 +457,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               onClick={() => setShowFilterDrawer(!showFilterDrawer)}
               className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all ${
                 showFilterDrawer
-                  ? "bg-[#313A28]/10 text-[#313A28] border-[#313A28]/20"
+                  ? "bg-[#142B4A]/10 text-[#142B4A] border-[#142B4A]/20"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-2xs"
               }`}
             >
@@ -618,7 +618,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
           <table className="w-full text-start text-xs border-collapse min-w-[850px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-[#F9F9F7] text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <tr className="border-b border-gray-100 bg-[#F8FAFC] text-[11px] font-bold uppercase tracking-wider text-gray-500">
                 <th className="py-3.5 px-4 text-start">
                   <button
                     type="button"
@@ -674,7 +674,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     <tr
                       key={tx.id}
                       onClick={() => setSelectedTxnForDetails(tx)}
-                      className="hover:bg-[#F9F9F7]/70 transition-colors cursor-pointer"
+                      className="hover:bg-[#F8FAFC]/70 transition-colors cursor-pointer"
                     >
                       {/* Date & Time */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -696,7 +696,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                       {/* Patient */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="h-8 w-8 rounded-full bg-[#EAE8E3] text-[var(--cr-primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-[#E2E8F0] text-[var(--cr-primary)] font-bold text-xs flex items-center justify-center shrink-0">
                             {patientInitial}
                           </div>
                           <div>
@@ -797,7 +797,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                         setSelectedTxnForDetails(tx);
                                         setActiveDropdownTxnId(null);
                                       }}
-                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-gray-700 hover:bg-[#F9F9F7] font-semibold"
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-gray-700 hover:bg-[#F8FAFC] font-semibold"
                                     >
                                       <Eye size={14} className="text-gray-500" />
                                       <span>{lang === "ar" ? "عرض التفاصيل" : "View Details"}</span>
@@ -811,7 +811,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                                         setSelectedTxnForDetails(tx);
                                         setActiveDropdownTxnId(null);
                                       }}
-                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-gray-700 hover:bg-[#F9F9F7] font-semibold"
+                                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-gray-700 hover:bg-[#F8FAFC] font-semibold"
                                     >
                                       <Printer size={14} className="text-gray-500" />
                                       <span>{lang === "ar" ? "طباعة الإيصال" : "Print Receipt"}</span>
@@ -857,7 +857,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                 <div
                   key={tx.id}
                   onClick={() => setSelectedTxnForDetails(tx)}
-                  className="p-4 hover:bg-[#F9F9F7]/70 transition-colors active:bg-gray-100/60 cursor-pointer space-y-3"
+                  className="p-4 hover:bg-[#F8FAFC]/70 transition-colors active:bg-gray-100/60 cursor-pointer space-y-3"
                 >
                   {/* Top Row: Date, ID, and Badges */}
                   <div className="flex items-center justify-between gap-2">
@@ -877,7 +877,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   {/* Middle Row: Patient & Amount */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-full bg-[#EAE8E3] text-[var(--cr-primary)] font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="h-8 w-8 rounded-full bg-[#E2E8F0] text-[var(--cr-primary)] font-bold text-xs flex items-center justify-center shrink-0">
                         {patientInitial}
                       </div>
                       <div className="min-w-0">
@@ -962,7 +962,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
         </div>
 
         {/* ── Table Footer & Pagination ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 bg-[#F9F9F7] p-4 text-xs font-semibold text-gray-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 bg-[#F8FAFC] p-4 text-xs font-semibold text-gray-500">
           <div>
             Showing {transactions.length === 0 ? 0 : (filters.page - 1) * filters.limit + 1} to{" "}
             {Math.min(filters.page * filters.limit, totalCount)} of {totalCount} transactions
@@ -987,7 +987,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   onClick={() => setFilters((prev) => ({ ...prev, page: p }))}
                   className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
                     filters.page === p
-                      ? "bg-[#313A28] text-white shadow-xs"
+                      ? "bg-[#142B4A] text-white shadow-xs"
                       : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }`}
                 >
@@ -1003,7 +1003,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                   onClick={() => setFilters((prev) => ({ ...prev, page: totalPages }))}
                   className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
                     filters.page === totalPages
-                      ? "bg-[#313A28] text-white shadow-xs"
+                      ? "bg-[#142B4A] text-white shadow-xs"
                       : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }`}
                 >
@@ -1146,7 +1146,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     {list.map((item, idx) => (
                       <div
                         key={item.id || idx}
-                        className="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-emerald-200 transition"
+                        className="rounded-2xl border border-gray-100 bg-[#FFFFFF] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-emerald-200 transition"
                       >
                         <div className="space-y-0.5">
                           <div className="font-bold text-gray-900 flex items-center gap-2">
@@ -1208,7 +1208,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     {list.map((item, idx) => (
                       <div
                         key={item.id || idx}
-                        className="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-rose-200 transition"
+                        className="rounded-2xl border border-gray-100 bg-[#FFFFFF] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-rose-200 transition"
                       >
                         <div className="space-y-0.5">
                           <div className="font-bold text-gray-900">{item.name}</div>
@@ -1261,7 +1261,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
                     {list.map((item, idx) => (
                       <div
                         key={item.id || idx}
-                        className="rounded-2xl border border-gray-100 bg-[#FBFBFA] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-sky-200 transition"
+                        className="rounded-2xl border border-gray-100 bg-[#FFFFFF] p-3.5 flex items-center justify-between gap-3 text-xs hover:border-sky-200 transition"
                       >
                         <div className="space-y-0.5">
                           <div className="font-bold text-gray-900">{item.name}</div>

@@ -110,7 +110,7 @@ export function HeroSlider() {
         className="pointer-events-none absolute inset-0 z-10"
         style={{
           background:
-            "linear-gradient(to top, rgba(31,37,26,0.90) 0%, rgba(31,37,26,0.58) 28%, rgba(31,37,26,0.18) 58%, transparent 100%)",
+            "linear-gradient(to top, rgba(13,28,48,0.90) 0%, rgba(13,28,48,0.58) 28%, rgba(13,28,48,0.18) 58%, transparent 100%)",
         }}
       />
 

@@ -317,7 +317,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
         <button
           type="button"
           onClick={onAddTransaction}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#313A28] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs shadow-sm transition-all shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#142B4A] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs shadow-sm transition-all shrink-0"
         >
           <Plus size={14} />
           <span>{lang === "ar" ? "إضافة معاملة" : "Add Transaction"}</span>
@@ -329,7 +329,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
         <div className="overflow-x-auto [scrollbar-width:thin]">
           <table className="w-full text-start text-xs border-collapse min-w-[700px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-[#F9F9F7] text-[11px] font-bold uppercase tracking-wider text-gray-500">
+              <tr className="border-b border-gray-100 bg-[#F8FAFC] text-[11px] font-bold uppercase tracking-wider text-gray-500">
                 <th className="py-3 px-4 text-start">
                   <button
                     type="button"
@@ -377,7 +377,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
                     <tr
                       key={tx.id}
                       onClick={() => setSelectedTxnForDetails(tx)}
-                      className="hover:bg-[#F9F9F7]/70 transition-colors cursor-pointer"
+                      className="hover:bg-[#F8FAFC]/70 transition-colors cursor-pointer"
                     >
                       {/* Date & Time */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -470,7 +470,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
                                 setSelectedTxnForDetails(tx);
                                 setActiveDropdownTxnId(null);
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-gray-700 hover:bg-[#F9F9F7] font-semibold"
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-gray-700 hover:bg-[#F8FAFC] font-semibold"
                             >
                               <Eye size={13} className="text-gray-500" />
                               <span>{lang === "ar" ? "عرض المعاملة" : "View Transaction"}</span>
@@ -487,7 +487,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
         </div>
 
         {/* ── Table Footer & Pagination ── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 bg-[#F9F9F7] p-3 text-xs font-semibold text-gray-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 bg-[#F8FAFC] p-3 text-xs font-semibold text-gray-500">
           <div>
             Showing {transactions.length === 0 ? 0 : (page - 1) * limit + 1} to{" "}
             {Math.min(page * limit, totalCount)} of {totalCount} transactions
@@ -512,7 +512,7 @@ export const PatientTransactionsHistoryTab: React.FC<PatientTransactionsHistoryT
                   onClick={() => setPage(p)}
                   className={`h-7 w-7 rounded-lg text-xs font-bold transition-all ${
                     page === p
-                      ? "bg-[#313A28] text-white shadow-xs"
+                      ? "bg-[#142B4A] text-white shadow-xs"
                       : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }`}
                 >

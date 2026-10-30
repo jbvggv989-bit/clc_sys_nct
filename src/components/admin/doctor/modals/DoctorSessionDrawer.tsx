@@ -275,7 +275,7 @@ export default function DoctorSessionDrawer({
                   <button
                     type="submit"
                     disabled={savingMedicalRecord}
-                    className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition"
+                    className="rounded-xl bg-[var(--cr-primary)] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition"
                   >
                     {savingMedicalRecord ? "..." : t.saveMedicalRecordBtn}
                   </button>
@@ -392,7 +392,7 @@ export default function DoctorSessionDrawer({
               <button
                 type="button"
                 onClick={() => setScheduleModalBooking(null)}
-                className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#343F2B] transition cursor-pointer text-center"
+                className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition cursor-pointer text-center"
               >
                 {t.closeDrawerBtn}
               </button>
@@ -431,7 +431,7 @@ export default function DoctorSessionDrawer({
                 <button
                   type="button"
                   onClick={() => handleCompleteTreatment(scheduleModalBooking)}
-                  className="w-full sm:w-auto rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#343F2B] transition cursor-pointer text-center"
+                  className="w-full sm:w-auto rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#142B4A] transition cursor-pointer text-center"
                 >
                   {t.completeTreatmentBtn}
                 </button>

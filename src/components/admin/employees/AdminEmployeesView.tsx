@@ -763,7 +763,7 @@ export default function AdminEmployeesView({
           }
           .tagline {
             font-size: 12px;
-            color: #8A9A81;
+            color: #8FA3B8;
             margin: 5px 0 0 0;
             letter-spacing: 0.15em;
             text-transform: uppercase;
@@ -843,7 +843,7 @@ export default function AdminEmployeesView({
           }
           .clinic-info {
             font-size: 10px;
-            color: #8A9A81;
+            color: #8FA3B8;
             line-height: 1.5;
           }
           @media print {
@@ -1223,7 +1223,7 @@ export default function AdminEmployeesView({
             setNewEmployeeOnlineWorkingDaysHours(defaultDays);
             setIsEditingEmployeeModalOpen(true);
           }}
-          className={`${(!hasPermission || hasPermission("employees.create")) ? "flex" : "hidden"} rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition items-center gap-2 shadow-md shrink-0`}
+          className={`${(!hasPermission || hasPermission("employees.create")) ? "flex" : "hidden"} rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition items-center gap-2 shadow-md shrink-0`}
         >
           <Plus size={16} />
           {t.addEmployeeBtn}
@@ -1272,7 +1272,7 @@ export default function AdminEmployeesView({
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm [scrollbar-width:thin]">
         <table className="w-full min-w-[800px] text-sm">
           <thead>
-            <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.employeeInfo}</th>
               <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.phone}</th>
               <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.department}</th>
@@ -1302,7 +1302,7 @@ export default function AdminEmployeesView({
                 const matchProv = providers.find(p => (p.name && emp.name && p.name.trim().toLowerCase() === emp.name.trim().toLowerCase()) || (p.phone && emp.phone && p.phone === emp.phone));
                 const effectiveSalary = matchProv ? (matchProv.fixedSalary ?? matchProv.fixed_salary ?? emp.salary ?? 0) : (emp.salary || 0);
                 return (
-                  <tr key={emp.id} className={`transition hover:bg-[#F9F9F7] ${emp.is_active === false ? "opacity-60" : ""}`}>
+                  <tr key={emp.id} className={`transition hover:bg-[#F8FAFC] ${emp.is_active === false ? "opacity-60" : ""}`}>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-xs font-bold font-serif overflow-hidden shrink-0">
@@ -2123,7 +2123,7 @@ export default function AdminEmployeesView({
                                         }
                                       });
                                     }}
-                                    className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#2e3a26] transition flex items-center gap-1 mt-0.5 cursor-pointer"
+                                    className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#0E1F36] transition flex items-center gap-1 mt-0.5 cursor-pointer"
                                   >
                                     <Plus size={12} /> Add Shift
                                   </button>
@@ -2298,7 +2298,7 @@ export default function AdminEmployeesView({
                                     }
                                   });
                                 }}
-                                className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#2e3a26] transition flex items-center gap-1 mt-0.5 cursor-pointer"
+                                className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#0E1F36] transition flex items-center gap-1 mt-0.5 cursor-pointer"
                               >
                                 <Plus size={12} /> {t.doctorSection.addShift || "Add Shift"}
                               </button>
@@ -2402,7 +2402,7 @@ export default function AdminEmployeesView({
                         Home Address
                       </p>
                       <div>
-                        <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.line1} <span className="text-[var(--cr-accent)]">{t.address.required}</span></label>
+                        <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.line1} <span className="text-[var(--cr-accent)]">{t.address.required}</span></label>
                         <input
                           type="text"
                           placeholder={t.address.line1Placeholder}
@@ -2415,7 +2415,7 @@ export default function AdminEmployeesView({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.line2} <span className="text-[#8A9A81] font-normal">{t.address.optional}</span></label>
+                        <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.line2} <span className="text-[#8FA3B8] font-normal">{t.address.optional}</span></label>
                         <input
                           type="text"
                           placeholder={t.address.line2Placeholder}
@@ -2429,7 +2429,7 @@ export default function AdminEmployeesView({
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.city}</label>
+                          <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.city}</label>
                           <input
                             type="text"
                             placeholder={t.address.cityPlaceholder}
@@ -2442,7 +2442,7 @@ export default function AdminEmployeesView({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.governorate}</label>
+                          <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.governorate}</label>
                           <select
                             value={newEmployeeGovernorateProp}
                             onChange={(e) => {
@@ -2460,7 +2460,7 @@ export default function AdminEmployeesView({
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.postalCode}</label>
+                          <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.postalCode}</label>
                           <input
                             type="text"
                             placeholder={t.address.postalCodePlaceholder}
@@ -2473,7 +2473,7 @@ export default function AdminEmployeesView({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.country}</label>
+                          <label className="block text-[10px] font-semibold text-[#8FA3B8] mb-1">{t.address.country}</label>
                           <input
                             type="text"
                             placeholder={t.address.countryPlaceholder}
@@ -2739,7 +2739,7 @@ export default function AdminEmployeesView({
                 </button>
                 <button
                   type="submit"
-                  className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#2e3a26] transition shadow-md"
+                  className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#0E1F36] transition shadow-md"
                 >
                   {editingEmployee ? t.modal.saveChangesBtn : t.modal.sendInvitationBtn}
                 </button>
@@ -2778,7 +2778,7 @@ export default function AdminEmployeesView({
                   )}
                 </div>
                 <label
-                  className="absolute -bottom-1 -end-1 p-1.5 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-md hover:bg-[#2e3a26] transition flex items-center justify-center"
+                  className="absolute -bottom-1 -end-1 p-1.5 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-md hover:bg-[#0E1F36] transition flex items-center justify-center"
                   title={t.profile.uploadPhotoTitle}
                 >
                   <Camera size={12} />
@@ -3068,7 +3068,7 @@ export default function AdminEmployeesView({
                   <div>
                     <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.employmentType}</span>
                     <div>
-                      <span className="inline-block rounded-lg bg-[#F9F9F7] border border-[var(--cr-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-brand-secondary)]">
+                      <span className="inline-block rounded-lg bg-[#F8FAFC] border border-[var(--cr-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-brand-secondary)]">
                         {t.profile.fullTime}
                       </span>
                     </div>
@@ -3239,11 +3239,11 @@ export default function AdminEmployeesView({
                         type="month"
                         value={attendanceInsightMonth}
                         onChange={(e) => setAttendanceInsightMonth(e.target.value)}
-                        className="px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] bg-[#F7F9F6] border border-[var(--cr-primary)]/20 rounded-lg outline-none focus:border-[var(--cr-primary)]"
+                        className="px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] bg-[#F8FAFC] border border-[var(--cr-primary)]/20 rounded-lg outline-none focus:border-[var(--cr-primary)]"
                       />
                       <button
                         onClick={() => handleExportAttendanceInsights(viewingEmployee, attendanceInsightMonth, empRecords)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[var(--cr-primary)] rounded-lg hover:bg-[#323D2A] transition-all shadow-xs"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[var(--cr-primary)] rounded-lg hover:bg-[#142B4A] transition-all shadow-xs"
                       >
                         <Download size={14} />
                         {t.profile.exportCsvBtn}
@@ -3253,37 +3253,37 @@ export default function AdminEmployeesView({
     
                   {/* Stat Summary Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.totalWorked}</span>
                       <span className="text-base font-bold text-[var(--cr-primary)]">{workedHrs}h {workedRMin}m</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.daysPresent(presentCount)}</span>
                     </div>
     
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.lateArrival}</span>
                       <span className={`text-base font-bold ${totalLateMins > 0 ? 'text-amber-600' : 'text-[var(--cr-primary)]'}`}>{totalLateMins} min</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.lateIncident(lateCount)}</span>
                     </div>
     
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.attendanceEarlyLeave}</span>
                       <span className={`text-base font-bold ${totalEarlyLeaveMins > 0 ? 'text-amber-600' : 'text-[var(--cr-primary)]'}`}>{totalEarlyLeaveMins} min</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.earlyDepartures}</span>
                     </div>
     
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.attendanceOvertime}</span>
                       <span className="text-base font-bold text-emerald-700">{totalOvertimeMins} min</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.extraHoursWorked}</span>
                     </div>
 
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.midShiftLeave}</span>
                       <span className={`text-base font-bold ${totalMidShiftLeaveMins > 0 ? 'text-purple-700' : 'text-[var(--cr-primary)]'}`}>{totalMidShiftLeaveMins} min</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.permissionDuration}</span>
                     </div>
 
-                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-[var(--cr-primary)]/10">
                       <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.absences}</span>
                       <span className={`text-base font-bold ${absentCount > 0 ? 'text-rose-600' : 'text-[var(--cr-primary)]'}`}>{absentCount} Days</span>
                       <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.unexcusedLeave}</span>
@@ -3292,7 +3292,7 @@ export default function AdminEmployeesView({
 
                   {/* Daily Breakdown Table */}
                   <div className="border border-[var(--cr-primary)]/10 rounded-xl overflow-hidden bg-white shadow-xs">
-                    <div className="px-4 py-3 bg-[#F7F9F6] border-b border-[var(--cr-primary)]/10 flex items-center justify-between">
+                    <div className="px-4 py-3 bg-[#F8FAFC] border-b border-[var(--cr-primary)]/10 flex items-center justify-between">
                       <h5 className="text-xs font-bold text-[var(--cr-primary)] uppercase tracking-wider">{t.profile.dailyAttendanceBreakdown}</h5>
                       <span className="text-xs font-semibold text-[var(--color-brand-secondary)]">{t.profile.recordCount(empRecords.length)}</span>
                     </div>
@@ -3309,7 +3309,7 @@ export default function AdminEmployeesView({
                     ) : (
                       <div className="overflow-x-auto [scrollbar-width:thin]">
                         <table className="w-full text-left text-xs min-w-[700px]">
-                          <thead className="bg-[#F7F9F6]/60 text-[var(--color-brand-secondary)] border-b border-[var(--cr-primary)]/10 font-bold uppercase tracking-wider text-[10px]">
+                          <thead className="bg-[#F8FAFC]/60 text-[var(--color-brand-secondary)] border-b border-[var(--cr-primary)]/10 font-bold uppercase tracking-wider text-[10px]">
                             <tr>
                               <th className="py-2.5 px-3">{t.profile.dateHeader}</th>
                               <th className="py-2.5 px-3">{t.profile.shiftTimeHeader}</th>
@@ -3328,7 +3328,7 @@ export default function AdminEmployeesView({
                               const inStr = r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }) : '—';
                               const outStr = r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }) : '—';
                               return (
-                                <tr key={r.id || idx} className="hover:bg-[#F7F9F6]/50 transition-colors">
+                                <tr key={r.id || idx} className="hover:bg-[#F8FAFC]/50 transition-colors">
                                   <td className="py-2.5 px-3 font-semibold text-[var(--cr-primary)] whitespace-nowrap">{r.date}</td>
                                   <td className="py-2.5 px-3 text-[var(--color-brand-secondary)] whitespace-nowrap">{r.scheduled_in || t.csvExport.fallbackScheduledIn} - {r.scheduled_out || t.csvExport.fallbackScheduledOut}</td>
                                   <td className="py-2.5 px-3 font-medium whitespace-nowrap">{inStr}</td>
@@ -3368,7 +3368,7 @@ export default function AdminEmployeesView({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                   <div className="md:col-span-2">
                     <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.homeAddress}</span>
-                    <span className="font-semibold text-[var(--cr-dark)] block bg-[#F9F9F7] px-3.5 py-2.5 rounded-xl border border-[var(--cr-primary)]/5 leading-relaxed max-w-xl">
+                    <span className="font-semibold text-[var(--cr-dark)] block bg-[#F8FAFC] px-3.5 py-2.5 rounded-xl border border-[var(--cr-primary)]/5 leading-relaxed max-w-xl">
                       {viewingEmployee.address || t.profile.noAddress}
                     </span>
                   </div>
@@ -3395,7 +3395,7 @@ export default function AdminEmployeesView({
                       <FileText size={16} className="text-[var(--cr-accent)]" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.profile.internalNotesReminders}</h4>
                     </div>
-                    <span className="text-[10px] font-bold text-[var(--color-brand-secondary)] bg-[#F9F9F7] px-2 py-0.5 rounded-full border border-[var(--cr-primary)]/10">
+                    <span className="text-[10px] font-bold text-[var(--color-brand-secondary)] bg-[#F8FAFC] px-2 py-0.5 rounded-full border border-[var(--cr-primary)]/10">
                       {t.profile.notesCount(viewingEmployeeNotes.length)}
                     </span>
                   </div>
@@ -3482,7 +3482,7 @@ export default function AdminEmployeesView({
                           }
                         }}
                         disabled={!newEmployeeNoteText.trim()}
-                        className="rounded-xl bg-[var(--cr-primary)] hover:bg-[#2e3a26] disabled:bg-gray-200 text-white disabled:text-gray-400 px-4 py-2 text-[11px] font-bold transition shadow-xs"
+                        className="rounded-xl bg-[var(--cr-primary)] hover:bg-[#0E1F36] disabled:bg-gray-200 text-white disabled:text-gray-400 px-4 py-2 text-[11px] font-bold transition shadow-xs"
                       >
                         {t.profile.addNoteBtn}
                       </button>
@@ -3593,7 +3593,7 @@ export default function AdminEmployeesView({
                               <a
                                 href={contractUrl}
                                 download={viewingEmployee.contract_file_name || "contract"}
-                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#d9e0d3] transition shadow-xs"
+                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#E2E8F0] transition shadow-xs"
                               >
                                 <FileText className="h-4 w-4 text-[var(--color-brand-secondary)]" />
                                 {viewingEmployee.contract_file_name || t.profile.downloadContract}
@@ -3634,7 +3634,7 @@ export default function AdminEmployeesView({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[var(--cr-primary)]/15 space-y-5 relative">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-[#1E3A2B]">
+              <div className="flex items-center gap-2.5 text-[#142B4A]">
                 <div className="h-9 w-9 rounded-2xl bg-[var(--color-brand-tint)] flex items-center justify-center text-[var(--cr-primary)] shrink-0">
                   <Lock size={18} />
                 </div>
@@ -3699,7 +3699,7 @@ export default function AdminEmployeesView({
                 type="button"
                 onClick={handleConfirmResetPassword}
                 disabled={resetPasswordSaving || !resetPasswordValue}
-                className="px-5 py-2.5 rounded-xl bg-[#1E3A2B] text-white font-extrabold text-xs hover:bg-[#162C20] transition disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-[#142B4A] text-white font-extrabold text-xs hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-2"
               >
                 {resetPasswordSaving ? <Loader2 size={14} className="animate-spin" /> : null}
                 {lang === "ar" ? "تأكيد" : "Confirm"}

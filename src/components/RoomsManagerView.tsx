@@ -259,7 +259,7 @@ export default function RoomsManagerView({ branches, services, selectedBranchId 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-[#F9F9F7] border-b border-[var(--cr-primary)]/10">
+                <tr className="bg-[#F8FAFC] border-b border-[var(--cr-primary)]/10">
                   <th className="px-6 py-4 font-semibold text-[var(--cr-primary)]">Room Name</th>
                   <th className="px-6 py-4 font-semibold text-[var(--cr-primary)]">Branch</th>
                   <th className="px-6 py-4 font-semibold text-[var(--cr-primary)]">Type</th>
@@ -269,7 +269,7 @@ export default function RoomsManagerView({ branches, services, selectedBranchId 
               </thead>
               <tbody className="divide-y divide-[var(--cr-primary)]/5">
                 {filteredRooms.map(r => (
-                  <tr key={r.id} className="hover:bg-[#F9F9F7]/50 transition">
+                  <tr key={r.id} className="hover:bg-[#F8FAFC]/50 transition">
                     <td className="px-6 py-4 font-medium text-[var(--cr-dark)]">{r.name}</td>
                     <td className="px-6 py-4 text-[var(--color-brand-secondary)]">{r.branchNameEn}</td>
                     <td className="px-6 py-4">

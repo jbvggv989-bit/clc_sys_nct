@@ -46,7 +46,7 @@ export function AppointmentSection() {
           style={{
             position: "relative",
             backgroundColor: "var(--cr-secondary, var(--color-brand-tint))",
-            border: "1px solid rgba(196,174,124,0.35)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 80px) clamp(24px, 5vw, 72px)",
           }}
@@ -165,7 +165,7 @@ export function AppointmentSection() {
             }
             .ap-input-custom {
               background-color: #fff;
-              border: 1px solid rgba(196, 174, 124, 0.4);
+              border: 1px solid rgba(54,166,160,0.30);
               border-radius: 14px;
               padding: 14px 20px;
               font-size: 14px;

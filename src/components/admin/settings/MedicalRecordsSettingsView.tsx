@@ -323,7 +323,7 @@ export default function MedicalRecordsSettingsView({
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#323D2A] shadow-sm cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#142B4A] shadow-sm cursor-pointer shrink-0"
         >
           <Plus size={16} />
           <span>Create Intake Template</span>
@@ -398,7 +398,7 @@ export default function MedicalRecordsSettingsView({
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#323D2A] transition"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#142B4A] transition"
           >
             <Plus size={14} /> Create Template
           </button>
@@ -512,7 +512,7 @@ export default function MedicalRecordsSettingsView({
                         </div>
                       ))}
                       {(tmpl.fields || []).length > 4 && (
-                        <div className="bg-[#F4F5F1] px-2.5 py-1.5 rounded-xl text-xs font-bold text-[var(--color-brand-secondary)] flex items-center justify-center">
+                        <div className="bg-[#F8FAFC] px-2.5 py-1.5 rounded-xl text-xs font-bold text-[var(--color-brand-secondary)] flex items-center justify-center">
                           +{(tmpl.fields?.length || 0) - 4} more fields
                         </div>
                       )}
@@ -670,7 +670,7 @@ export default function MedicalRecordsSettingsView({
                         className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition select-none text-left w-full ${
                           isSelected
                             ? "border-emerald-700 bg-emerald-50 font-bold text-emerald-950 shadow-2xs"
-                            : "border-[var(--cr-primary)]/10 bg-white font-medium text-[var(--cr-dark)] hover:bg-[#F4F5F1]"
+                            : "border-[var(--cr-primary)]/10 bg-white font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                         }`}
                       >
                         <span className={`h-4 w-4 rounded flex items-center justify-center border transition shrink-0 ${
@@ -823,7 +823,7 @@ export default function MedicalRecordsSettingsView({
                 type="submit"
                 form="templateForm"
                 disabled={saving || !modalTitle.trim() || modalFields.length === 0}
-                className="rounded-2xl bg-[var(--cr-primary)] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#323D2A] transition disabled:opacity-50 flex items-center gap-2 shadow-sm cursor-pointer"
+                className="rounded-2xl bg-[var(--cr-primary)] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#142B4A] transition disabled:opacity-50 flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                 <span>{saving ? "Saving Template..." : "Save Template"}</span>

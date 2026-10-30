@@ -186,7 +186,7 @@ export default function SettleDebtModal({ customer, onClose, onSettled, lang = "
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="h-11 w-11 rounded-2xl bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+          <div className="h-11 w-11 rounded-2xl bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
             <Receipt size={20} />
           </div>
           <div>
@@ -216,7 +216,7 @@ export default function SettleDebtModal({ customer, onClose, onSettled, lang = "
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#36412D] transition cursor-pointer"
+              className="w-full rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#142B4A] transition cursor-pointer"
             >
               {isAr ? "إغلاق" : "Close"}
             </button>
@@ -254,7 +254,7 @@ export default function SettleDebtModal({ customer, onClose, onSettled, lang = "
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#36412D] transition cursor-pointer"
+              className="w-full rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#142B4A] transition cursor-pointer"
             >
               {isAr ? "تم" : "Done"}
             </button>
@@ -479,7 +479,7 @@ export default function SettleDebtModal({ customer, onClose, onSettled, lang = "
 
             {/* Balance after payment preview */}
             {numericAmount > 0 && numericAmount <= maxAllowedAmount && (
-              <div className="rounded-xl bg-[#F3F6F1] border border-[var(--cr-primary)]/10 p-3 text-xs flex items-center justify-between">
+              <div className="rounded-xl bg-[#F8FAFC] border border-[var(--cr-primary)]/10 p-3 text-xs flex items-center justify-between">
                 <span className="text-[var(--color-brand-secondary)] font-semibold">
                   {selectedSession
                     ? isAr ? "المتبقي من هذه الجلسة بعد السداد" : "Session balance after payment"
@@ -511,7 +511,7 @@ export default function SettleDebtModal({ customer, onClose, onSettled, lang = "
               <button
                 type="submit"
                 disabled={submitting || numericAmount <= 0}
-                className="flex-1 rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#36412D] disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer inline-flex items-center justify-center gap-2"
+                className="flex-1 rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#142B4A] disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer inline-flex items-center justify-center gap-2"
               >
                 {submitting && <Loader2 size={14} className="animate-spin" />}
                 <span>

@@ -50,7 +50,7 @@ export function OurApproachSection() {
           style={{
             position: "relative",
             backgroundColor: "var(--cr-secondary, var(--color-brand-tint))",
-            border: "1px solid rgba(196,174,124,0.3)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 72px) clamp(24px, 5vw, 72px)",
           }}
@@ -252,7 +252,7 @@ export function OurApproachSection() {
                 {approachItems.map((item, i) => (
                   <div key={item.title}>
                     {i > 0 && (
-                      <div style={{ borderTop: "1px solid rgba(196,174,124,0.25)", marginBottom: "20px" }} />
+                      <div style={{ borderTop: "1px solid rgba(54,166,160,0.20)", marginBottom: "20px" }} />
                     )}
                     <div className="oas2-item">
                       <div className="oas2-icon">

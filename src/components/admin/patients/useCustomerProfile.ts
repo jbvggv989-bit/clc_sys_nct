@@ -686,7 +686,7 @@ export function useCustomerProfile({
           }
           .tagline {
             font-size: 12px;
-            color: #8A9A81;
+            color: #8FA3B8;
             margin: 5px 0 0 0;
             letter-spacing: 0.15em;
             text-transform: uppercase;
@@ -754,7 +754,7 @@ export function useCustomerProfile({
           }
           .clinic-info {
             font-size: 11px;
-            color: #8A9A81;
+            color: #8FA3B8;
             line-height: 1.5;
           }
           @media print {

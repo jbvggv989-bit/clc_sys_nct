@@ -94,7 +94,7 @@ export default function DoctorScheduleTab({
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
                 scheduleViewMode === "calendar"
                   ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                  : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[#F4F5F1]"
+                  : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[#F8FAFC]"
               }`}
             >
               <Calendar size={14} />
@@ -107,7 +107,7 @@ export default function DoctorScheduleTab({
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl transition cursor-pointer ${
                 scheduleViewMode === "list"
                   ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                  : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[#F4F5F1]"
+                  : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[#F8FAFC]"
               }`}
             >
               <List size={14} />
@@ -338,7 +338,7 @@ export default function DoctorScheduleTab({
                       }`}
                     >
                       <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                        <div className="flex flex-col items-center justify-center min-w-[65px] sm:min-w-[75px] rounded-xl sm:rounded-2xl bg-[#F4F5F1] p-2 sm:p-2.5 text-center border border-[var(--cr-primary)]/10 group-hover:border-[var(--cr-primary)]/30 transition shrink-0">
+                        <div className="flex flex-col items-center justify-center min-w-[65px] sm:min-w-[75px] rounded-xl sm:rounded-2xl bg-[#F8FAFC] p-2 sm:p-2.5 text-center border border-[var(--cr-primary)]/10 group-hover:border-[var(--cr-primary)]/30 transition shrink-0">
                           <Clock size={13} className="text-[var(--cr-primary)] mb-0.5" />
                           <span className="text-[11px] sm:text-xs font-black text-[var(--cr-primary)]">
                             {item.time || item.time_slot || item.timeSlot || "09:00 AM"}
@@ -409,7 +409,7 @@ export default function DoctorScheduleTab({
                           <button
                             type="button"
                             onClick={() => onStartOngoingSession(item)}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] text-white px-3 sm:px-3.5 py-1.5 text-xs font-bold shadow-md hover:bg-[#343F2B] active:scale-95 transition cursor-pointer"
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] text-white px-3 sm:px-3.5 py-1.5 text-xs font-bold shadow-md hover:bg-[#142B4A] active:scale-95 transition cursor-pointer"
                           >
                             <Play size={13} />
                             <span>{t.startTreatmentBtn || "Start Treatment"}</span>
@@ -443,7 +443,7 @@ export default function DoctorScheduleTab({
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-2xl transition cursor-pointer ${
                   selectedDateStr === yesterdayStr
                     ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                    : "bg-[#F4F5F1] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
+                    : "bg-[#F8FAFC] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
                 }`}
               >
                 {t.yesterdayBtn} ({yesterdayStr})
@@ -455,7 +455,7 @@ export default function DoctorScheduleTab({
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-2xl transition cursor-pointer ${
                   selectedDateStr === todayStr
                     ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                    : "bg-[#F4F5F1] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
+                    : "bg-[#F8FAFC] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
                 }`}
               >
                 {t.todayBtn} ({todayStr})
@@ -467,7 +467,7 @@ export default function DoctorScheduleTab({
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold rounded-2xl transition cursor-pointer ${
                   selectedDateStr === tomorrowStr
                     ? "bg-[var(--cr-primary)] text-white shadow-sm"
-                    : "bg-[#F4F5F1] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
+                    : "bg-[#F8FAFC] text-[var(--color-brand-secondary)] hover:bg-[var(--cr-primary)]/10 hover:text-[var(--cr-primary)]"
                 }`}
               >
                 {t.tomorrowBtn} ({tomorrowStr})
@@ -566,7 +566,7 @@ export default function DoctorScheduleTab({
                               <button
                                 type="button"
                                 onClick={() => onStartOngoingSession(item)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] text-white px-3 py-1.5 text-xs font-bold shadow-md hover:bg-[#343F2B] active:scale-95 transition cursor-pointer"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] text-white px-3 py-1.5 text-xs font-bold shadow-md hover:bg-[#142B4A] active:scale-95 transition cursor-pointer"
                               >
                                 <Play size={12} /> <span>{t.startTreatmentBtn || "Start"}</span>
                               </button>

@@ -604,7 +604,7 @@ export default function RoleManagementView({
 
             <button
               type="submit"
-              className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-sm w-full sm:w-auto"
+              className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-sm w-full sm:w-auto"
             >
               {t.defineRoles.saveRoleBtn}
             </button>
@@ -630,7 +630,7 @@ export default function RoleManagementView({
                     <td colSpan={3} className="px-6 py-5 text-center text-xs text-gray-400">{t.defineRoles.noRoles}</td>
                   </tr>
                 ) : rolesList.map((r) => (
-                  <tr key={r.id} className="transition hover:bg-[#F9F9F7]">
+                  <tr key={r.id} className="transition hover:bg-[#F8FAFC]">
                     <td className="px-6 py-4 font-bold text-[var(--cr-dark)] capitalize">
                       <div className="flex flex-wrap items-center gap-2">
                         <span>{r.name}</span>
@@ -799,7 +799,7 @@ export default function RoleManagementView({
             </div>
 
             {/* Invite info banner */}
-            <div className="flex items-start gap-2.5 rounded-2xl bg-[#EDF5E8] border border-[var(--cr-primary)]/15 px-3.5 sm:px-4 py-3">
+            <div className="flex items-start gap-2.5 rounded-2xl bg-[#F8FAFC] border border-[var(--cr-primary)]/15 px-3.5 sm:px-4 py-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mt-0.5 shrink-0 text-[var(--cr-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <p className="text-xs text-[var(--cr-primary)] font-medium leading-relaxed">
                 {t.provisionEmployees.inviteBanner}
@@ -811,7 +811,7 @@ export default function RoleManagementView({
 
             <button
               type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-sm w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition shadow-sm w-full sm:w-auto"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
               {t.provisionEmployees.sendInvitationBtn}
@@ -840,7 +840,7 @@ export default function RoleManagementView({
                     <td colSpan={5} className="px-6 py-5 text-center text-xs text-gray-400">{t.provisionEmployees.noAccounts}</td>
                   </tr>
                 ) : employeesList.map((emp) => (
-                  <tr key={emp.id} className="transition hover:bg-[#F9F9F7]">
+                  <tr key={emp.id} className="transition hover:bg-[#F8FAFC]">
                     <td className="px-6 py-4 font-semibold text-[var(--cr-dark)]">{emp.name || emp.employee_id || '—'}</td>
                     <td className="px-6 py-4 text-xs font-semibold text-[var(--cr-primary)]">
                       {(adminRole === "superadmin" || adminRole === "admin") && emp.employee_id !== "superadmin" ? (
@@ -1012,7 +1012,7 @@ export default function RoleManagementView({
             />
             <button
               type="submit"
-              className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#2e3a26] transition flex items-center justify-center gap-1.5 shadow-sm shrink-0"
+              className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#0E1F36] transition flex items-center justify-center gap-1.5 shadow-sm shrink-0"
             >
               <Plus size={14} /> {t.departments.addBtn}
             </button>

@@ -182,7 +182,7 @@ export default function CustomerSupportView({ lang = "en", hasPermission }: Prop
           <button
             type="button"
             onClick={() => setShowNewTicketModal(true)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs sm:text-sm font-bold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-4 py-2.5 text-xs sm:text-sm font-bold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] active:scale-95 cursor-pointer"
           >
             <Plus size={16} />
             <span>{isAr ? "تذكرة دعم جديدة" : "New Support Ticket"}</span>
@@ -292,7 +292,7 @@ export default function CustomerSupportView({ lang = "en", hasPermission }: Prop
         <div className="lg:col-span-2 overflow-hidden rounded-3xl border border-[var(--cr-primary)]/10 bg-white shadow-xs">
           <div className="overflow-x-auto [scrollbar-width:thin]">
             <table className="w-full text-left text-xs text-[var(--cr-dark)] min-w-[550px]" dir={isAr ? "rtl" : "ltr"}>
-              <thead className="bg-[#F9F9F7] text-[11px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] border-b border-gray-100">
+              <thead className="bg-[#F8FAFC] text-[11px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] border-b border-gray-100">
                 <tr>
                   <th className="px-5 py-4">{isAr ? "المريض والتذكرة" : "Patient & ID"}</th>
                   <th className="px-4 py-4">{isAr ? "الموضوع" : "Subject"}</th>
@@ -315,7 +315,7 @@ export default function CustomerSupportView({ lang = "en", hasPermission }: Prop
                       <tr
                         key={t.id}
                         onClick={() => setSelectedTicket(t)}
-                        className={`cursor-pointer transition hover:bg-[var(--color-brand-light)] ${isSelected ? "bg-[#EDE4C8]/30 font-semibold" : ""}`}
+                        className={`cursor-pointer transition hover:bg-[var(--color-brand-light)] ${isSelected ? "bg-[#F1F5F9]/30 font-semibold" : ""}`}
                       >
                         <td className="px-5 py-4">
                           <div className="font-bold text-[var(--cr-dark)]">{t.patientName}</div>
@@ -533,7 +533,7 @@ export default function CustomerSupportView({ lang = "en", hasPermission }: Prop
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[#2e3a26] cursor-pointer"
+                  className="rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[#0E1F36] cursor-pointer"
                 >
                   {isAr ? "حفظ التذكرة" : "Create Ticket"}
                 </button>

@@ -323,7 +323,7 @@ export default function CustomerFormModal({
               type="button"
               onClick={handleSaveCustomer}
               disabled={savingCustomer}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#203D20] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#182E18] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#142B4A] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#142B4A] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {savingCustomer ? (
                 <>
@@ -349,7 +349,7 @@ export default function CustomerFormModal({
         {/* ── SECTION 1: Contact Information ── */}
         <div className="space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <BookUser size={20} className="text-[var(--cr-primary)]" />
             </div>
             <div>
@@ -360,8 +360,8 @@ export default function CustomerFormModal({
 
           {/* Edit Mode Lock Banner */}
           {isNameLocked && (
-            <div className="flex items-center gap-2.5 rounded-xl bg-[#F0F6EE] border border-[#D5E5D1] px-4 py-3 text-xs sm:text-sm font-medium text-[#2E5233]">
-              <Lock size={15} className="shrink-0 text-[#2E5233]" />
+            <div className="flex items-center gap-2.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] px-4 py-3 text-xs sm:text-sm font-medium text-[#142B4A]">
+              <Lock size={15} className="shrink-0 text-[#142B4A]" />
               <span>{t.nameCannotBeEdited || "Customer name cannot be edited."}</span>
             </div>
           )}
@@ -390,7 +390,7 @@ export default function CustomerFormModal({
                 placeholder={t.namePlaceholder}
                 className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
                   isNameLocked
-                    ? "bg-[#F7F7F6] text-gray-700 border-gray-200 cursor-not-allowed font-medium"
+                    ? "bg-[#F8FAFC] text-gray-700 border-gray-200 cursor-not-allowed font-medium"
                     : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
                 }`}
                 required={!isNameLocked}
@@ -406,7 +406,7 @@ export default function CustomerFormModal({
               </label>
               <div className="flex items-center rounded-xl border border-[var(--cr-primary)]/15 bg-white overflow-hidden transition focus-within:border-[var(--cr-primary)] focus-within:ring-1 focus-within:ring-[var(--cr-primary)]">
                 {/* Compact Country Code Dropdown */}
-                <div className="relative flex items-center justify-center bg-[#F9FAF8] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F0F4EE] transition cursor-pointer">
+                <div className="relative flex items-center justify-center bg-[#F8FAFC] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F8FAFC] transition cursor-pointer">
                   <div className="flex items-center gap-1.5 pointer-events-none text-xs sm:text-sm font-bold text-[#111827]">
                     <span className="text-base leading-none select-none">{selectedMobileCountry.flag}</span>
                     <span className="font-mono text-xs sm:text-sm">{custMobileCountryCode}</span>
@@ -475,7 +475,7 @@ export default function CustomerFormModal({
                 type="checkbox"
                 checked={isCustomerWhatsappSame}
                 onChange={(e) => setIsCustomerWhatsappSame(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-[#203D20] focus:ring-[#203D20] accent-[#203D20] cursor-pointer"
+                className="h-4 w-4 rounded border-gray-300 text-[#142B4A] focus:ring-[#142B4A] accent-[#142B4A] cursor-pointer"
               />
               <span>{t.whatsappSameLabel}</span>
             </label>
@@ -486,7 +486,7 @@ export default function CustomerFormModal({
                 </label>
                 <div className="flex items-center rounded-xl border border-[var(--cr-primary)]/15 bg-white overflow-hidden transition focus-within:border-[var(--cr-primary)] focus-within:ring-1 focus-within:ring-[var(--cr-primary)]">
                   {/* Compact Country Code Dropdown */}
-                  <div className="relative flex items-center justify-center bg-[#F9FAF8] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F0F4EE] transition cursor-pointer">
+                  <div className="relative flex items-center justify-center bg-[#F8FAFC] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F8FAFC] transition cursor-pointer">
                     <div className="flex items-center gap-1.5 pointer-events-none text-xs sm:text-sm font-bold text-[#111827]">
                       <span className="text-base leading-none select-none">{selectedWaCountry.flag}</span>
                       <span className="font-mono text-xs sm:text-sm">{custWaCountryCode}</span>
@@ -564,7 +564,7 @@ export default function CustomerFormModal({
                   placeholder={t.agePlaceholder}
                   className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
                     custDob
-                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      ? "border-gray-200 bg-[#F8FAFC] font-semibold text-gray-700 cursor-not-allowed select-none"
                       : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
                   }`}
                 />
@@ -657,7 +657,7 @@ export default function CustomerFormModal({
         {/* ── SECTION 2: Address Information ── */}
         <div className="space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <MapPin size={20} className="text-[var(--cr-primary)]" />
             </div>
             <div>
@@ -747,7 +747,7 @@ export default function CustomerFormModal({
         {/* ── SECTION 3: Financial Balances ── */}
         <div className="space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <Wallet size={20} className="text-[var(--cr-primary)]" />
             </div>
             <div>
@@ -787,7 +787,7 @@ export default function CustomerFormModal({
                   placeholder="0"
                   className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
                     !isFinancialsEditable
-                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      ? "border-gray-200 bg-[#F8FAFC] font-semibold text-gray-700 cursor-not-allowed select-none"
                       : isSuperAdmin && selectedCustomerForEdit
                         ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                         : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
@@ -822,7 +822,7 @@ export default function CustomerFormModal({
                   placeholder="0"
                   className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
                     !isFinancialsEditable
-                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      ? "border-gray-200 bg-[#F8FAFC] font-semibold text-gray-700 cursor-not-allowed select-none"
                       : isSuperAdmin && selectedCustomerForEdit
                         ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                         : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
@@ -857,7 +857,7 @@ export default function CustomerFormModal({
                   placeholder="0"
                   className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
                     !isFinancialsEditable
-                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      ? "border-gray-200 bg-[#F8FAFC] font-semibold text-gray-700 cursor-not-allowed select-none"
                       : isSuperAdmin && selectedCustomerForEdit
                         ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                         : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
@@ -873,7 +873,7 @@ export default function CustomerFormModal({
         {/* ── SECTION 4: Status & Internal Notes ── */}
         <div className="space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <ShieldCheck size={20} className="text-[var(--cr-primary)]" />
             </div>
             <div>
@@ -887,7 +887,7 @@ export default function CustomerFormModal({
               onClick={() => setCustActive(!custActive)}
               className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none ${
                 custActive
-                  ? "border-[var(--cr-primary)]/20 bg-[#F4F7F2]/80 hover:bg-[#EEF4EC]"
+                  ? "border-[var(--cr-primary)]/20 bg-[#F8FAFC]/80 hover:bg-[#F8FAFC]"
                   : "border-gray-200 bg-[var(--color-brand-light)] hover:bg-gray-50"
               }`}
             >
@@ -897,11 +897,11 @@ export default function CustomerFormModal({
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
                       custActive
-                        ? "bg-[#E0EBDC] text-[#244322] border border-[#244322]/15"
+                        ? "bg-[#E2E8F0] text-[#142B4A] border border-[#142B4A]/15"
                         : "bg-red-50 text-red-700 border border-red-200"
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${custActive ? "bg-[#244322]" : "bg-red-500"}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${custActive ? "bg-[#142B4A]" : "bg-red-500"}`} />
                     {custActive
                       ? (t.activeStatusActive || (lang === "ar" ? "نشط" : "Active"))
                       : (t.activeStatusInactive || (lang === "ar" ? "غير نشط" : "Inactive"))}
@@ -924,7 +924,7 @@ export default function CustomerFormModal({
                   setCustActive(!custActive);
                 }}
                 className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--cr-primary)]/30 ${
-                  custActive ? "bg-[#203D20]" : "bg-gray-300"
+                  custActive ? "bg-[#142B4A]" : "bg-gray-300"
                 }`}
               >
                 <span
@@ -965,7 +965,7 @@ export default function CustomerFormModal({
             type="button"
             onClick={handleSaveCustomer}
             disabled={savingCustomer}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#203D20] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#182E18] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#142B4A] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#142B4A] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
             {savingCustomer ? (
               <>

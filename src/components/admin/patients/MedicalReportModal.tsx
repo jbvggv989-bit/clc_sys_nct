@@ -158,7 +158,7 @@ export default function MedicalReportModal({
             type="button"
             onClick={handleSaveMedicalReport}
             disabled={savingMedicalReport || !reportTitle.trim()}
-            className="rounded-xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+            className="rounded-xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#0E1F36] transition disabled:opacity-50"
           >
             {savingMedicalReport ? t.savingBtn : t.saveBtn}
           </button>

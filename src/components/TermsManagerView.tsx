@@ -364,7 +364,7 @@ export default function TermsManagerView({
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 onClick={handleSeedDefaults}
-                className="flex items-center gap-2 rounded-2xl bg-[var(--cr-accent)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#b09b6a] shadow-sm cursor-pointer"
+                className="flex items-center gap-2 rounded-2xl bg-[var(--cr-accent)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2D8B86] shadow-sm cursor-pointer"
               >
                 <Sparkles size={14} />
                 <span>Populate Default Terms</span>
@@ -458,7 +458,7 @@ export default function TermsManagerView({
                       onClick={() => handleToggleActive(item)}
                       className={`rounded-2xl p-2.5 transition cursor-pointer ${
                         item.is_active
-                          ? "bg-[var(--color-brand-tint)] text-[var(--cr-primary)] hover:bg-[#dbe4da]"
+                          ? "bg-[var(--color-brand-tint)] text-[var(--cr-primary)] hover:bg-[#E2E8F0]"
                           : "bg-gray-200 text-gray-500 hover:bg-gray-300"
                       }`}
                       title={item.is_active ? "Set Inactive" : "Set Active"}
@@ -470,7 +470,7 @@ export default function TermsManagerView({
                     <button
                       type="button"
                       onClick={() => handleOpenEditModal(item)}
-                      className="rounded-2xl bg-[#F4F6F4] p-2.5 text-[var(--cr-primary)] transition hover:bg-[var(--cr-primary)] hover:text-white cursor-pointer"
+                      className="rounded-2xl bg-[#F8FAFC] p-2.5 text-[var(--cr-primary)] transition hover:bg-[var(--cr-primary)] hover:text-white cursor-pointer"
                       title="Edit Item"
                     >
                       <Edit2 size={15} />

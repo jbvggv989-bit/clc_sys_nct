@@ -58,7 +58,7 @@ export default function DepositSettingsView({
         <button
           onClick={handleSaveDepositSettings}
           disabled={savingDepositSettings}
-          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-md w-full sm:w-auto"
+          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 shadow-md w-full sm:w-auto"
         >
           {savingDepositSettings ? t.savingBtn : t.saveBtn}
         </button>
@@ -78,7 +78,7 @@ export default function DepositSettingsView({
                 value={instapayName}
                 onChange={(e) => setInstapayName(e.target.value)}
                 placeholder={CLIENT.name}
-                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#B0BCA7] outline-none focus:border-[var(--cr-primary)] transition"
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#CBD5E1] outline-none focus:border-[var(--cr-primary)] transition"
               />
             </div>
 
@@ -89,7 +89,7 @@ export default function DepositSettingsView({
                 value={instapayAddress}
                 onChange={(e) => setInstapayAddress(e.target.value)}
                 placeholder="clcsys@instapay"
-                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#B0BCA7] outline-none focus:border-[var(--cr-primary)] transition"
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#CBD5E1] outline-none focus:border-[var(--cr-primary)] transition"
               />
             </div>
 
@@ -100,9 +100,9 @@ export default function DepositSettingsView({
                 value={instapayLink}
                 onChange={(e) => setInstapayLink(e.target.value)}
                 placeholder="e.g. https://www.instapay.eg or deep link"
-                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#B0BCA7] outline-none focus:border-[var(--cr-primary)] transition"
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#CBD5E1] outline-none focus:border-[var(--cr-primary)] transition"
               />
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.instapayLinkHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.instapayLinkHint}</span>
             </div>
           </div>
 
@@ -119,7 +119,7 @@ export default function DepositSettingsView({
               />
               <div>
                 <span className="text-sm font-bold text-[var(--cr-dark)]">{t.walletEnabled}</span>
-                <p className="text-[11px] text-[#8A9A81]">{t.walletEnabledHint}</p>
+                <p className="text-[11px] text-[#8FA3B8]">{t.walletEnabledHint}</p>
               </div>
             </label>
 
@@ -173,7 +173,7 @@ export default function DepositSettingsView({
               onChange={(e) => setBookingDepositPercentage(Math.max(0, Math.min(100, Number(e.target.value))))}
               className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition"
             />
-            <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.depositPercentageHint}</span>
+            <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.depositPercentageHint}</span>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export default function DepositSettingsView({
             />
           </div>
           <p className="text-xs text-[var(--color-brand-secondary)] font-semibold uppercase tracking-wider mb-2">{t.generatedQr}</p>
-          <p className="text-[10px] text-[#8A9A81] max-w-xs">{t.qrHint}</p>
+          <p className="text-[10px] text-[#8FA3B8] max-w-xs">{t.qrHint}</p>
         </div>
       </div>
     </div>

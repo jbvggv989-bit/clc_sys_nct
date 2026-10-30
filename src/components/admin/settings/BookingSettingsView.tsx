@@ -95,7 +95,7 @@ export default function BookingSettingsView({
               >
                 {[1, 2, 4, 6, 12, 24].map(h => <option key={h} value={h}>{h} {h === 1 ? t.hour : t.hours}</option>)}
               </select>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.minAdvanceHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.minAdvanceHint}</span>
             </div>
 
             <div>
@@ -120,7 +120,7 @@ export default function BookingSettingsView({
               >
                 {[7, 14, 30, 60, 90].map(d => <option key={d} value={d}>{d} {t.days}</option>)}
               </select>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.maxAdvanceHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.maxAdvanceHint}</span>
             </div>
 
             <div>
@@ -145,7 +145,7 @@ export default function BookingSettingsView({
               >
                 {[1, 2, 4, 6, 12, 24].map(h => <option key={h} value={h}>{h} {h === 1 ? t.hour : t.hours} {t.before}</option>)}
               </select>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.cancelWindowHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.cancelWindowHint}</span>
             </div>
 
             <div>
@@ -171,7 +171,7 @@ export default function BookingSettingsView({
                 onChange={(e) => setBookingMaxPerSlot(Number(e.target.value))}
                 className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition"
               />
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.maxPerSlotHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.maxPerSlotHint}</span>
             </div>
 
             <div>
@@ -196,7 +196,7 @@ export default function BookingSettingsView({
               >
                 {[1, 2, 3, 4, 6, 8, 12].map(h => <option key={h} value={h}>{h} {h === 1 ? t.hour : t.hours}</option>)}
               </select>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.staleSessionHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.staleSessionHint}</span>
             </div>
 
             <div>
@@ -225,7 +225,7 @@ export default function BookingSettingsView({
                   </option>
                 ))}
               </select>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">{t.followUpLeadDaysHint}</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">{t.followUpLeadDaysHint}</span>
             </div>
 
             <div>
@@ -259,7 +259,7 @@ export default function BookingSettingsView({
                   EGP
                 </span>
               </div>
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">
                 {t.defaultPricePerPulseHint || "Standard unit price for selling laser pulses and calculating additional pulses."}
               </span>
             </div>
@@ -337,7 +337,7 @@ export default function BookingSettingsView({
               <div className="flex items-center gap-3.5">
                 <div className={`h-12 w-12 flex items-center justify-center rounded-2xl transition-all duration-500 shadow-sm shrink-0 ${
                   globalEndingSession 
-                    ? 'bg-gradient-to-br from-[var(--cr-dark)] via-[var(--cr-primary)] to-[#0F3826] text-emerald-300 ring-4 ring-emerald-500/20 shadow-emerald-900/10' 
+                    ? 'bg-gradient-to-br from-[var(--cr-dark)] via-[var(--cr-primary)] to-[#142B4A] text-emerald-300 ring-4 ring-emerald-500/20 shadow-emerald-900/10' 
                     : 'bg-white text-gray-400 border border-gray-200'
                 }`}>
                   <Zap size={22} className={globalEndingSession ? 'animate-pulse text-emerald-400 fill-emerald-400/30' : ''} />
@@ -398,7 +398,7 @@ export default function BookingSettingsView({
                   }}
                   className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full p-1 transition-colors duration-300 ease-in-out focus:outline-none ring-2 ${
                     globalEndingSession 
-                      ? 'bg-gradient-to-r from-[#0F3826] to-[var(--cr-primary)] ring-emerald-500/40 shadow-inner' 
+                      ? 'bg-gradient-to-r from-[#142B4A] to-[var(--cr-primary)] ring-emerald-500/40 shadow-inner' 
                       : 'bg-gray-200 ring-transparent'
                   }`}
                 >
@@ -431,7 +431,7 @@ export default function BookingSettingsView({
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800/80">Reception Full Control</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-[#2C3825]">
+                <p className="text-xs leading-relaxed text-[#142B4A]">
                   {t.globalEndingSessionActiveDesc}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -464,7 +464,7 @@ export default function BookingSettingsView({
                     <span className="text-[10px] font-black uppercase tracking-wider text-amber-800/80">Doctor Portal Only</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-[#4A3B2C]">
+                <p className="text-xs leading-relaxed text-[#142B4A]">
                   {t.globalEndingSessionRestrictedDesc}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -485,7 +485,7 @@ export default function BookingSettingsView({
               type="button"
               onClick={handleSaveBookingSettings}
               disabled={savingBookingSettings}
-              className="rounded-3xl bg-[var(--cr-primary)] px-8 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-md cursor-pointer"
+              className="rounded-3xl bg-[var(--cr-primary)] px-8 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 shadow-md cursor-pointer"
             >
               {savingBookingSettings ? t.savingBtn : t.saveBtn}
             </button>

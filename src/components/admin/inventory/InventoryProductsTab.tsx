@@ -398,7 +398,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
         {/* Stats Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="rounded-2xl sm:rounded-[28px] bg-white p-4 sm:p-5 border border-[#E6E9EB] shadow-sm flex items-center gap-3 sm:gap-4">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-[#EBF0E6] text-[var(--cr-primary)] shrink-0">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-[#F1F5F9] text-[var(--cr-primary)] shrink-0">
               <ShoppingBag size={20} />
             </div>
             <div className="min-w-0">
@@ -524,7 +524,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                       resetProductForm();
                       setShowAddProductModal(true);
                     }}
-                    className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26]`}
+                    className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36]`}
                   >
                     <Plus size={14} /> {t.addItemBtn}
                   </button>
@@ -550,7 +550,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <ShoppingBag size={32} className="text-[#A3B19B]" />
+                            <ShoppingBag size={32} className="text-[#8FA3B8]" />
                             <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
                             <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
                             <button
@@ -559,7 +559,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                                 resetProductForm();
                                 setShowAddProductModal(true);
                               }}
-                              className={`mt-2 ${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26] cursor-pointer`}
+                              className={`mt-2 ${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36] cursor-pointer`}
                             >
                               <Plus size={14} /> {t.addItemBtn}
                             </button>
@@ -570,10 +570,10 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                       filteredInventoryProducts.map((prod) => {
                         const isLowStock = prod.stock_quantity <= prod.min_reorder_quantity;
                         return (
-                          <tr key={prod.id} className="transition hover:bg-[#F9F9F7]">
+                          <tr key={prod.id} className="transition hover:bg-[#F8FAFC]">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EBF0E6] text-[var(--cr-primary)] font-bold">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-[var(--cr-primary)] font-bold">
                                   <ShoppingBag size={18} />
                                 </div>
                                 <div>
@@ -590,7 +590,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center rounded-full bg-[#EBF0E6] px-2.5 py-0.5 text-xs font-medium text-[var(--cr-primary)]">
+                              <span className="inline-flex items-center rounded-full bg-[#F1F5F9] px-2.5 py-0.5 text-xs font-medium text-[var(--cr-primary)]">
                                 {categoryLabel(prod.category)}
                               </span>
                               <p className="text-xs text-[var(--color-brand-secondary)] mt-1 font-mono">{t.unitLabel} {prod.unit}</p>
@@ -632,7 +632,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                                   type="button"
                                   onClick={() => handleOpenSellProductModal(prod)}
                                   disabled={prod.stock_quantity <= 0 || prod.role === "consumable"}
-                                  className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2e3a26] disabled:opacity-40 disabled:cursor-not-allowed`}
+                                  className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0E1F36] disabled:opacity-40 disabled:cursor-not-allowed`}
                                   title={prod.role === "consumable" ? t.consumableTitle : prod.stock_quantity <= 0 ? t.outOfStockTitle : t.sellProductTitle}
                                 >
                                   <Tag size={13} /> {prod.role === "consumable" ? t.consumableOnly : t.sellProductTitle}
@@ -640,7 +640,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                                 <button
                                   type="button"
                                   onClick={() => openEditProductModal(prod)}
-                                  className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#EBF0E6] hover:text-[var(--cr-primary)]`}
+                                  className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#F1F5F9] hover:text-[var(--cr-primary)]`}
                                   title={t.editProductTitle}
                                 >
                                   <Pencil size={15} />
@@ -692,7 +692,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                 {filteredInventoryProducts.length === 0 ? (
                   <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-[var(--color-brand-secondary)]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <ShoppingBag size={32} className="text-[#A3B19B]" />
+                      <ShoppingBag size={32} className="text-[#8FA3B8]" />
                       <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
                       <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
                       <button
@@ -701,7 +701,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                           resetProductForm();
                           setShowAddProductModal(true);
                         }}
-                        className={`mt-2 ${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26] cursor-pointer`}
+                        className={`mt-2 ${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36] cursor-pointer`}
                       >
                         <Plus size={14} /> {t.addItemBtn}
                       </button>
@@ -718,7 +718,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                         {/* Header: Icon, Name, Category & Status */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EBF0E6] text-[var(--cr-primary)] font-bold">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F9] text-[var(--cr-primary)] font-bold">
                               <ShoppingBag size={16} />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -727,7 +727,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                                 <p className="text-xs text-[var(--color-brand-secondary)] dir-rtl font-sans truncate">{prod.name_ar}</p>
                               )}
                               <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                <span className="inline-flex items-center rounded-md bg-[#EBF0E6] px-2 py-0.5 text-[10px] font-semibold text-[var(--cr-primary)]">
+                                <span className="inline-flex items-center rounded-md bg-[#F1F5F9] px-2 py-0.5 text-[10px] font-semibold text-[var(--cr-primary)]">
                                   {categoryLabel(prod.category)}
                                 </span>
                                 {prod.sku && (
@@ -752,7 +752,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                         </div>
 
                         {/* Prices & Stock Grid */}
-                        <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#FAFBF9] p-2.5 border border-[#E6E9EB]/60 text-xs">
+                        <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#FFFFFF] p-2.5 border border-[#E6E9EB]/60 text-xs">
                           <div>
                             <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block">{t.thSellingPrice}</span>
                             <span className="font-mono font-bold text-sm text-[var(--cr-primary)]">EGP {prod.selling_price.toFixed(2)}</span>
@@ -777,7 +777,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                             type="button"
                             onClick={() => handleOpenSellProductModal(prod)}
                             disabled={prod.stock_quantity <= 0 || prod.role === "consumable"}
-                            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2e3a26] disabled:opacity-40 disabled:cursor-not-allowed`}
+                            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0E1F36] disabled:opacity-40 disabled:cursor-not-allowed`}
                             title={prod.role === "consumable" ? t.consumableTitle : prod.stock_quantity <= 0 ? t.outOfStockTitle : t.sellProductTitle}
                           >
                             <Tag size={12} />
@@ -786,7 +786,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                           <button
                             type="button"
                             onClick={() => openEditProductModal(prod)}
-                            className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] bg-white p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#EBF0E6] hover:text-[var(--cr-primary)]`}
+                            className={`${canManage ? "inline-flex" : "hidden"} rounded-xl border border-[#E6E9EB] bg-white p-2 text-[var(--color-brand-secondary)] transition hover:bg-[#F1F5F9] hover:text-[var(--cr-primary)]`}
                             title={t.editProductTitle}
                           >
                             <Pencil size={14} />
@@ -858,7 +858,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                       <tr>
                         <td colSpan={6} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">
                           <div className="flex flex-col items-center justify-center gap-2">
-                            <Receipt size={32} className="text-[#A3B19B]" />
+                            <Receipt size={32} className="text-[#8FA3B8]" />
                             <p className="font-semibold text-[var(--cr-dark)]">{t.noSalesTitle}</p>
                             <p className="text-xs text-[var(--color-brand-secondary)]">{t.noSalesDesc}</p>
                           </div>
@@ -866,7 +866,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                       </tr>
                     ) : (
                       productSalesHistory.map((sale) => (
-                        <tr key={sale.id} className="transition hover:bg-[#F9F9F7]">
+                        <tr key={sale.id} className="transition hover:bg-[#F8FAFC]">
                           <td className="px-6 py-4 font-mono text-xs text-[var(--color-brand-secondary)]">
                             {new Date(sale.created_at).toLocaleString("en-GB", {
                               dateStyle: "medium",
@@ -906,7 +906,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                 {productSalesHistory.length === 0 ? (
                   <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-[var(--color-brand-secondary)]">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Receipt size={32} className="text-[#A3B19B]" />
+                      <Receipt size={32} className="text-[#8FA3B8]" />
                       <p className="font-semibold text-[var(--cr-dark)]">{t.noSalesTitle}</p>
                       <p className="text-xs text-[var(--color-brand-secondary)]">{t.noSalesDesc}</p>
                     </div>
@@ -1160,7 +1160,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                   <button
                     type="submit"
                     disabled={savingProduct}
-                    className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2e3a26] transition shadow-sm disabled:opacity-50"
+                    className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0E1F36] transition shadow-sm disabled:opacity-50"
                   >
                     {savingProduct ? t.savingBtn : editingProduct ? t.saveChangesBtn : t.createProductBtn}
                   </button>
@@ -1226,7 +1226,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                   onClick={confirmProductDelete}
                   disabled={deletingProduct}
                   className={`rounded-2xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition disabled:opacity-60 ${
-                    productPendingDelete.mode === "hard" ? "bg-rose-600 hover:bg-rose-700" : "bg-[var(--cr-primary)] hover:bg-[#2e3a26]"
+                    productPendingDelete.mode === "hard" ? "bg-rose-600 hover:bg-rose-700" : "bg-[var(--cr-primary)] hover:bg-[#0E1F36]"
                   }`}
                 >
                   {deletingProduct ? t.deletingBtn : productPendingDelete.mode === "hard" ? t.permanentlyDeleteBtn : t.deleteSoftBtn}
@@ -1348,7 +1348,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
                   <button
                     type="submit"
                     disabled={submittingSellProduct}
-                    className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#2e3a26] transition shadow-sm disabled:opacity-50"
+                    className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#0E1F36] transition shadow-sm disabled:opacity-50"
                   >
                     {submittingSellProduct ? t.recordingSaleBtn : t.confirmSellBtn}
                   </button>

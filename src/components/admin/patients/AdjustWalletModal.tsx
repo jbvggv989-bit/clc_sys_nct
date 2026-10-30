@@ -249,7 +249,7 @@ export default function AdjustWalletModal({
                 {lang === "ar" ? "سوبر أدمن" : "Superadmin"}
               </span>
             </div>
-            <p className="text-xs text-[#5A6A51] font-semibold truncate max-w-[240px]">
+            <p className="text-xs text-[#64748B] font-semibold truncate max-w-[240px]">
               {customer.name}
             </p>
           </div>

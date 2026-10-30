@@ -71,7 +71,7 @@ export default function AdminInventoryView({
                 onClick={() => {
                   devicesTabRef.current?.openAuditLogs();
                 }}
-                className={`${canManageDevices ? "inline-flex" : "hidden"} items-center gap-2 rounded-3xl border border-[var(--cr-primary)]/30 bg-white px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:bg-[#EBF0E6] shadow-sm`}
+                className={`${canManageDevices ? "inline-flex" : "hidden"} items-center gap-2 rounded-3xl border border-[var(--cr-primary)]/30 bg-white px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:bg-[#F1F5F9] shadow-sm`}
               >
                 <ClipboardList size={15} /> {t.auditLogsBtn}
               </button>
@@ -80,7 +80,7 @@ export default function AdminInventoryView({
                 onClick={() => {
                   devicesTabRef.current?.openAddDevice();
                 }}
-                className={`${canManageDevices ? "inline-flex" : "hidden"} items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-sm`}
+                className={`${canManageDevices ? "inline-flex" : "hidden"} items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] shadow-sm`}
               >
                 <Plus size={15} /> {t.addDeviceBtn}
               </button>

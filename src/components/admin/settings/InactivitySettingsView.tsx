@@ -43,7 +43,7 @@ export default function InactivitySettingsView({
         <button
           onClick={handleSaveInactivitySettings}
           disabled={savingInactivitySettings}
-          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-md w-full sm:w-auto"
+          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 shadow-md w-full sm:w-auto"
         >
           {savingInactivitySettings ? t.savingBtn : t.saveBtn}
         </button>
@@ -79,7 +79,7 @@ export default function InactivitySettingsView({
                 {inactivityThreshold} {t.min}
               </div>
             </div>
-            <p className="text-[11px] text-[#8A9A81] mt-2">
+            <p className="text-[11px] text-[#8FA3B8] mt-2">
               {t.alertThresholdHint} <strong>{inactivityThreshold} {t.minutes}</strong>, {t.alertThresholdHint2}
             </p>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -88,7 +88,7 @@ export default function InactivitySettingsView({
                   key={val}
                   type="button"
                   onClick={() => setInactivityThreshold(val)}
-                  className={`rounded-xl py-2 text-xs font-semibold transition border ${inactivityThreshold === val ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]' : 'bg-[#F5F5F0] text-[var(--color-brand-secondary)] border-transparent hover:border-[var(--cr-primary)]/30'}`}
+                  className={`rounded-xl py-2 text-xs font-semibold transition border ${inactivityThreshold === val ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]' : 'bg-[#F8FAFC] text-[var(--color-brand-secondary)] border-transparent hover:border-[var(--cr-primary)]/30'}`}
                 >
                   {val} {t.min}
                 </button>
@@ -126,7 +126,7 @@ export default function InactivitySettingsView({
                 {inactivityCountdown}s
               </div>
             </div>
-            <p className="text-[11px] text-[#8A9A81] mt-2">
+            <p className="text-[11px] text-[#8FA3B8] mt-2">
               {t.countdownHint} <strong>{inactivityCountdown} {t.seconds}</strong> {t.countdownHint2}
             </p>
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -135,7 +135,7 @@ export default function InactivitySettingsView({
                   key={val}
                   type="button"
                   onClick={() => setInactivityCountdown(val)}
-                  className={`rounded-xl py-2 text-xs font-semibold transition border ${inactivityCountdown === val ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]' : 'bg-[#F5F5F0] text-[var(--color-brand-secondary)] border-transparent hover:border-[var(--cr-primary)]/30'}`}
+                  className={`rounded-xl py-2 text-xs font-semibold transition border ${inactivityCountdown === val ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]' : 'bg-[#F8FAFC] text-[var(--color-brand-secondary)] border-transparent hover:border-[var(--cr-primary)]/30'}`}
                 >
                   {val}s
                 </button>
@@ -149,7 +149,7 @@ export default function InactivitySettingsView({
       <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-3 sm:pb-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-[#EBF0E6] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 shrink-0">
+            <div className="h-10 w-10 flex items-center justify-center rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 shrink-0">
               <MapPin size={20} />
             </div>
             <div>
@@ -228,7 +228,7 @@ export default function InactivitySettingsView({
               <h4 className="text-base sm:text-lg font-bold text-[var(--cr-dark)]">{t.activityVerification}</h4>
               <p className="text-xs text-[var(--color-brand-secondary)]">{t.activityVerificationDesc}</p>
               <div className="text-3xl sm:text-4xl font-bold text-[var(--cr-primary)]">{inactivityCountdown}s</div>
-              <p className="text-[10px] text-[#8A9A81]">{t.alertSentToAdmin}</p>
+              <p className="text-[10px] text-[#8FA3B8]">{t.alertSentToAdmin}</p>
               <div className="rounded-2xl bg-[var(--cr-primary)] py-2 px-4 text-xs font-bold text-white">{t.iAmPresent}</div>
             </div>
           </div>

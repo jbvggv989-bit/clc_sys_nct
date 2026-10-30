@@ -1505,8 +1505,8 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                 {(hasTerms || termsText.trim() !== "") && depositPercentage === 0 && (
                   <div className="mb-5 text-left" dir={isRTL ? "rtl" : "ltr"}>
                     <div className="rounded-2xl border border-gray-200/90 bg-white p-5 space-y-4 shadow-2xs">
-                      <div className="flex items-center gap-2 text-[#2D522D] font-bold text-xs tracking-wider uppercase">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[#2D522D]/40 text-[#2D522D]">
+                      <div className="flex items-center gap-2 text-[#36A6A0] font-bold text-xs tracking-wider uppercase">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[#36A6A0]/40 text-[#36A6A0]">
                           <ShieldCheck size={14} />
                         </div>
                         <span>{isRTL ? "الشروط والأحكام" : "TERMS & CONDITIONS"}</span>
@@ -1516,9 +1516,9 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                         {isRTL ? "بالمتابعة، فإنك توافق على الشروط والأحكام الخاصة بنا." : "By continuing, you agree to our Terms & Conditions."}
                       </p>
 
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-[#F4F8F4] p-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-gray-200/80 bg-[#F0FDFA] p-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E2EBE2] text-[#2D522D]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E6F6F5] text-[#36A6A0]">
                             <FileText size={16} />
                           </div>
                           <span className="text-xs text-gray-600 font-normal leading-normal">
@@ -1528,7 +1528,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                         <button
                           type="button"
                           onClick={() => setShowTermsModal(true)}
-                          className="flex items-center gap-1 text-xs font-semibold text-[#2D522D] underline underline-offset-2 hover:opacity-80 shrink-0 self-end sm:self-auto cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-semibold text-[#36A6A0] underline underline-offset-2 hover:opacity-80 shrink-0 self-end sm:self-auto cursor-pointer"
                         >
                           <span>{isRTL ? "عرض الشروط والأحكام" : "View Terms & Conditions"}</span>
                           <ExternalLink size={13} />
@@ -1543,7 +1543,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                             type="checkbox"
                             checked={acceptedTerms}
                             onChange={(e) => setAcceptedTerms(e.target.checked)}
-                            className="peer h-4 w-4 appearance-none rounded border-2 border-gray-300 bg-white checked:border-[#2D522D] checked:bg-[#2D522D] focus:outline-none transition cursor-pointer"
+                            className="peer h-4 w-4 appearance-none rounded border-2 border-gray-300 bg-white checked:border-[#36A6A0] checked:bg-[#36A6A0] focus:outline-none transition cursor-pointer"
                           />
                           <svg
                             className="pointer-events-none absolute left-0.5 top-0.5 hidden h-3 w-3 stroke-white peer-checked:block"
@@ -1560,7 +1560,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                           <button
                             type="button"
                             onClick={() => setShowTermsModal(true)}
-                            className="font-semibold text-[#2D522D] underline underline-offset-2 hover:opacity-80 cursor-pointer"
+                            className="font-semibold text-[#36A6A0] underline underline-offset-2 hover:opacity-80 cursor-pointer"
                           >
                             {isRTL ? "الشروط والأحكام" : "Terms & Conditions"}
                           </button>
@@ -1697,7 +1697,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                             setTimeout(() => setCopiedAddress(false), 2000);
                           }
                         }}
-                        className="rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition cursor-pointer"
+                        className="rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition cursor-pointer"
                       >
                         {copiedAddress ? (isRTL ? "تم النسخ!" : "Copied!") : (isRTL ? "نسخ" : "Copy")}
                       </button>
@@ -1749,7 +1749,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                             setTimeout(() => setCopiedAddress(false), 2000);
                           }
                         }}
-                        className="rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition cursor-pointer"
+                        className="rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition cursor-pointer"
                       >
                         {copiedAddress ? (isRTL ? "تم النسخ!" : "Copied!") : (isRTL ? "نسخ" : "Copy")}
                       </button>
@@ -1806,21 +1806,21 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                 {(hasTerms || termsText.trim() !== "") && (
                   <div className="mt-4 text-left" dir={isRTL ? "rtl" : "ltr"}>
                     <div className="rounded-2xl border border-gray-200/90 bg-white p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center gap-2 text-[#2D522D] font-bold text-xs tracking-wider uppercase">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-[#2D522D]/40 text-[#2D522D]">
+                      <div className="flex items-center gap-2 text-[#36A6A0] font-bold text-xs tracking-wider uppercase">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-[#36A6A0]/40 text-[#36A6A0]">
                           <ShieldCheck size={13} />
                         </div>
                         <span>{isRTL ? "الشروط والأحكام" : "TERMS & CONDITIONS"}</span>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200/80 bg-[#F4F8F4] p-2.5">
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200/80 bg-[#F0FDFA] p-2.5">
                         <span className="text-xs text-gray-600 font-normal">
                           {isRTL ? "يرجى قراءة الشروط والأحكام قبل إتمام الدفع." : "Please read our Terms & Conditions before paying."}
                         </span>
                         <button
                           type="button"
                           onClick={() => setShowTermsModal(true)}
-                          className="flex items-center gap-1 text-xs font-semibold text-[#2D522D] underline shrink-0 cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-semibold text-[#36A6A0] underline shrink-0 cursor-pointer"
                         >
                           <span>{isRTL ? "عرض" : "View"}</span>
                           <ExternalLink size={12} />
@@ -1833,7 +1833,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                             type="checkbox"
                             checked={acceptedTerms}
                             onChange={(e) => setAcceptedTerms(e.target.checked)}
-                            className="peer h-4 w-4 appearance-none rounded border-2 border-gray-300 bg-white checked:border-[#2D522D] checked:bg-[#2D522D] focus:outline-none transition cursor-pointer"
+                            className="peer h-4 w-4 appearance-none rounded border-2 border-gray-300 bg-white checked:border-[#36A6A0] checked:bg-[#36A6A0] focus:outline-none transition cursor-pointer"
                           />
                           <svg
                             className="pointer-events-none absolute left-0.5 top-0.5 hidden h-3 w-3 stroke-white peer-checked:block"
@@ -1850,7 +1850,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                           <button
                             type="button"
                             onClick={() => setShowTermsModal(true)}
-                            className="font-semibold text-[#2D522D] underline hover:opacity-80 cursor-pointer"
+                            className="font-semibold text-[#36A6A0] underline hover:opacity-80 cursor-pointer"
                           >
                             {isRTL ? "الشروط والأحكام" : "Terms & Conditions"}
                           </button>
@@ -1989,7 +1989,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                 }
               </a>
             )}
-            <p className="text-[11px] text-[#8A9A81] mt-3 text-center">
+            <p className="text-[11px] text-[#8FA3B8] mt-3 text-center">
               {isRTL ? "انقر في أي مكان للإغلاق" : "Click anywhere outside to close"}
             </p>
           </div>

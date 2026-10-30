@@ -125,7 +125,7 @@ export default function ServiceRecipeEditor({ serviceId, authHeaders }: Props) {
       <div className="flex items-center gap-2 text-[var(--cr-primary)] font-semibold text-xs uppercase tracking-wider">
         <FlaskConical size={14} /> Consumables Recipe
       </div>
-      <p className="text-[11px] text-[#8C9A84]">
+      <p className="text-[11px] text-[#8FA3B8]">
         Standard materials consumed by one session of this service. Staff can still adjust the actual
         quantity used at checkout — this sets the default.
       </p>
@@ -197,7 +197,7 @@ export default function ServiceRecipeEditor({ serviceId, authHeaders }: Props) {
               type="button"
               onClick={addItem}
               disabled={!newProductId}
-              className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#2e3a26] disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--cr-primary)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#0E1F36] disabled:opacity-40"
             >
               <Plus size={13} /> Add
             </button>
@@ -207,7 +207,7 @@ export default function ServiceRecipeEditor({ serviceId, authHeaders }: Props) {
             type="button"
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="w-full rounded-lg bg-[var(--cr-primary)] py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26] disabled:opacity-40"
+            className="w-full rounded-lg bg-[var(--cr-primary)] py-2 text-xs font-semibold text-white transition hover:bg-[#0E1F36] disabled:opacity-40"
           >
             {saving ? "Saving Recipe..." : "Save Recipe"}
           </button>

@@ -179,7 +179,7 @@ export default function PatientsDirectoryView({
             {hasPermission("customers.create") && (
               <button
                 onClick={handleOpenAddCustomer}
-                className="inline-flex items-center gap-2 rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] cursor-pointer shadow-2xs"
               >
                 <Plus size={14} /> {t.addPatientBtn}
               </button>
@@ -265,7 +265,7 @@ export default function PatientsDirectoryView({
             title={t.filterTitle}
             className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer shadow-2xs ${
               showCustomerFilterPanel || customerFilterGender !== "All" || customerFilterStatus !== "All" || customerFilterReferral !== "All"
-                ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                ? "border-[var(--cr-accent)] bg-[#F1F5F9] text-[var(--cr-primary)]"
                 : "border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[var(--color-brand-light)]"
             }`}
           >
@@ -279,7 +279,7 @@ export default function PatientsDirectoryView({
 
       {/* Toggleable Customer Filters Drawer */}
       {showCustomerFilterPanel && (
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 rounded-3xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4 sm:p-5 items-end shadow-sm animate-fadeIn">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 rounded-3xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-4 sm:p-5 items-end shadow-sm animate-fadeIn">
           {/* Gender Filter */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.genderFilterLabel}</label>
@@ -348,7 +348,7 @@ export default function PatientsDirectoryView({
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm [scrollbar-width:thin]">
         <table className="w-full min-w-[750px] text-sm">
           <thead>
-            <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+            <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
               {/* Customer Column with Sort Droplist */}
               <th className="relative px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap select-none sort-dropdown-container">
                 <div className="inline-flex items-center gap-2">
@@ -361,7 +361,7 @@ export default function PatientsDirectoryView({
                     }}
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-lg transition cursor-pointer ${
                       sortField === "name"
-                        ? "bg-[#E6EDE4] text-[#2E5233]"
+                        ? "bg-[#F1F5F9] text-[#142B4A]"
                         : "bg-[#F3EFE6] text-[var(--color-brand-secondary)] hover:bg-[#EBE5D8]"
                     }`}
                     title={t.sortBy || "Sort by"}
@@ -372,7 +372,7 @@ export default function PatientsDirectoryView({
 
                 {openSortDropdown === "name" && (
                   <div className="absolute start-5 top-full mt-1.5 z-50 w-48 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--cr-primary)]/15 text-xs animate-fadeIn dropdown-action-menu normal-case font-normal text-start">
-                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8A9A81] tracking-normal">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8FA3B8] tracking-normal">
                       {t.sortBy || "Sort by"}
                     </div>
 
@@ -386,12 +386,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "name" && sortDirection === "asc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.nameAtoZ || "Name (A to Z)"}</span>
-                      <ArrowUp size={14} className={sortField === "name" && sortDirection === "asc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowUp size={14} className={sortField === "name" && sortDirection === "asc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
 
                     <button
@@ -404,12 +404,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "name" && sortDirection === "desc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.nameZtoA || "Name (Z to A)"}</span>
-                      <ArrowDown size={14} className={sortField === "name" && sortDirection === "desc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowDown size={14} className={sortField === "name" && sortDirection === "desc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
                   </div>
                 )}
@@ -427,7 +427,7 @@ export default function PatientsDirectoryView({
                     }}
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-lg transition cursor-pointer ${
                       sortField === "lastBooking"
-                        ? "bg-[#E6EDE4] text-[#2E5233]"
+                        ? "bg-[#F1F5F9] text-[#142B4A]"
                         : "bg-[#F3EFE6] text-[var(--color-brand-secondary)] hover:bg-[#EBE5D8]"
                     }`}
                     title={t.sortBy || "Sort by"}
@@ -438,7 +438,7 @@ export default function PatientsDirectoryView({
 
                 {openSortDropdown === "lastBooking" && (
                   <div className="absolute start-5 top-full mt-1.5 z-50 w-48 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--cr-primary)]/15 text-xs animate-fadeIn dropdown-action-menu normal-case font-normal text-start">
-                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8A9A81] tracking-normal">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8FA3B8] tracking-normal">
                       {t.sortBy || "Sort by"}
                     </div>
                     
@@ -452,12 +452,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "lastBooking" && sortDirection === "desc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.newestToOldest || "Newest to Oldest"}</span>
-                      <ArrowDown size={14} className={sortField === "lastBooking" && sortDirection === "desc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowDown size={14} className={sortField === "lastBooking" && sortDirection === "desc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
 
                     <button
@@ -470,12 +470,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "lastBooking" && sortDirection === "asc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.oldestToNewest || "Oldest to Newest"}</span>
-                      <ArrowUp size={14} className={sortField === "lastBooking" && sortDirection === "asc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowUp size={14} className={sortField === "lastBooking" && sortDirection === "asc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
                   </div>
                 )}
@@ -498,7 +498,7 @@ export default function PatientsDirectoryView({
                     }}
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-lg transition cursor-pointer ${
                       sortField === "totalSpend"
-                        ? "bg-[#E6EDE4] text-[#2E5233]"
+                        ? "bg-[#F1F5F9] text-[#142B4A]"
                         : "bg-[#F3EFE6] text-[var(--color-brand-secondary)] hover:bg-[#EBE5D8]"
                     }`}
                     title={t.sortBy || "Sort by"}
@@ -509,7 +509,7 @@ export default function PatientsDirectoryView({
 
                 {openSortDropdown === "totalSpend" && (
                   <div className="absolute start-5 top-full mt-1.5 z-50 w-44 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--cr-primary)]/15 text-xs animate-fadeIn dropdown-action-menu normal-case font-normal text-start">
-                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8A9A81] tracking-normal">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8FA3B8] tracking-normal">
                       {t.sortBy || "Sort by"}
                     </div>
 
@@ -523,12 +523,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "totalSpend" && sortDirection === "desc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.highToLow || "High to Low"}</span>
-                      <ArrowDown size={14} className={sortField === "totalSpend" && sortDirection === "desc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowDown size={14} className={sortField === "totalSpend" && sortDirection === "desc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
 
                     <button
@@ -541,12 +541,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "totalSpend" && sortDirection === "asc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.lowToHigh || "Low to High"}</span>
-                      <ArrowUp size={14} className={sortField === "totalSpend" && sortDirection === "asc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowUp size={14} className={sortField === "totalSpend" && sortDirection === "asc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
                   </div>
                 )}
@@ -564,7 +564,7 @@ export default function PatientsDirectoryView({
                     }}
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-lg transition cursor-pointer ${
                       sortField === "wallet"
-                        ? "bg-[#E6EDE4] text-[#2E5233]"
+                        ? "bg-[#F1F5F9] text-[#142B4A]"
                         : "bg-[#F3EFE6] text-[var(--color-brand-secondary)] hover:bg-[#EBE5D8]"
                     }`}
                     title={t.sortBy || "Sort by"}
@@ -575,7 +575,7 @@ export default function PatientsDirectoryView({
 
                 {openSortDropdown === "wallet" && (
                   <div className="absolute start-5 top-full mt-1.5 z-50 w-44 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--cr-primary)]/15 text-xs animate-fadeIn dropdown-action-menu normal-case font-normal text-start">
-                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8A9A81] tracking-normal">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8FA3B8] tracking-normal">
                       {t.sortBy || "Sort by"}
                     </div>
 
@@ -589,12 +589,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "wallet" && sortDirection === "desc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.highToLow || "High to Low"}</span>
-                      <ArrowDown size={14} className={sortField === "wallet" && sortDirection === "desc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowDown size={14} className={sortField === "wallet" && sortDirection === "desc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
 
                     <button
@@ -607,12 +607,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "wallet" && sortDirection === "asc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.lowToHigh || "Low to High"}</span>
-                      <ArrowUp size={14} className={sortField === "wallet" && sortDirection === "asc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowUp size={14} className={sortField === "wallet" && sortDirection === "asc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
                   </div>
                 )}
@@ -630,7 +630,7 @@ export default function PatientsDirectoryView({
                     }}
                     className={`inline-flex items-center justify-center h-6 w-6 rounded-lg transition cursor-pointer ${
                       sortField === "outstanding"
-                        ? "bg-[#E6EDE4] text-[#2E5233]"
+                        ? "bg-[#F1F5F9] text-[#142B4A]"
                         : "bg-[#F3EFE6] text-[var(--color-brand-secondary)] hover:bg-[#EBE5D8]"
                     }`}
                     title={t.sortBy || "Sort by"}
@@ -641,7 +641,7 @@ export default function PatientsDirectoryView({
 
                 {openSortDropdown === "outstanding" && (
                   <div className="absolute start-5 top-full mt-1.5 z-50 w-44 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--cr-primary)]/15 text-xs animate-fadeIn dropdown-action-menu normal-case font-normal text-start">
-                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8A9A81] tracking-normal">
+                    <div className="px-3 py-1.5 text-[11px] font-semibold text-[#8FA3B8] tracking-normal">
                       {t.sortBy || "Sort by"}
                     </div>
                     
@@ -655,12 +655,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "outstanding" && sortDirection === "desc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.highToLow || "High to Low"}</span>
-                      <ArrowDown size={14} className={sortField === "outstanding" && sortDirection === "desc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowDown size={14} className={sortField === "outstanding" && sortDirection === "desc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
 
                     <button
@@ -673,12 +673,12 @@ export default function PatientsDirectoryView({
                       }}
                       className={`w-full text-start px-3 py-2 rounded-xl flex items-center justify-between transition cursor-pointer text-xs ${
                         sortField === "outstanding" && sortDirection === "asc"
-                          ? "bg-[#E7EFE6] font-semibold text-[#2E5233]"
-                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F9F9F7]"
+                          ? "bg-[#F1F5F9] font-semibold text-[#142B4A]"
+                          : "font-medium text-[var(--cr-dark)] hover:bg-[#F8FAFC]"
                       }`}
                     >
                       <span>{t.lowToHigh || "Low to High"}</span>
-                      <ArrowUp size={14} className={sortField === "outstanding" && sortDirection === "asc" ? "text-[#2E5233]" : "text-[#8A9A81]"} />
+                      <ArrowUp size={14} className={sortField === "outstanding" && sortDirection === "asc" ? "text-[#142B4A]" : "text-[#8FA3B8]"} />
                     </button>
                   </div>
                 )}
@@ -711,7 +711,7 @@ export default function PatientsDirectoryView({
                 <tr
                   key={uniqueKey}
                   onClick={() => setViewingCustomerProfile(c)}
-                  className="transition hover:bg-[#F9F9F7] cursor-pointer"
+                  className="transition hover:bg-[#F8FAFC] cursor-pointer"
                 >
                   <td className="px-5 py-4 font-semibold text-[var(--cr-dark)]">
                     <div>
@@ -733,7 +733,7 @@ export default function PatientsDirectoryView({
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-[#8A9A81]">—</span>
+                      <span className="text-xs text-[#8FA3B8]">—</span>
                     )}
                   </td>
 
@@ -912,7 +912,7 @@ export default function PatientsDirectoryView({
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-[#8A9A81]">—</span>
+                      <span className="text-xs text-[#8FA3B8]">—</span>
                     )}
                   </div>
 

@@ -254,7 +254,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                   <button
                     type="button"
                     onClick={() => handleClose(false)}
-                    className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition cursor-pointer"
+                    className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -263,7 +263,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                     <button
                       type="button"
                       onClick={() => handleClose(false)}
-                      className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition cursor-pointer"
+                      className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -281,7 +281,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                   <button
                     type="button"
                     onClick={() => handleClose(false)}
-                    className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition cursor-pointer"
+                    className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition cursor-pointer"
                   >
                     Cancel
                   </button>

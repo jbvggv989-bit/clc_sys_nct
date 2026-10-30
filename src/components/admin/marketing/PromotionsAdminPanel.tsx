@@ -301,7 +301,7 @@ export function PromotionsAdminPanel({ localServices, setLocalServices, branches
               </p>
               <button
                 onClick={() => setShowAddPromoModal(true)}
-                className="mt-4 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26]"
+                className="mt-4 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36]"
               >
                 Create Your First Promotion
               </button>
@@ -479,7 +479,7 @@ export function PromotionsAdminPanel({ localServices, setLocalServices, branches
                       />
                     </div>
                     {/* Select All / Clear row */}
-                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--cr-primary)]/10 bg-[#F5F4F0]">
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--cr-primary)]/10 bg-[#F8FAFC]">
                       <button
                         type="button"
                         onClick={() => setPromoServiceIds(localServices.filter(s => s.en.toLowerCase().includes(promoServiceSearch.toLowerCase()) || (s.ar || "").toLowerCase().includes(promoServiceSearch.toLowerCase())).map(s => s.id))}
@@ -718,7 +718,7 @@ export function PromotionsAdminPanel({ localServices, setLocalServices, branches
                 className={`rounded-lg px-5 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition ${
                   (editingPromo ? false : promoServiceIds.length === 0) || promoBranchNames.length === 0
                     ? "bg-[var(--cr-primary)]/50 cursor-not-allowed"
-                    : "bg-[var(--cr-primary)] hover:bg-[#2e3a26]"
+                    : "bg-[var(--cr-primary)] hover:bg-[#0E1F36]"
                 }`}
               >
                 {editingPromo ? "Save Changes" : promoServiceIds.length > 1 ? `Apply to ${promoServiceIds.length} Services` : "Save Promotion"}

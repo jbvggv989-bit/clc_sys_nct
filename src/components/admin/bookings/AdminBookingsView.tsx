@@ -1205,7 +1205,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
             <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
               {tr.cardTodayAppointments || "Today's Appointments"}
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#1E3A2B]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#142B4A]">
               <CalendarIcon size={18} />
             </div>
           </div>
@@ -1309,7 +1309,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
             <button
               type="button"
               onClick={onNewBooking}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A2B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#162C20] active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#142B4A] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#142B4A] active:scale-95 cursor-pointer"
             >
               <Plus size={16} />
               <span>{tr.newBookingBtn}</span>
@@ -1366,9 +1366,9 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
                     {canAddPrev && (
                       <button
                         onClick={() => { onAddPreviousBooking?.(); setIsMoreMenuOpen(false); }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#374151] hover:bg-[#F4F7F2] hover:text-[#2D3F2A] transition cursor-pointer whitespace-nowrap"
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#374151] hover:bg-[#F8FAFC] hover:text-[#142B4A] transition cursor-pointer whitespace-nowrap"
                       >
-                        <History size={15} className="text-[#3D5A45] shrink-0" />
+                        <History size={15} className="text-[#142B4A] shrink-0" />
                         <span>{tr.addPreviousBookingBtn || "Add Previous Booking"}</span>
                       </button>
                     )}
@@ -1675,7 +1675,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
               >
                 <ChevronLeft size={16} />
               </button>
-              <span className="px-3 py-1 bg-[#1E3A2B] text-white font-bold rounded-lg text-xs">
+              <span className="px-3 py-1 bg-[#142B4A] text-white font-bold rounded-lg text-xs">
                 {pendingPage}
               </span>
               <button
@@ -1813,7 +1813,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
           <div className="w-full overflow-x-auto rounded-2xl border border-gray-100 [scrollbar-width:thin]">
             <table className="w-full text-start text-xs border-collapse min-w-[800px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-[#F9F9F7] text-[10px] uppercase font-bold tracking-tight text-[#9CA3AF]">
+                <tr className="border-b border-gray-100 bg-[#F8FAFC] text-[10px] uppercase font-bold tracking-tight text-[#9CA3AF]">
                   <th className="py-3 px-2.5 text-start font-bold w-[14%]">{tr.colDateTime || "DATE & TIME"}</th>
                   <th className="py-3 px-2.5 text-start font-bold w-[20%]">{tr.colPatient || "PATIENT"}</th>
                   <th className="py-3 px-2.5 text-start font-bold w-[18%]">{tr.colService || "SERVICE"}</th>
@@ -2026,7 +2026,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
                           !cell.currentMonth
                             ? "text-gray-300 group-hover:bg-gray-100/60"
                             : isSelected
-                            ? "bg-[#1E3A2B] text-white font-bold shadow-xs group-hover:bg-[#162C20]"
+                            ? "bg-[#142B4A] text-white font-bold shadow-xs group-hover:bg-[#142B4A]"
                             : "text-[#374151] font-semibold group-hover:bg-gray-100 group-hover:text-[#111827]"
                         }`}
                       >
@@ -2104,7 +2104,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
                     title={tr.filterTitle || "Filter"}
                     className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer shadow-2xs ${
                       showTodayFilters || todayStatusFilter !== "All" || todayDoctorFilter !== "All" || todayServiceFilter !== "All" || todayPaymentFilter !== "All"
-                        ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                        ? "border-[var(--cr-accent)] bg-[#F1F5F9] text-[var(--cr-primary)]"
                         : "border-gray-200 bg-white text-[#374151] hover:bg-gray-50 active:scale-95"
                     }`}
                   >
@@ -2118,7 +2118,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
 
               {/* Expandable Filter Panel (Inventory style) */}
               {showTodayFilters && (
-                <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4 shadow-2xs animate-fadeIn">
+                <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-4 shadow-2xs animate-fadeIn">
                   {/* Status Filter */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
@@ -2238,7 +2238,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
                     {loadingDb ? (
                       <tr>
                         <td colSpan={7} className="py-12 text-center text-xs text-[var(--color-brand-secondary)]">
-                          <Loader2 size={20} className="animate-spin mx-auto mb-2 text-[#1E3A2B]" />
+                          <Loader2 size={20} className="animate-spin mx-auto mb-2 text-[#142B4A]" />
                           {tr.loadingAppointments}
                         </td>
                       </tr>
@@ -2250,7 +2250,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
                             <button
                               type="button"
                               onClick={onNewBooking}
-                              className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A2B] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#162C20]"
+                              className="inline-flex items-center gap-2 rounded-xl bg-[#142B4A] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#142B4A]"
                             >
                               <Plus size={14} />
                               <span>{tr.createNewBookingBtn}</span>

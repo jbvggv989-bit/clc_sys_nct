@@ -202,7 +202,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
           </button>
           <button
             onClick={() => setShowAddCategoryModal(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] cursor-pointer"
           >
             <Plus size={14} /> {t.addCategoryBtn}
           </button>
@@ -228,7 +228,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
               title={t.filterTitle}
               className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer shadow-2xs ${
                 showServiceFilterPanel || serviceFilterStatus !== "All"
-                  ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                  ? "border-[var(--cr-accent)] bg-[#F1F5F9] text-[var(--cr-primary)]"
                   : "border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[var(--color-brand-light)]"
               }`}
             >
@@ -263,7 +263,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
             const newStates = Object.fromEntries(localCategories.map(c => [c.key, !allExpanded]));
             setExpandedCategories(newStates);
           }}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F9F9F7] transition shadow-2xs"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition shadow-2xs"
         >
           {localCategories.every(c => expandedCategories[c.key] ?? true) ? t.collapseAll : t.expandAll}
         </button>
@@ -271,7 +271,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
 
       {/* Dynamic Services Filter Panel */}
       {showServiceFilterPanel && (
-        <div className="mb-5 grid grid-cols-1 gap-4 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4 md:grid-cols-3 items-end shadow-sm animate-fadeIn">
+        <div className="mb-5 grid grid-cols-1 gap-4 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-4 md:grid-cols-3 items-end shadow-sm animate-fadeIn">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.statusFilterLabel}</label>
             <select
@@ -396,7 +396,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
 
           if (sortedCategories.length === 0) {
             return (
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-[#F9F9F7] py-16 px-4 text-center">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-[#F8FAFC] py-16 px-4 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] mb-3">
                   <Layers size={22} />
                 </div>
@@ -411,7 +411,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                 <button
                   type="button"
                   onClick={() => setShowAddCategoryModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] cursor-pointer"
                 >
                   <Plus size={14} /> {t.addCategoryBtn}
                 </button>
@@ -482,7 +482,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
               {/* Category header row */}
               <div
                 onClick={() => toggleCategoryExpand(cat.key)}
-                className="flex w-full cursor-pointer flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 transition hover:bg-[#F9F9F7]"
+                className="flex w-full cursor-pointer flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 transition hover:bg-[#F8FAFC]"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   {/* Category Drag Handle */}
@@ -547,7 +547,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                       setEditingService(null);
                       setShowAddServiceModal(true);
                     }}
-                    className={`${hasPermission("services.create") ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer`}
+                    className={`${hasPermission("services.create") ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#0E1F36] cursor-pointer`}
                   >
                     <Plus size={12} /> {t.addServiceBtn}
                   </button>
@@ -574,7 +574,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                       <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
                         <table className="w-full min-w-[860px] text-sm">
                           <thead>
-                            <tr className="bg-[#F9F9F7]">
+                            <tr className="bg-[#F8FAFC]">
                               <th className="w-10 px-3 py-2.5"></th>
                               <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colId}</th>
                               <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colName}</th>
@@ -620,7 +620,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                                   } ${
                                     dragOverServiceId === svc.id ? "border-t-2 border-t-[var(--cr-accent)]" : ""
                                   } ${
-                                    rowFaded ? "opacity-50 bg-[#F9F9F7]" : "hover:bg-[#F9F9F7]"
+                                    rowFaded ? "opacity-50 bg-[#F8FAFC]" : "hover:bg-[#F8FAFC]"
                                   }`}
                                 >
                                   {/* Drag Handle */}
@@ -797,7 +797,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                       </div>
 
                       {/* Mobile Adaptive Cards */}
-                      <div className="block md:hidden divide-y divide-[var(--cr-primary)]/10 p-3.5 space-y-3.5 bg-[#FAFBF9]">
+                      <div className="block md:hidden divide-y divide-[var(--cr-primary)]/10 p-3.5 space-y-3.5 bg-[#FFFFFF]">
                         {catServices.map((svc) => {
                           const toggles = serviceToggles[svc.id] ?? { visible: true, active: true };
                           const isInactive = !toggles.active;
@@ -846,7 +846,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                               </div>
 
                               {/* Price & Branch Pricing Details */}
-                              <div className="rounded-xl bg-[#F8F9F6] p-2.5 mb-3 border border-[var(--cr-primary)]/8 text-xs space-y-1.5">
+                              <div className="rounded-xl bg-[#F8FAFC] p-2.5 mb-3 border border-[var(--cr-primary)]/8 text-xs space-y-1.5">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[11px] font-semibold text-[var(--color-brand-secondary)]">{t.colBranchPrice}:</span>
                                   <span className="font-bold text-[var(--cr-accent)] text-sm">EGP {svc.price ?? 0}</span>
@@ -958,7 +958,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
             <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/8 pt-4">
               <button
                 onClick={() => setDeleteCategoryTarget(null)}
-                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F8FAFC]"
               >
                 {t.cancelBtn}
               </button>
@@ -997,7 +997,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                   setDeleteServiceTarget(null);
                   setShowAddServiceModal(true);
                 }}
-                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F8FAFC]"
               >
                 {t.cancelBtn}
               </button>
@@ -1030,7 +1030,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
               </div>
               <button
                 onClick={() => setShowAddCategoryModal(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F9F9F7]"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F8FAFC]"
               >
                 ✕
               </button>
@@ -1042,7 +1042,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                   value={newCategoryNameEn}
                   onChange={(e) => setNewCategoryNameEn(e.target.value)}
                   placeholder={t.categoryNameEnPlaceholder || "e.g. Dermatology & Aesthetic"}
-                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                 />
               </div>
               <div>
@@ -1051,7 +1051,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                   value={newCategoryNameAr}
                   onChange={(e) => setNewCategoryNameAr(e.target.value)}
                   placeholder={(t as any).categoryNameArPlaceholder || "e.g. الجلدية والتجميل"}
-                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F8FAFC] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
                   dir="rtl"
                 />
               </div>
@@ -1063,7 +1063,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                   setNewCategoryNameAr("");
                   setShowAddCategoryModal(false);
                 }}
-                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F8FAFC]"
               >
                 {t.cancelBtn}
               </button>
@@ -1084,7 +1084,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                   setNewCategoryNameAr("");
                   setShowAddCategoryModal(false);
                 }}
-                className="rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26]"
+                className="rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36]"
               >
                 {t.createCategoryBtn}
               </button>
@@ -1530,7 +1530,7 @@ export default function AdminServicesView(props: AdminServicesViewProps) {
                     alert(lang === "ar" ? "فشل حفظ الخدمة. يرجى التأكد من صلاحيات الحساب والمحاولة مرة أخرى." : "Failed to save service. Please check your permissions and try again.");
                   }
                 }}
-                className="rounded-lg bg-[var(--cr-primary)] px-6 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] cursor-pointer"
+                className="rounded-lg bg-[var(--cr-primary)] px-6 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] cursor-pointer"
               >
                 {t.saveBtn}
               </button>

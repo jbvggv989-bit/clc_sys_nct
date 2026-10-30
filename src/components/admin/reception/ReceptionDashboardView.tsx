@@ -514,13 +514,13 @@ export default function ReceptionDashboardView({
             <span>{greetingData.title}</span>
             <span>{greetingData.icon}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#788272] mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-[#8FA3B8] mt-1 font-medium">
             {greetingData.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-[#EBE8E0] shadow-xs shrink-0 self-start sm:self-auto">
-          <div className="h-9 w-9 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-[#E2E8F0] shadow-xs shrink-0 self-start sm:self-auto">
+          <div className="h-9 w-9 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
             <Calendar size={18} />
           </div>
           <p className="text-xs font-bold text-[var(--cr-dark)]">{todayFormatted}</p>
@@ -528,17 +528,17 @@ export default function ReceptionDashboardView({
       </div>
 
       {/* ── 1. TODAY'S SHIFT / SHIFT SUMMARY CARD ── */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#EBE8E0] shadow-sm space-y-6">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E2E8F0] shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#F3F0E8]">
           <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-full bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="h-11 w-11 rounded-full bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <Clock size={20} />
             </div>
             <div>
               <h3 className="text-lg font-bold text-[var(--cr-dark)]">
                 {isCompleted ? (tr.shiftSummaryTitle ?? "Shift Summary") : (tr.shiftTitle ?? "Today's Shift")}
               </h3>
-              <p className="text-xs text-[#788272]">
+              <p className="text-xs text-[#8FA3B8]">
                 {isCompleted
                   ? (tr.completedStatus ?? "Completed")
                   : isInProgress
@@ -577,7 +577,7 @@ export default function ReceptionDashboardView({
                 type="button"
                 disabled={shiftProcessing}
                 onClick={handleStartShift}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[var(--cr-primary)] hover:bg-[#343e2b] text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[var(--cr-primary)] hover:bg-[#142B4A] text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
               >
                 <Play size={14} fill="currentColor" />
                 <span>{shiftProcessing ? (tr.updating ?? "Updating...") : (tr.startShift ?? "Start Shift")}</span>
@@ -619,22 +619,22 @@ export default function ReceptionDashboardView({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {/* 1. Today's Date */}
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <Calendar size={18} />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-[#8C9686] uppercase tracking-wider">{tr.todayDate ?? "Today's Date"}</p>
+              <p className="text-[11px] font-bold text-[#8FA3B8] uppercase tracking-wider">{tr.todayDate ?? "Today's Date"}</p>
               <p className="text-base sm:text-lg font-black text-[var(--cr-dark)] mt-0.5">{todayShortDate}</p>
             </div>
           </div>
 
           {/* 2. Shift Start */}
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <Clock size={18} />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-[#8C9686] uppercase tracking-wider">{tr.shiftStart ?? "Shift Start"}</p>
+              <p className="text-[11px] font-bold text-[#8FA3B8] uppercase tracking-wider">{tr.shiftStart ?? "Shift Start"}</p>
               <p className="text-base sm:text-lg font-black text-[var(--cr-dark)] mt-0.5">
                 {isNotStarted ? "—" : (dashboardData?.shift?.actualStartingTime || "--:--")}
               </p>
@@ -643,11 +643,11 @@ export default function ReceptionDashboardView({
 
           {/* 3. Shift End */}
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <Clock size={18} />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-[#8C9686] uppercase tracking-wider">{tr.shiftEnd ?? "Shift End"}</p>
+              <p className="text-[11px] font-bold text-[#8FA3B8] uppercase tracking-wider">{tr.shiftEnd ?? "Shift End"}</p>
               <p className="text-base sm:text-lg font-black text-[var(--cr-dark)] mt-0.5">
                 {isCompleted
                   ? (dashboardData?.shift?.actualEndingTime || "--:--")
@@ -658,11 +658,11 @@ export default function ReceptionDashboardView({
 
           {/* 4. Working Hours */}
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
               <CheckCircle2 size={18} />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-[#8C9686] uppercase tracking-wider">{tr.workingHours ?? "Working Hours"}</p>
+              <p className="text-[11px] font-bold text-[#8FA3B8] uppercase tracking-wider">{tr.workingHours ?? "Working Hours"}</p>
               <p className="text-base sm:text-lg font-black text-[var(--cr-dark)] mt-0.5">
                 {isNotStarted
                   ? "—"
@@ -689,15 +689,15 @@ export default function ReceptionDashboardView({
               {/* Card 1: Today's Bookings */}
               <div
                 onClick={() => onNavigateTab ? onNavigateTab("Bookings") : null}
-                className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
+                className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
               >
-                <div className="h-14 w-14 rounded-2xl bg-[#EBF0E6] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+                <div className="h-14 w-14 rounded-2xl bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
                   <Calendar size={24} />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{todayBookingsCount}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.todaysBookings ?? "Today's Bookings"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.scheduledForToday ?? "Scheduled for today"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.scheduledForToday ?? "Scheduled for today"}</p>
                 </div>
               </div>
 
@@ -707,7 +707,7 @@ export default function ReceptionDashboardView({
                   if (onPendingApprovalsClick) onPendingApprovalsClick();
                   else if (onNavigateTab) onNavigateTab("Bookings");
                 }}
-                className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
+                className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
               >
                 <div className="h-14 w-14 rounded-2xl bg-[#FEF3E6] text-[#D97706] flex items-center justify-center shrink-0">
                   <Clock size={24} />
@@ -715,14 +715,14 @@ export default function ReceptionDashboardView({
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{pendingApprovalCount}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.pendingApproval ?? "Pending Approval"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.bookingsWaitingForAction ?? "Bookings waiting for action"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.bookingsWaitingForAction ?? "Bookings waiting for action"}</p>
                 </div>
               </div>
 
               {/* Card 3: Expected Payments */}
               <div
                 onClick={() => onViewTransactions ? onViewTransactions() : onNavigateTab?.("Finance")}
-                className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
+                className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4 hover:shadow-md transition cursor-pointer"
               >
                 <div className="h-14 w-14 rounded-2xl bg-[#EAF2FA] text-[#2563EB] flex items-center justify-center shrink-0">
                   <CreditCard size={24} />
@@ -730,7 +730,7 @@ export default function ReceptionDashboardView({
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{formatCurrency(expectedPayments)}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.expectedPayments ?? "Expected Payments"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.toBeCollectedToday ?? "To be collected today"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.toBeCollectedToday ?? "To be collected today"}</p>
                 </div>
               </div>
             </div>
@@ -739,9 +739,9 @@ export default function ReceptionDashboardView({
           {/* ── 3. 2-COLUMN OPERATIONAL GRID: QUICK ACTIONS & ATTENTION NEEDED ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Quick Actions Card */}
-            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#EBE8E0] shadow-sm space-y-4">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E2E8F0] shadow-sm space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
                   <Plus size={18} />
                 </div>
                 <h3 className="text-base font-bold text-[var(--cr-dark)]">{tr.quickActions ?? "Quick Actions"}</h3>
@@ -751,7 +751,7 @@ export default function ReceptionDashboardView({
                 <button
                   type="button"
                   onClick={() => onNewBooking ? onNewBooking() : onNavigateTab?.("Bookings")}
-                  className="w-full bg-[var(--cr-primary)] hover:bg-[#343e2b] text-white py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+                  className="w-full bg-[var(--cr-primary)] hover:bg-[#142B4A] text-white py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
                 >
                   <Plus size={16} />
                   <span>{tr.newBooking ?? "New Booking"}</span>
@@ -760,7 +760,7 @@ export default function ReceptionDashboardView({
                 <button
                   type="button"
                   onClick={() => onNewPatient ? onNewPatient() : onNavigateTab?.("Patients")}
-                  className="w-full bg-white border border-[#E0DCCE] hover:bg-[#FAF9F5] text-[var(--cr-dark)] py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs transition cursor-pointer"
+                  className="w-full bg-white border border-[#E0DCCE] hover:bg-[#FFFFFF] text-[var(--cr-dark)] py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs transition cursor-pointer"
                 >
                   <Plus size={16} />
                   <span>{tr.newPatient ?? "New Patient"}</span>
@@ -769,7 +769,7 @@ export default function ReceptionDashboardView({
             </div>
 
             {/* Attention Needed Card */}
-            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#EBE8E0] shadow-sm space-y-3">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E2E8F0] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="h-9 w-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
@@ -794,7 +794,7 @@ export default function ReceptionDashboardView({
                     if (onPendingApprovalsClick) onPendingApprovalsClick();
                     else if (onNavigateTab) onNavigateTab("Bookings");
                   }}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-[#FAF9F5] border border-[#EBE8E0] hover:bg-[var(--color-brand-sand)] transition cursor-pointer group"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-[#FFFFFF] border border-[#E2E8F0] hover:bg-[var(--color-brand-sand)] transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-full bg-[#FEF3E6] text-[#D97706] flex items-center justify-center shrink-0">
@@ -804,16 +804,16 @@ export default function ReceptionDashboardView({
                       <p className="text-xs font-bold text-[var(--cr-dark)]">
                         {pendingApprovalCount} {tr.bookingsPendingApproval ?? "bookings pending approval"}
                       </p>
-                      <p className="text-[11px] text-[#788272] font-medium">{tr.needYourConfirmation ?? "Need your confirmation"}</p>
+                      <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.needYourConfirmation ?? "Need your confirmation"}</p>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-[#8C9686] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  <ChevronRight size={16} className="text-[#8FA3B8] group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
 
                 {/* Item 2: Upcoming Confirmation */}
                 <div
                   onClick={() => onNavigateTab ? onNavigateTab("Bookings") : null}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-[#FAF9F5] border border-[#EBE8E0] hover:bg-[var(--color-brand-sand)] transition cursor-pointer group"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-[#FFFFFF] border border-[#E2E8F0] hover:bg-[var(--color-brand-sand)] transition cursor-pointer group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="h-9 w-9 rounded-full bg-[#EAF2FA] text-[#2563EB] flex items-center justify-center shrink-0">
@@ -823,20 +823,20 @@ export default function ReceptionDashboardView({
                       <p className="text-xs font-bold text-[var(--cr-dark)]">
                         {upcomingConfirmationsCount} {tr.upcomingConfirmations ?? "upcoming confirmations"}
                       </p>
-                      <p className="text-[11px] text-[#788272] font-medium">{tr.inTheNext30Minutes ?? "In the next 30 minutes"}</p>
+                      <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.inTheNext30Minutes ?? "In the next 30 minutes"}</p>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-[#8C9686] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  <ChevronRight size={16} className="text-[#8FA3B8] group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* ── 4. TODAY'S BOOKINGS TABLE ── */}
-          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#EBE8E0] shadow-sm space-y-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E2E8F0] shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
                   <Calendar size={18} />
                 </div>
                 <h3 className="text-base font-bold text-[var(--cr-dark)]">{tr.todaysBookings ?? "Today's Bookings"}</h3>
@@ -854,7 +854,7 @@ export default function ReceptionDashboardView({
             <div className="overflow-x-auto [scrollbar-width:thin]">
               <table className="w-full text-start text-xs border-collapse min-w-[700px]">
                 <thead>
-                  <tr className="border-b border-[#F0EEE6] text-[#8C9686] uppercase text-[10px] font-extrabold tracking-wider">
+                  <tr className="border-b border-[#E2E8F0] text-[#8FA3B8] uppercase text-[10px] font-extrabold tracking-wider">
                     <th className="py-3 px-3.5 text-start">{tr.time ?? "Time"}</th>
                     <th className="py-3 px-3.5 text-start">{tr.patient ?? "Patient"}</th>
                     <th className="py-3 px-3.5 text-start">{tr.doctor ?? "Doctor"}</th>
@@ -867,7 +867,7 @@ export default function ReceptionDashboardView({
                 <tbody className="divide-y divide-[#F7F5F0]">
                   {bookingsList.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-[#8C9686] italic">
+                      <td colSpan={7} className="py-8 text-center text-[#8FA3B8] italic">
                         {tr.noBookingsToday ?? "No bookings scheduled for today."}
                       </td>
                     </tr>
@@ -888,7 +888,7 @@ export default function ReceptionDashboardView({
                         <tr
                           key={row.id}
                           onClick={() => onViewBookingDetails ? onViewBookingDetails(row.raw || row) : onNavigateTab?.("Bookings")}
-                          className="hover:bg-[#FAF9F5] transition cursor-pointer group"
+                          className="hover:bg-[#FFFFFF] transition cursor-pointer group"
                         >
                           {/* 1. Time */}
                           <td className="py-3.5 px-3.5 font-black text-[var(--cr-dark)] whitespace-nowrap">
@@ -899,7 +899,7 @@ export default function ReceptionDashboardView({
                           <td className="py-3.5 px-3.5">
                             <div>
                               <p className="font-bold text-[var(--cr-dark)]">{row.patientName}</p>
-                              <p className="text-[11px] text-[#8C9686] font-medium">{row.patientPhone}</p>
+                              <p className="text-[11px] text-[#8FA3B8] font-medium">{row.patientPhone}</p>
                             </div>
                           </td>
 
@@ -910,16 +910,16 @@ export default function ReceptionDashboardView({
                                 <img
                                   src={row.doctorImage}
                                   alt={row.doctorName}
-                                  className="h-7 w-7 rounded-full object-cover border border-[#EBE8E0]"
+                                  className="h-7 w-7 rounded-full object-cover border border-[#E2E8F0]"
                                 />
                               ) : (
-                                <div className="h-7 w-7 rounded-full bg-[#EBF0E6] text-[var(--cr-primary)] flex items-center justify-center text-[10px] font-bold shrink-0">
+                                <div className="h-7 w-7 rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center text-[10px] font-bold shrink-0">
                                   {row.doctorName?.slice(0, 2)?.toUpperCase() || "DR"}
                                 </div>
                               )}
                               <div>
                                 <p className="font-bold text-[var(--cr-dark)] whitespace-nowrap">{row.doctorName}</p>
-                                <p className="text-[10px] text-[#8C9686] font-medium">{row.doctorSpecialty}</p>
+                                <p className="text-[10px] text-[#8FA3B8] font-medium">{row.doctorSpecialty}</p>
                               </div>
                             </div>
                           </td>
@@ -970,7 +970,7 @@ export default function ReceptionDashboardView({
                             <button
                               type="button"
                               onClick={() => setActiveBookingMenuId(activeBookingMenuId === row.id ? null : row.id)}
-                              className="p-1.5 rounded-xl hover:bg-[#F0F4EC] text-[#8C9686] hover:text-[var(--cr-dark)] transition cursor-pointer"
+                              className="p-1.5 rounded-xl hover:bg-[#F8FAFC] text-[#8FA3B8] hover:text-[var(--cr-dark)] transition cursor-pointer"
                             >
                               <MoreVertical size={16} />
                             </button>
@@ -978,7 +978,7 @@ export default function ReceptionDashboardView({
                             {activeBookingMenuId === row.id && (
                               <div
                                 ref={menuRef}
-                                className={`absolute z-30 ${dir === "rtl" ? "left-0" : "right-0"} mt-1 w-40 rounded-2xl bg-white border border-[#EBE8E0] shadow-xl p-1.5 space-y-1 animate-in fade-in zoom-in-95`}
+                                className={`absolute z-30 ${dir === "rtl" ? "left-0" : "right-0"} mt-1 w-40 rounded-2xl bg-white border border-[#E2E8F0] shadow-xl p-1.5 space-y-1 animate-in fade-in zoom-in-95`}
                               >
                                 <button
                                   type="button"
@@ -987,7 +987,7 @@ export default function ReceptionDashboardView({
                                     if (onViewBookingDetails) onViewBookingDetails(row.raw || row);
                                     else if (onNavigateTab) onNavigateTab("Bookings");
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-[var(--cr-dark)] hover:bg-[#F0F4EC] rounded-xl transition cursor-pointer"
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-[var(--cr-dark)] hover:bg-[#F8FAFC] rounded-xl transition cursor-pointer"
                                 >
                                   <Eye size={14} />
                                   <span>{tr.viewBookingDetails ?? "View Details"}</span>
@@ -1018,48 +1018,48 @@ export default function ReceptionDashboardView({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
               {/* Card 1: Completed Bookings */}
-              <div className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-[#EBF0E6] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+              <div className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-[#F1F5F9] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
                   <CheckCircle2 size={24} />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{completedCount}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.completedBookings ?? "Completed"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.bookingsFinished ?? "Bookings finished"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.bookingsFinished ?? "Bookings finished"}</p>
                 </div>
               </div>
 
               {/* Card 2: Cancelled */}
-              <div className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4">
+              <div className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4">
                 <div className="h-14 w-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                   <X size={24} />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{cancelledCount}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.cancelled ?? "Cancelled"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.bookingsCancelled ?? "Bookings cancelled"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.bookingsCancelled ?? "Bookings cancelled"}</p>
                 </div>
               </div>
 
               {/* Card 3: No Shows */}
-              <div className="bg-white p-5 rounded-3xl border border-[#EBE8E0] shadow-xs flex items-center gap-4">
+              <div className="bg-white p-5 rounded-3xl border border-[#E2E8F0] shadow-xs flex items-center gap-4">
                 <div className="h-14 w-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
                   <UserX size={24} />
                 </div>
                 <div>
                   <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">{noShowsCount}</p>
                   <p className="text-xs font-bold text-[var(--cr-dark)] mt-0.5">{tr.noShows ?? "No Shows"}</p>
-                  <p className="text-[11px] text-[#788272] font-medium">{tr.didNotAttend ?? "Did not attend"}</p>
+                  <p className="text-[11px] text-[#8FA3B8] font-medium">{tr.didNotAttend ?? "Did not attend"}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* ── 3. PAYMENTS RECEIVED (BREAKDOWN + TOTAL BANNER) ── */}
-          <div className="bg-white rounded-3xl p-6 border border-[#EBE8E0] shadow-sm space-y-5">
+          <div className="bg-white rounded-3xl p-6 border border-[#E2E8F0] shadow-sm space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-[#F0F4EC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-xl bg-[#F8FAFC] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
                   <CreditCard size={18} />
                 </div>
                 <h3 className="text-base font-bold text-[var(--cr-dark)]">{tr.paymentsReceived ?? "Payments Received"}</h3>
@@ -1077,56 +1077,56 @@ export default function ReceptionDashboardView({
             {/* 4 Method Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Cash */}
-              <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] flex items-center gap-3.5">
+              <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] flex items-center gap-3.5">
                 <div className="h-11 w-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
                   <DollarSign size={20} />
                 </div>
                 <div>
                   <p className="text-base sm:text-lg font-black text-[var(--cr-dark)]">{formatCurrency(payments.cash)}</p>
-                  <p className="text-[11px] font-bold text-[#8C9686]">{tr.cash ?? "Cash"}</p>
+                  <p className="text-[11px] font-bold text-[#8FA3B8]">{tr.cash ?? "Cash"}</p>
                 </div>
               </div>
 
               {/* InstaPay */}
-              <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] flex items-center gap-3.5">
+              <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] flex items-center gap-3.5">
                 <div className="h-11 w-11 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
                   <Zap size={20} />
                 </div>
                 <div>
                   <p className="text-base sm:text-lg font-black text-[var(--cr-dark)]">{formatCurrency(payments.instapay)}</p>
-                  <p className="text-[11px] font-bold text-[#8C9686]">{tr.instapay ?? "InstaPay"}</p>
+                  <p className="text-[11px] font-bold text-[#8FA3B8]">{tr.instapay ?? "InstaPay"}</p>
                 </div>
               </div>
 
               {/* Visa */}
-              <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] flex items-center gap-3.5">
+              <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] flex items-center gap-3.5">
                 <div className="h-11 w-11 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
                   <CreditCard size={20} />
                 </div>
                 <div>
                   <p className="text-base sm:text-lg font-black text-[var(--cr-dark)]">{formatCurrency(payments.visa)}</p>
-                  <p className="text-[11px] font-bold text-[#8C9686]">{tr.visa ?? "Visa"}</p>
+                  <p className="text-[11px] font-bold text-[#8FA3B8]">{tr.visa ?? "Visa"}</p>
                 </div>
               </div>
 
               {/* Wallet */}
-              <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] flex items-center gap-3.5">
+              <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] flex items-center gap-3.5">
                 <div className="h-11 w-11 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
                   <Wallet size={20} />
                 </div>
                 <div>
                   <p className="text-base sm:text-lg font-black text-[var(--cr-dark)]">{formatCurrency(payments.wallet)}</p>
-                  <p className="text-[11px] font-bold text-[#8C9686]">{tr.wallet ?? "Wallet"}</p>
+                  <p className="text-[11px] font-bold text-[#8FA3B8]">{tr.wallet ?? "Wallet"}</p>
                 </div>
               </div>
             </div>
 
             {/* Total Payments Received Banner */}
-            <div className="bg-[#EBF0E6]/70 border border-[#D5DDD0] rounded-2xl p-5 text-center space-y-1">
+            <div className="bg-[#F1F5F9]/70 border border-[#E2E8F0] rounded-2xl p-5 text-center space-y-1">
               <p className="text-2xl sm:text-3xl font-black text-[var(--cr-dark)]">
                 {formatCurrency(payments.totalPayments)}
               </p>
-              <p className="text-xs font-bold text-[#45523A] uppercase tracking-wider">
+              <p className="text-xs font-bold text-[#142B4A] uppercase tracking-wider">
                 {tr.totalPaymentsReceived ?? "Total Payments Received"}
               </p>
             </div>
@@ -1162,7 +1162,7 @@ export default function ReceptionDashboardView({
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-bold text-[var(--cr-dark)]">{tr.endShiftModalTitle ?? "End Shift"}</h3>
-                <p className="text-xs text-[#788272] mt-1">
+                <p className="text-xs text-[#8FA3B8] mt-1">
                   {tr.endShiftModalSubtitle ?? "Are you sure you want to end your shift? Please review the summary below before confirming."}
                 </p>
               </div>
@@ -1170,26 +1170,26 @@ export default function ReceptionDashboardView({
               <button
                 type="button"
                 onClick={() => setShowEndShiftModal(false)}
-                className="p-2 text-[#8C9686] hover:text-[var(--cr-dark)] hover:bg-[#F0F4EC] rounded-xl transition cursor-pointer"
+                className="p-2 text-[#8FA3B8] hover:text-[var(--cr-dark)] hover:bg-[#F8FAFC] rounded-xl transition cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Shift Summary Box */}
-            <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] space-y-3">
+            <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] space-y-3">
               <p className="text-xs font-bold text-[var(--cr-dark)] uppercase tracking-wider">{tr.shiftSummaryTitle ?? "Shift Summary"}</p>
               <div className="grid grid-cols-3 gap-3 text-start">
                 <div>
-                  <p className="text-[10px] text-[#8C9686] font-semibold">{tr.shiftStart ?? "Shift Start"}</p>
+                  <p className="text-[10px] text-[#8FA3B8] font-semibold">{tr.shiftStart ?? "Shift Start"}</p>
                   <p className="text-sm font-black text-[var(--cr-dark)] mt-0.5">{dashboardData?.shift?.actualStartingTime || "--:--"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#8C9686] font-semibold">{tr.currentTime ?? "Current Time"}</p>
+                  <p className="text-[10px] text-[#8FA3B8] font-semibold">{tr.currentTime ?? "Current Time"}</p>
                   <p className="text-sm font-black text-[var(--cr-dark)] mt-0.5">{currentTimeFormatted}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#8C9686] font-semibold">{tr.workingHours ?? "Working Hours"}</p>
+                  <p className="text-[10px] text-[#8FA3B8] font-semibold">{tr.workingHours ?? "Working Hours"}</p>
                   <p className="text-sm font-black text-[var(--cr-dark)] mt-0.5">{formatElapsedTime(liveElapsedSeconds)}</p>
                 </div>
               </div>
@@ -1215,7 +1215,7 @@ export default function ReceptionDashboardView({
             </div>
 
             {/* Payments Received Breakdown */}
-            <div className="bg-[#FAF9F5] p-4 rounded-2xl border border-[#EBE8E0] space-y-2.5">
+            <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E2E8F0] space-y-2.5">
               <p className="text-xs font-bold text-[var(--cr-dark)] uppercase tracking-wider">{tr.paymentsReceived ?? "Payments Received"}</p>
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between py-1">
@@ -1246,7 +1246,7 @@ export default function ReceptionDashboardView({
                   </span>
                   <span className="font-bold text-[var(--cr-dark)]">{formatCurrency(payments.wallet)}</span>
                 </div>
-                <div className="border-t border-[#EBE8E0] pt-2 flex justify-between font-black text-sm text-[var(--cr-dark)]">
+                <div className="border-t border-[#E2E8F0] pt-2 flex justify-between font-black text-sm text-[var(--cr-dark)]">
                   <span>{tr.totalPayments ?? "Total Payments"}</span>
                   <span>{formatCurrency(payments.totalPayments)}</span>
                 </div>
@@ -1278,7 +1278,7 @@ export default function ReceptionDashboardView({
                 type="button"
                 disabled={shiftProcessing}
                 onClick={handleConfirmEndShift}
-                className="py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white bg-[var(--cr-primary)] hover:bg-[#343e2b] shadow-md transition disabled:opacity-50 cursor-pointer"
+                className="py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm text-white bg-[var(--cr-primary)] hover:bg-[#142B4A] shadow-md transition disabled:opacity-50 cursor-pointer"
               >
                 {shiftProcessing ? (tr.updating ?? "Ending Shift...") : (tr.endShift ?? "End Shift")}
               </button>
@@ -1292,7 +1292,7 @@ export default function ReceptionDashboardView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="relative w-full max-w-sm rounded-[32px] bg-white p-8 shadow-2xl text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
             {/* Waving Hand Emoji */}
-            <div className="h-20 w-20 rounded-full bg-[#EBF0E6] flex items-center justify-center mx-auto text-4xl shadow-inner select-none">
+            <div className="h-20 w-20 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto text-4xl shadow-inner select-none">
               👋
             </div>
 
@@ -1320,7 +1320,7 @@ export default function ReceptionDashboardView({
                 type="button"
                 disabled={shiftProcessing}
                 onClick={handleStartShift}
-                className="w-full flex items-center justify-center gap-3 bg-[var(--cr-primary)] hover:bg-[#323D2A] text-white py-3.5 px-6 rounded-2xl font-bold text-sm shadow-md transition disabled:opacity-60 cursor-pointer"
+                className="w-full flex items-center justify-center gap-3 bg-[var(--cr-primary)] hover:bg-[#142B4A] text-white py-3.5 px-6 rounded-2xl font-bold text-sm shadow-md transition disabled:opacity-60 cursor-pointer"
               >
                 {shiftProcessing ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

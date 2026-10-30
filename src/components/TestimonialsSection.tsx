@@ -52,7 +52,7 @@ export function TestimonialsSection() {
             position: "relative",
             backgroundColor: "var(--cr-primary, var(--cr-primary))",
             borderRadius: "32px",
-            border: "1px solid rgba(196,174,124,0.35)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 80px) clamp(24px, 5vw, 72px)",
           }}
@@ -254,7 +254,7 @@ export function TestimonialsSection() {
             <div
               style={{
                 height: "1px",
-                backgroundColor: "rgba(196, 174, 124, 0.15)",
+                backgroundColor: "rgba(54,166,160,0.15)",
                 margin: "48px 0",
               }}
             />

@@ -44,7 +44,7 @@ export default function BranchesView({
         </div>
         <button
           onClick={() => setBranchModal({ open: true, mode: "add", branch: { status: "active", sort_order: branches.length } })}
-          className="inline-flex items-center justify-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] w-full sm:w-auto shadow-sm"
+          className="inline-flex items-center justify-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] w-full sm:w-auto shadow-sm"
         >
           <Plus size={16} /> {t.addBranch}
         </button>
@@ -151,7 +151,7 @@ export default function BranchesView({
               <button
                 type="submit"
                 disabled={savingBranch}
-                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-2"
+                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 mt-2"
               >
                 {savingBranch ? t.savingBtn : branchModal.mode === "add" ? t.addBranch : t.saveChanges}
               </button>

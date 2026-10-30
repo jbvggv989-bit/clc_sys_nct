@@ -265,7 +265,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
       {packages.length > 0 && (
         <div className="overflow-x-auto [scrollbar-width:thin] rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm">
           <table className="w-full min-w-[900px] text-sm">
-            <thead className="bg-[#F9F9F7]">
+            <thead className="bg-[#F8FAFC]">
               <tr>
                 <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Name</th>
                 <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Type</th>
@@ -284,7 +284,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
               {packages.map((pkg) => {
                 const isPulses = pkg.packageType === "pulses" || Number(pkg.totalPulses || 0) > 0;
                 return (
-                  <tr key={pkg.id} className="hover:bg-[#F9F9F7]">
+                  <tr key={pkg.id} className="hover:bg-[#F8FAFC]">
                     <td className="px-5 py-3 font-medium text-[var(--cr-dark)]">{pkg.name}</td>
                     <td className="px-5 py-3 text-left">
                       {isPulses ? (
@@ -370,7 +370,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
               </div>
               <button
                 onClick={closeModal}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F9F9F7] cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F8FAFC] cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -389,7 +389,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
                     className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition cursor-pointer ${
                       form.packageType === "services"
                         ? "border-[var(--cr-primary)] bg-[var(--color-brand-tint)] ring-2 ring-[var(--cr-primary)]/20 shadow-xs"
-                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F9F9F7]"
+                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F8FAFC]"
                     }`}
                   >
                     <div className={`p-2 rounded-xl shrink-0 ${form.packageType === "services" ? "bg-[var(--cr-primary)] text-white" : "bg-gray-100 text-[var(--color-brand-secondary)]"}`}>
@@ -407,7 +407,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
                     className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition cursor-pointer ${
                       form.packageType === "pulses"
                         ? "border-amber-600 bg-amber-50/70 ring-2 ring-amber-500/20 shadow-xs"
-                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F9F9F7]"
+                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F8FAFC]"
                     }`}
                   >
                     <div className={`p-2 rounded-xl shrink-0 ${form.packageType === "pulses" ? "bg-amber-600 text-white" : "bg-gray-100 text-[var(--color-brand-secondary)]"}`}>
@@ -591,7 +591,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4">
+                <div className="rounded-xl border border-[var(--cr-primary)]/10 bg-[#F8FAFC] p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-primary)]">Included Services</h4>
                     <button
@@ -646,7 +646,7 @@ export function PackageAdminPanel({ session }: { session: any }) {
               <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4">
                 <button
                   onClick={closeModal}
-                  className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+                  className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F8FAFC]"
                 >
                   Cancel
                 </button>

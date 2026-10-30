@@ -34,7 +34,7 @@ export default function DoctorAuditLogsModal({
 
   return (
     <div dir={lang === "ar" ? "rtl" : "ltr"} className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
-      <div className="w-full max-w-4xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-4xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(13,28,48,0.25)] max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4 shrink-0">
           <div>
@@ -43,7 +43,7 @@ export default function DoctorAuditLogsModal({
           </div>
           <button
             onClick={onClose}
-            className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+            className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#E2E8F0]"
           >
             <X size={20} />
           </button>
@@ -140,7 +140,7 @@ export default function DoctorAuditLogsModal({
         <div className="border-t border-[var(--cr-primary)]/10 pt-4 mt-4 shrink-0 flex justify-end">
           <button
             onClick={onClose}
-            className="rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] px-8 py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+            className="rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] px-8 py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#F8FAFC] transition"
           >
             {t.closeBtn}
           </button>

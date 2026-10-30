@@ -292,7 +292,7 @@ export default function AboutUsPageSettingsView({
           <button
             disabled={savingPageSettings}
             onClick={() => savePageSettings()}
-            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] duration-150 cursor-pointer"
           >
             {savingPageSettings ? "Saving..." : "Save All Changes"}
           </button>
@@ -431,7 +431,7 @@ export default function AboutUsPageSettingsView({
               <button
                 type="button"
                 onClick={() => setWhatWeDoList([...whatWeDoList, ""])}
-                className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#0E1F36] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 + Add Item
               </button>
@@ -485,7 +485,7 @@ export default function AboutUsPageSettingsView({
               <button
                 type="button"
                 onClick={() => setWhatWeDoListAr([...whatWeDoListAr, ""])}
-                className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#0E1F36] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 + إضافة عنصر
               </button>
@@ -539,7 +539,7 @@ export default function AboutUsPageSettingsView({
           <button
             disabled={savingPageSettings}
             onClick={() => savePageSettings()}
-            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50"
           >
             {savingPageSettings ? "Saving..." : "Save All Changes"}
           </button>
@@ -775,7 +775,7 @@ export default function AboutUsPageSettingsView({
                 <button
                   type="button"
                   onClick={() => setFaqs([...faqs, { question: "", answer: "" }])}
-                  className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#0E1F36] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   + Add FAQ Item
                 </button>
@@ -855,7 +855,7 @@ export default function AboutUsPageSettingsView({
                 <button
                   type="button"
                   onClick={() => setFaqsAr([...faqsAr, { question: "", answer: "" }])}
-                  className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#0E1F36] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   + إضافة سؤال
                 </button>
@@ -935,7 +935,7 @@ export default function AboutUsPageSettingsView({
             <button
               disabled={savingPageSettings}
               onClick={() => savePageSettings()}
-              className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-6 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50"
             >
               {savingPageSettings ? "Saving..." : "Save All Changes"}
             </button>

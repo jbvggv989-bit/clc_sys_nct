@@ -46,7 +46,7 @@ export default function ClinicProfileSettingsView({ authenticatedJsonHeaders }: 
           form="clinic-profile-form"
           type="submit"
           disabled={savingClinicProfile}
-          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-md w-full sm:w-auto"
+          className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#0E1F36] disabled:opacity-50 shadow-md w-full sm:w-auto"
         >
           {savingClinicProfile ? "Saving..." : "Save Profile"}
         </button>
@@ -118,7 +118,7 @@ export default function ClinicProfileSettingsView({ authenticatedJsonHeaders }: 
                 onChange={(e) => setClinicWhatsapp(e.target.value)}
                 className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] transition"
               />
-              <span className="text-[11px] text-[#8A9A81] mt-1 block">Used for the WhatsApp floating chat button visible on all public pages.</span>
+              <span className="text-[11px] text-[#8FA3B8] mt-1 block">Used for the WhatsApp floating chat button visible on all public pages.</span>
             </div>
           </div>
         </form>

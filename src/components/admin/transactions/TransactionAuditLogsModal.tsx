@@ -80,7 +80,7 @@ export const TransactionAuditLogsModal: React.FC<TransactionAuditLogsModalProps>
             logs.map((log) => (
               <div
                 key={log.id}
-                className="p-3.5 rounded-2xl border border-gray-100 bg-[#F9F9F7] hover:bg-[#F4F4F0] transition-colors flex items-start justify-between gap-4 text-xs"
+                className="p-3.5 rounded-2xl border border-gray-100 bg-[#F8FAFC] hover:bg-[#F8FAFC] transition-colors flex items-start justify-between gap-4 text-xs"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">

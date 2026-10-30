@@ -46,7 +46,7 @@ export function SiteFooter() {
           style={{
             position: "relative",
             backgroundColor: "var(--cr-primary, var(--cr-primary))",
-            border: "1px solid rgba(196,174,124,0.35)",
+            border: "1px solid rgba(54,166,160,0.25)",
             overflow: "hidden",
             padding: "clamp(40px, 6vw, 70px) clamp(24px, 5vw, 64px)",
           }}

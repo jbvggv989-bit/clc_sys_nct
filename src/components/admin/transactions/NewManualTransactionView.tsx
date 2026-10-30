@@ -533,7 +533,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
             <button
               type="button"
               onClick={onAddPreviousBooking}
-              className="px-3.5 py-1.5 rounded-xl bg-[#313A28] text-white font-bold hover:bg-[#20271a] transition-colors shadow-2xs flex items-center justify-center gap-1.5 shrink-0"
+              className="px-3.5 py-1.5 rounded-xl bg-[#142B4A] text-white font-bold hover:bg-[#142B4A] transition-colors shadow-2xs flex items-center justify-center gap-1.5 shrink-0"
             >
               <History size={13} />
               <span>{isAr ? "إضافة حجز سابق" : "Add Previous Booking"}</span>
@@ -647,7 +647,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
                       key={c.id}
                       type="button"
                       onClick={() => handleSelectCustomer(c)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-start text-xs hover:bg-[#F9F9F7] transition-colors"
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-start text-xs hover:bg-[#F8FAFC] transition-colors"
                     >
                       <div>
                         <div className="font-bold text-gray-800">{c.name}</div>
@@ -672,7 +672,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
 
           {/* Selected Patient Banner with Wallet Info */}
           {selectedCustomer && (
-            <div className="rounded-2xl bg-[#F7F9F6] p-4 border border-emerald-100 text-xs flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+            <div className="rounded-2xl bg-[#F8FAFC] p-4 border border-emerald-100 text-xs flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
               <div className="flex items-center gap-2.5">
                 <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center">
                   <User size={15} />
@@ -771,7 +771,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
                         onClick={() => setRefundDestination(opt.id)}
                         className={`rounded-xl border px-3 py-2 text-start transition cursor-pointer ${
                           refundDestination === opt.id
-                            ? "border-[var(--cr-primary)] bg-[#F3F6F1]"
+                            ? "border-[var(--cr-primary)] bg-[#F8FAFC]"
                             : "border-gray-200 bg-white hover:bg-gray-50"
                         }`}
                       >
@@ -846,7 +846,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
                       setAmount("");
                     }}
                     className={`px-3 py-1 rounded-lg font-bold transition-colors ${
-                      itemType === "product" ? "bg-[#313A28] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+                      itemType === "product" ? "bg-[#142B4A] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     {isAr ? "منتج تجميلي / علاجي" : "Retail Product"}
@@ -860,7 +860,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
                       setAmount("");
                     }}
                     className={`px-3 py-1 rounded-lg font-bold transition-colors ${
-                      itemType === "package" ? "bg-[#313A28] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+                      itemType === "package" ? "bg-[#142B4A] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     {isAr ? "باقة جلسات" : "Treatment Package"}
@@ -1065,7 +1065,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Metadata Table */}
-            <div className="md:col-span-2 rounded-2xl bg-[#F9F9F7] p-4 border border-gray-100 grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+            <div className="md:col-span-2 rounded-2xl bg-[#F8FAFC] p-4 border border-gray-100 grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
               <div>
                 <span className="text-gray-400 font-bold uppercase text-[10px] block">
                   {isAr ? "معرف المعاملة" : "Transaction ID"}
@@ -1120,7 +1120,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
             </div>
 
             {/* Note Box */}
-            <div className="rounded-2xl bg-[#F7F9F6] p-4 border border-emerald-100 text-xs space-y-2">
+            <div className="rounded-2xl bg-[#F8FAFC] p-4 border border-emerald-100 text-xs space-y-2">
               <div className="flex items-center gap-1.5 font-bold text-emerald-800">
                 <Info size={14} />
                 <span>{isAr ? "إرشادات هامة" : "Important Note"}</span>
@@ -1146,7 +1146,7 @@ export const NewManualTransactionView: React.FC<NewManualTransactionViewProps> =
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-2.5 rounded-2xl bg-[#313A28] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-2xl bg-[#142B4A] hover:bg-[var(--cr-dark)] text-[var(--color-brand-light)] font-bold text-xs flex items-center gap-2 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? (
               <>

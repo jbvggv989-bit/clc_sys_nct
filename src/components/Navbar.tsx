@@ -490,7 +490,7 @@ export function Navbar() {
                       display: "flex",
                       alignItems: "center",
                       gap: "6px",
-                      background: "rgba(196,174,124,0.15)",
+                      background: "rgba(54,166,160,0.15)",
                       color: "var(--cr-primary)",
                       border: "1.5px solid var(--cr-accent)",
                       padding: "8px 14px",
@@ -505,7 +505,7 @@ export function Navbar() {
                       (e.currentTarget as HTMLButtonElement).style.color = "white";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(196,174,124,0.15)";
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(54,166,160,0.15)";
                       (e.currentTarget as HTMLButtonElement).style.color = "var(--cr-primary)";
                     }}
                   >
@@ -591,9 +591,9 @@ export function Navbar() {
                       left: isRTL ? 0 : "auto",
                       marginTop: "10px",
                       background: "#FFFFFF",
-                      border: "1px solid #EBE8E0",
+                      border: "1px solid #E2E8F0",
                       borderRadius: "16px",
-                      boxShadow: "0 12px 36px rgba(31, 37, 26, 0.12)",
+                      boxShadow: "0 12px 36px rgba(20, 43, 74, 0.12)",
                       zIndex: 1000,
                       minWidth: "290px",
                       padding: "8px",
@@ -618,14 +618,14 @@ export function Navbar() {
                         gap: "12px",
                         cursor: showCustomerLogin ? "pointer" : "not-allowed",
                         opacity: showCustomerLogin ? 1 : 0.45,
-                        background: showCustomerLogin ? "transparent" : "#F9F9F7",
+                        background: showCustomerLogin ? "transparent" : "#F8FAFC",
                         transition: "all 0.2s ease",
                         textAlign: isRTL ? "right" : "left",
                         userSelect: "none",
                       }}
                       onMouseEnter={(e) => {
                         if (showCustomerLogin) {
-                          (e.currentTarget as HTMLDivElement).style.background = "#F4F6F2";
+                          (e.currentTarget as HTMLDivElement).style.background = "#F8FAFC";
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -640,7 +640,7 @@ export function Navbar() {
                           width: "36px",
                           height: "36px",
                           borderRadius: "10px",
-                          background: showCustomerLogin ? "#EBF0E6" : "#EBEBEB",
+                          background: showCustomerLogin ? "#F1F5F9" : "#EBEBEB",
                           color: showCustomerLogin ? "var(--cr-primary)" : "#888888",
                           display: "flex",
                           alignItems: "center",
@@ -670,14 +670,14 @@ export function Navbar() {
                             </span>
                           )}
                         </div>
-                        <p style={{ fontSize: "11px", color: "#788272", margin: "2px 0 0 0", lineHeight: "1.3" }}>
+                        <p style={{ fontSize: "11px", color: "#8FA3B8", margin: "2px 0 0 0", lineHeight: "1.3" }}>
                           {t.nav.customerLoginDesc || "Access your appointments, profile & medical wallet"}
                         </p>
                       </div>
                     </div>
 
                     {/* Subtle Divider */}
-                    <div style={{ height: "1px", background: "#F0EEE6", margin: "2px 4px" }} />
+                    <div style={{ height: "1px", background: "#E2E8F0", margin: "2px 4px" }} />
 
                     {/* Option 2: Staff Login */}
                     <Link
@@ -695,7 +695,7 @@ export function Navbar() {
                         textAlign: isRTL ? "right" : "left",
                       }}
                       onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = "#F4F6F2";
+                        (e.currentTarget as HTMLElement).style.background = "#F8FAFC";
                       }}
                       onMouseLeave={(e) => {
                         (e.currentTarget as HTMLElement).style.background = "transparent";
@@ -706,7 +706,7 @@ export function Navbar() {
                           width: "36px",
                           height: "36px",
                           borderRadius: "10px",
-                          background: "#FAF0E6",
+                          background: "#F1F5F9",
                           color: "var(--cr-accent)",
                           display: "flex",
                           alignItems: "center",
@@ -734,7 +734,7 @@ export function Navbar() {
                             Portal
                           </span>
                         </div>
-                        <p style={{ fontSize: "11px", color: "#788272", margin: "2px 0 0 0", lineHeight: "1.3" }}>
+                        <p style={{ fontSize: "11px", color: "#8FA3B8", margin: "2px 0 0 0", lineHeight: "1.3" }}>
                           {t.nav.staffLoginDesc || "Admin, doctor & reception portal"}
                         </p>
                       </div>
@@ -980,7 +980,7 @@ export function Navbar() {
                         alignItems: "center",
                         justifyContent: "center",
                         gap: "6px",
-                        background: "rgba(196,174,124,0.15)",
+                        background: "rgba(54,166,160,0.15)",
                         color: "var(--cr-primary)",
                         border: "1.5px solid var(--cr-accent)",
                         padding: "12px 16px",
