@@ -99,7 +99,7 @@ export function OurApproachSection() {
               display: flex;
               flex-direction: column;
               gap: 20px;
-              box-shadow: 0 2px 16px rgba(90,61,52,0.06);
+              box-shadow: 0 2px 16px rgba(20, 43, 74,0.06);
               margin-top: 24px;
             }
             .oas2-item {
@@ -114,7 +114,7 @@ export function OurApproachSection() {
               width: 52px;
               height: 52px;
               border-radius: 50%;
-              background-color: rgba(90,61,52,0.08);
+              background-color: rgba(20, 43, 74,0.08);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -130,7 +130,7 @@ export function OurApproachSection() {
               aspect-ratio: 4 / 3.2;
               border-radius: 24px;
               overflow: hidden;
-              box-shadow: 0 8px 28px rgba(90,61,52,0.12);
+              box-shadow: 0 8px 28px rgba(20, 43, 74,0.12);
             }
             .oas2-doctor-img {
               position: absolute;
@@ -153,7 +153,7 @@ export function OurApproachSection() {
               display: flex;
               align-items: center;
               gap: 10px;
-              box-shadow: 0 4px 16px rgba(90,61,52,0.25);
+              box-shadow: 0 4px 16px rgba(20, 43, 74,0.25);
             }
             .rtl-oas2 .oas2-support-badge {
               right: auto;

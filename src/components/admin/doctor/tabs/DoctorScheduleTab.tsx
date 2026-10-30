@@ -156,7 +156,7 @@ export default function DoctorScheduleTab({
         /* VIEW 1: INTERACTIVE CALENDAR VIEW */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 w-full items-start">
           {/* Left Column: Interactive Month Grid Picker & Navigator */}
-          <div className="lg:col-span-5 rounded-2xl sm:rounded-[32px] border border-[var(--cr-primary)]/10 bg-white p-4 sm:p-6 shadow-[0_20px_50px_rgba(47,61,41,0.05)] space-y-3 sm:space-y-4">
+          <div className="lg:col-span-5 rounded-2xl sm:rounded-[32px] border border-[var(--cr-primary)]/10 bg-white p-4 sm:p-6 shadow-[0_20px_50px_rgba(20,43,74,0.05)] space-y-3 sm:space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--cr-primary)]/10">
               <div className="flex items-center gap-2">
                 <Calendar size={18} className="text-[var(--cr-primary)]" />
@@ -485,7 +485,7 @@ export default function DoctorScheduleTab({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl sm:rounded-[32px] border border-[var(--cr-primary)]/10 bg-white shadow-[0_20px_50px_rgba(47,61,41,0.05)] w-full">
+          <div className="overflow-hidden rounded-2xl sm:rounded-[32px] border border-[var(--cr-primary)]/10 bg-white shadow-[0_20px_50px_rgba(20,43,74,0.05)] w-full">
             <div className="overflow-x-auto w-full [scrollbar-width:thin]">
               <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="border-b border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] text-xs uppercase tracking-wider text-[var(--color-brand-secondary)]">

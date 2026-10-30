@@ -72,7 +72,7 @@ export default function HomePageSettingsView({
   return (
     <div className="space-y-6">
       {/* Customer Login in Navbar Toggle Setting */}
-      <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] border border-[var(--cr-primary)]/10 flex flex-wrap items-center justify-between gap-4">
+      <div className="rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] border border-[var(--cr-primary)]/10 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--cr-primary)]/10 text-[var(--cr-primary)] shrink-0">
             <User size={24} />
@@ -132,7 +132,7 @@ export default function HomePageSettingsView({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)]">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)]">
         <div>
           <h3 className="text-2xl font-bold text-[var(--cr-dark)]">Hero Slider Editor</h3>
           <p className="text-sm text-[var(--color-brand-secondary)] mt-1">Manage slides, headings, descriptions, and background images.</p>
@@ -175,11 +175,11 @@ export default function HomePageSettingsView({
       </div>
 
       {loadingPageSettings ? (
-        <div className="rounded-b-[40px] bg-white p-12 shadow-[0_30px_80px_rgba(47,61,41,0.07)] flex justify-center">
+        <div className="rounded-b-[40px] bg-white p-12 shadow-[0_30px_80px_rgba(20,43,74,0.07)] flex justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--cr-primary)] border-t-transparent" />
         </div>
       ) : (
-        <div className="rounded-b-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-8">
+        <div className="rounded-b-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-8">
           {slidesList.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-sm text-[var(--color-brand-secondary)]">No slides found. Click "Add New Slide" to start.</p>
@@ -421,7 +421,7 @@ export default function HomePageSettingsView({
       )}
 
       {/* Before / After Results Editor */}
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-6">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[var(--color-brand-sand)]">
           <div>
             <h3 className="text-2xl font-bold text-[var(--cr-dark)]">Before / After Results</h3>

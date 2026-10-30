@@ -255,7 +255,7 @@ export default function AdminHrView({
           </div>
     
           {/* Employees Directory Card */}
-          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(47,61,41,0.06)] overflow-hidden">
+          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(20,43,74,0.06)] overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-[var(--cr-primary)]/10 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[var(--cr-dark)]">{t.overview.workforceDirectory}</h3>
             </div>
@@ -506,7 +506,7 @@ export default function AdminHrView({
             </div>
     
             {/* Main Table */}
-            <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(47,61,41,0.06)] overflow-hidden">
+            <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(20,43,74,0.06)] overflow-hidden">
               <div className="overflow-x-auto [scrollbar-width:thin]">
                 <table className="w-full border-collapse text-left text-sm min-w-[950px]">
                   <thead>
@@ -931,7 +931,7 @@ export default function AdminHrView({
             </div>
     
             {/* Main Table */}
-            <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(47,61,41,0.06)] overflow-hidden">
+            <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(20,43,74,0.06)] overflow-hidden">
               <div className="overflow-x-auto [scrollbar-width:thin]">
                 <table className="w-full border-collapse text-left text-sm min-w-[900px]">
                   <thead>
@@ -1500,7 +1500,7 @@ export default function AdminHrView({
       {/* Attendance Sub-tab */}
       {hrActiveSubTab === "attendance" && (
         <div className="space-y-6">
-          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(47,61,41,0.06)] overflow-hidden">
+          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(20,43,74,0.06)] overflow-hidden">
             <div className="p-6 border-b border-[var(--cr-primary)]/10">
               <h3 className="text-lg font-bold text-[var(--cr-dark)]">{t.attendance.heading}</h3>
               <p className="mt-1 text-xs text-[var(--color-brand-secondary)]">{t.attendance.subtitle}</p>
@@ -1648,7 +1648,7 @@ export default function AdminHrView({
             </div>
           </div>
     
-          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(47,61,41,0.06)] overflow-hidden">
+          <div className="rounded-[32px] bg-white border border-[var(--cr-primary)]/10 shadow-[0_20px_60px_rgba(20,43,74,0.06)] overflow-hidden">
             <div className="p-6 border-b border-[var(--cr-primary)]/10">
               <h3 className="text-lg font-bold text-[var(--cr-dark)]">{t.targets.title}</h3>
               <p className="mt-1 text-xs text-[var(--color-brand-secondary)]">{t.targets.subtitle}</p>

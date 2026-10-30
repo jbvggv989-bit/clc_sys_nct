@@ -37,10 +37,10 @@ export function FaqSection() {
 
           /* FAQ accordion */
           .faq-item {
-            border-bottom: 1px solid rgba(90, 106, 81, 0.25);
+            border-bottom: 1px solid rgba(143, 163, 184, 0.25);
           }
           .faq-item:first-child {
-            border-top: 1px solid rgba(90, 106, 81, 0.25);
+            border-top: 1px solid rgba(143, 163, 184, 0.25);
           }
           .faq-question-btn {
             width: 100%;

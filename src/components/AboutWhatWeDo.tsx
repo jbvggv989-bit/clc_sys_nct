@@ -27,7 +27,7 @@ export function AboutWhatWeDo() {
             overflow: hidden;
             padding: 0;
             position: relative;
-            box-shadow: 0 4px 20px rgba(90,61,52,0.08);
+            box-shadow: 0 4px 20px rgba(20, 43, 74,0.08);
           }
           .awwd-ba-top-label {
             position: absolute;
@@ -65,7 +65,7 @@ export function AboutWhatWeDo() {
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 0.3em;
-            color: rgba(90,61,52,0.55);
+            color: rgba(20, 43, 74,0.55);
             text-transform: uppercase;
             white-space: nowrap;
             pointer-events: none;
@@ -79,7 +79,7 @@ export function AboutWhatWeDo() {
           .awwd-ba-bottom-url {
             font-size: 9px;
             letter-spacing: 0.18em;
-            color: rgba(90,61,52,0.35);
+            color: rgba(20, 43, 74,0.35);
             text-align: center;
             padding: 8px 0;
             text-transform: uppercase;
@@ -106,7 +106,7 @@ export function AboutWhatWeDo() {
             width: 22px;
             height: 22px;
             border-radius: 6px;
-            background: rgba(90, 106, 81, 0.15);
+            background: rgba(143, 163, 184, 0.15);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -124,7 +124,7 @@ export function AboutWhatWeDo() {
             padding: 13px 26px;
             border-radius: 30px;
             background: var(--cr-secondary, var(--color-brand-tint));
-            border: 1.5px solid rgba(90, 106, 81, 0.4);
+            border: 1.5px solid rgba(143, 163, 184, 0.4);
             color: var(--cr-primary);
             font-size: 14px;
             font-weight: 600;
@@ -165,13 +165,13 @@ export function AboutWhatWeDo() {
             aspect-ratio: 3 / 4;
             border-radius: 999px;
             overflow: hidden;
-            box-shadow: 0 10px 32px rgba(90,61,52,0.14);
+            box-shadow: 0 10px 32px rgba(20, 43, 74,0.14);
           }
           .awwd-exp-badge {
             position: absolute;
             bottom: 36px;
             left: -10px;
-            background: rgba(65, 78, 54, 0.85);
+            background: #142B4A;
             backdrop-filter: blur(8px);
             border-radius: 50%;
             width: 100px;
@@ -182,7 +182,7 @@ export function AboutWhatWeDo() {
             justify-content: center;
             text-align: center;
             padding: 10px;
-            box-shadow: 0 4px 16px rgba(90,61,52,0.18);
+            box-shadow: 0 4px 16px rgba(20, 43, 74,0.18);
           }
           .rtl-awwd .awwd-exp-badge {
             left: auto;
@@ -208,7 +208,7 @@ export function AboutWhatWeDo() {
           {/* ── Column 1: Single image ── */}
           <div
             className="overflow-hidden rounded-2xl"
-            style={{ aspectRatio: "3/4", boxShadow: "0 4px 20px rgba(90,61,52,0.08)" }}
+            style={{ aspectRatio: "3/4", boxShadow: "0 4px 20px rgba(20, 43, 74,0.08)" }}
           >
             <img
               src={t.aboutPage.whatWeDoImage1 || "/images/clinic/interior.jpg"}

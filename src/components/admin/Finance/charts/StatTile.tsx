@@ -29,7 +29,7 @@ export function StatTile({
       className="flex flex-col rounded-2xl border p-5"
       style={{
         backgroundColor: "var(--cr-white)",
-        borderColor: "rgba(90, 106, 81, 0.12)",
+        borderColor: "rgba(143, 163, 184, 0.12)",
       }}
     >
       <div className="mb-3 flex items-center gap-3">

@@ -102,7 +102,7 @@ export function WhyChooseUs() {
               height: 330px;
               border-radius: 30px;
               overflow: hidden;
-              box-shadow: 0 12px 32px rgba(90, 61, 52, 0.08);
+              box-shadow: 0 12px 32px rgba(20, 43, 74, 0.08);
             }
             .wcu-right-backing {
               position: absolute;
@@ -113,7 +113,7 @@ export function WhyChooseUs() {
               background-color: var(--color-brand-secondary);
               border-radius: 30px;
               z-index: 2;
-              box-shadow: 0 12px 32px rgba(90, 61, 52, 0.12);
+              box-shadow: 0 12px 32px rgba(20, 43, 74, 0.12);
             }
             .wcu-right-img {
               position: absolute;

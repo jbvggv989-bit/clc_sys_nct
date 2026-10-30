@@ -59,7 +59,7 @@ export default function QueueSettingsView({
         </button>
       </div>
 
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] max-w-2xl space-y-4 sm:space-y-6">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] max-w-2xl space-y-4 sm:space-y-6">
         <div className="space-y-4">
           <label className="flex items-center gap-3 cursor-pointer">
             <input

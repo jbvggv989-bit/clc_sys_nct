@@ -758,7 +758,7 @@
 /* ── Scrollbar styling ───────────────────────────────────────── */
 html,
 body {
-  scrollbar-color: rgba(124, 141, 109, 0.95) transparent;
+  scrollbar-color: #8FA3B8 transparent;
   scrollbar-width: thin;
 }
 *::-webkit-scrollbar,
@@ -776,7 +776,7 @@ body::-webkit-scrollbar-track {
 *::-webkit-scrollbar-thumb,
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(88, 106, 82, 0.95), rgba(66, 81, 63, 0.95));
+  background: linear-gradient(180deg, #8FA3B8, #607994);
   border-radius: 999px;
   border: 0 none;
   min-height: 28px;
@@ -785,12 +785,12 @@ body::-webkit-scrollbar-thumb {
 *::-webkit-scrollbar-thumb:hover,
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(104, 123, 99, 0.95), rgba(83, 101, 81, 0.95));
+  background: linear-gradient(180deg, #36A6A0, #28807B);
 }
 *::-webkit-scrollbar-thumb:active,
 html::-webkit-scrollbar-thumb:active,
 body::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(180deg, rgba(115, 134, 110, 0.95), rgba(97, 114, 95, 0.95));
+  background: linear-gradient(180deg, #142B4A, #0D1C30);
 }
 *::-webkit-scrollbar-corner,
 html::-webkit-scrollbar-corner,
@@ -799,7 +799,7 @@ body::-webkit-scrollbar-corner {
 }
 
 .custom-scrollbar {
-  scrollbar-color: rgba(88, 106, 82, 0.95) transparent;
+  scrollbar-color: #8FA3B8 transparent;
   scrollbar-width: thin;
 }
 .custom-scrollbar::-webkit-scrollbar {
@@ -811,13 +811,13 @@ body::-webkit-scrollbar-corner {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(125, 146, 106, 0.95), rgba(89, 106, 80, 0.95));
+  background: linear-gradient(180deg, #8FA3B8, #607994);
   border-radius: 999px;
   border: 0 none;
   min-height: 28px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(146, 164, 126, 0.95), rgba(108, 126, 97, 0.95));
+  background: linear-gradient(180deg, #36A6A0, #28807B);
 }
 .custom-scrollbar::-webkit-scrollbar-corner {
   background: transparent;

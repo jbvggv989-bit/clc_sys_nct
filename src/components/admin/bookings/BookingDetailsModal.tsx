@@ -2305,7 +2305,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                           <h3 className="text-lg sm:text-xl font-black text-white truncate">
                             {booking.name || "Patient"}
                           </h3>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 border border-emerald-400/40 px-3 py-0.5 text-[11px] font-bold text-emerald-200">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 border border-[#36A6A0]/50/40 px-3 py-0.5 text-[11px] font-bold text-emerald-200">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                             {isRTL ? "جلسة نشطة • إنهاء الجلسة عبر الاستقبال" : "Live Session • Reception Finalization"}
                           </span>
@@ -2363,7 +2363,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                           </div>
 
                           {medicalRecord ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 shrink-0">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#36A6A0]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#142B4A] shrink-0">
                               <CheckCircle2 size={10} /> {isRTL ? "مسجل بالملف" : "On File"}
                             </span>
                           ) : isFirstVisit ? (
@@ -2371,7 +2371,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               <AlertTriangle size={10} /> {isRTL ? "مطلوب (زيارة أولى)" : "Intake Required (1st Visit)"}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200 shrink-0">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#36A6A0]/10 px-2.5 py-0.5 text-[10px] font-bold text-[#36A6A0] border border-[#36A6A0]/30 shrink-0">
                               <CheckCircle2 size={10} /> {isRTL ? "مريض سابق" : "Returning Patient"}
                             </span>
                           )}
@@ -2836,7 +2836,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                                 };
                                 handleSendPrescriptionWhatsApp(rxPayload, booking);
                               }}
-                              className="rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                              className="rounded-xl border border-[#36A6A0]/40 bg-[#36A6A0]/10 text-[#142B4A] hover:bg-[#36A6A0]/15 px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                             >
                               <Send size={13} /> {isRTL ? "إرسال عبر واتساب" : "Send WhatsApp"}
                             </button>
@@ -3290,7 +3290,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                         title="Copy Reference ID"
                         className="text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)] transition p-0.5 rounded cursor-pointer"
                       >
-                        {copiedBookingRef ? <Check size={13} className="text-emerald-700 font-bold" /> : <Copy size={13} />}
+                        {copiedBookingRef ? <Check size={13} className="text-[#36A6A0] font-bold" /> : <Copy size={13} />}
                       </button>
                     </span>
 
@@ -3307,7 +3307,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                               : booking.status === 'rejected' || booking.status === 'cancelled'
                                 ? 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200' 
                                 : booking.status === 'completed'
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200'
+                                  ? 'bg-[#36A6A0]/15 text-[#142B4A] border-[#36A6A0]/30 hover:bg-[#36A6A0]/20'
                                   : booking.status === 'started'
                                     ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
                                     : booking.status === 'checked_in'
@@ -3335,7 +3335,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                           : booking.status === 'rejected' || booking.status === 'cancelled'
                             ? 'bg-red-100 text-red-800' 
                             : booking.status === 'completed'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-[#36A6A0]/15 text-[#142B4A]'
                               : booking.status === 'started'
                                 ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                 : booking.status === 'checked_in'
@@ -3666,7 +3666,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                         {booking.sessionType === 'online' ? "Online Consultation" : "In Person"}
                       </p>
                       <p className="text-xs text-[var(--color-brand-secondary)] font-medium flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full ${booking.sessionType === 'online' ? 'bg-blue-500' : isLaserPerPulse ? 'bg-amber-500' : isLaserPackage ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                        <span className={`h-2 w-2 rounded-full ${booking.sessionType === 'online' ? 'bg-blue-500' : isLaserPerPulse ? 'bg-amber-500' : isLaserPackage ? 'bg-purple-500' : 'bg-[#36A6A0]'}`} />
                         <span>
                           {isLaserPerPulse 
                             ? `Pay per Pulse (@ ${laserPulseRate} EGP)` 
@@ -4366,12 +4366,12 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
 
                       <div className="flex justify-between items-center text-[var(--cr-dark)]">
                         <span className="font-semibold text-[var(--color-brand-secondary)]">Paid Amount</span>
-                        <span className="font-bold text-emerald-700">{sessionPaid} EGP</span>
+                        <span className="font-bold text-[#36A6A0]">{sessionPaid} EGP</span>
                       </div>
 
                       <div className="flex justify-between items-center text-[var(--cr-dark)]">
                         <span className="font-semibold text-[var(--color-brand-secondary)]">Outstanding</span>
-                        <span className={`font-bold ${sessionLeft > 0 ? 'text-[#9B1C1C]' : 'text-emerald-700'}`}>
+                        <span className={`font-bold ${sessionLeft > 0 ? 'text-[#9B1C1C]' : 'text-[#36A6A0]'}`}>
                           {sessionLeft} EGP
                         </span>
                       </div>
@@ -5114,14 +5114,14 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                 </div>
 
                 {/* New Service Card */}
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 space-y-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 block">
+                <div className="rounded-2xl border border-[#36A6A0]/30 bg-[#36A6A0]/10/60 p-3.5 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#142B4A] block">
                     {tr.newServiceLabel}
                   </span>
-                  <p className="font-bold text-xs text-emerald-950 line-clamp-2">
+                  <p className="font-bold text-xs text-[#142B4A] line-clamp-2">
                     {selectedNewSvcName}
                   </p>
-                  <p className="font-extrabold text-sm text-emerald-800 pt-1">
+                  <p className="font-extrabold text-sm text-[#142B4A] pt-1">
                     {selectedNewSvcPrice} EGP
                   </p>
                 </div>
@@ -5131,7 +5131,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
               <div className="rounded-2xl bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/10 p-4 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between text-[var(--color-brand-secondary)]">
                   <span>{tr.paidAmountLabel}:</span>
-                  <span className="font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                  <span className="font-bold text-[#36A6A0] bg-[#36A6A0]/15 px-2 py-0.5 rounded-md">
                     {effectivePaidAmount} EGP (100% {isRTL ? "محفوظ" : "Preserved"})
                   </span>
                 </div>
@@ -5147,7 +5147,7 @@ ${notes ? `📝 *تعليمات الطبيب / Doctor Instructions:*\n${notes}\n
                   <span className="font-extrabold text-xs sm:text-sm">
                     {tr.remainingDueLabel}:
                   </span>
-                  <span className={`font-black text-sm sm:text-base ${projectedNewAmountLeft > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+                  <span className={`font-black text-sm sm:text-base ${projectedNewAmountLeft > 0 ? "text-rose-700" : "text-[#36A6A0]"}`}>
                     {projectedNewAmountLeft} EGP
                   </span>
                 </div>

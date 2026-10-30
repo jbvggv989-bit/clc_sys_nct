@@ -19,7 +19,7 @@ export function WhatWeDo() {
             position: "relative",
             backgroundColor: "var(--cr-secondary)",
             borderRadius: "32px",
-            border: "1px solid rgba(90, 106, 81, 0.3)",
+            border: "1px solid rgba(143, 163, 184, 0.3)",
             overflow: "hidden",
             padding: "clamp(40px, 5vw, 80px) clamp(24px, 4vw, 64px)",
           }}
@@ -305,7 +305,7 @@ export function WhatWeDo() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "2px",
-                  boxShadow: "0 8px 24px rgba(90, 61, 52, 0.2)",
+                  boxShadow: "0 8px 24px rgba(20, 43, 74, 0.2)",
                   border: "4px solid var(--cr-bg, var(--color-brand-tint))",
                 }}
               >

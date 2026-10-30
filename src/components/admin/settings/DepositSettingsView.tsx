@@ -66,7 +66,7 @@ export default function DepositSettingsView({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
         {/* Left Column: Form Settings */}
-        <div className="lg:col-span-7 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
+        <div className="lg:col-span-7 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 sm:space-y-6">
           {/* InstaPay Details */}
           <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] border-b border-gray-100 pb-3">{t.instapayDetails}</h3>
 
@@ -178,7 +178,7 @@ export default function DepositSettingsView({
         </div>
 
         {/* Right Column: Live QR Preview */}
-        <div className="lg:col-span-5 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] text-center flex flex-col items-center">
+        <div className="lg:col-span-5 rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] text-center flex flex-col items-center">
           <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] border-b border-gray-100 pb-3 w-full mb-4 sm:mb-6">{t.liveQrPreview}</h3>
           <div className="bg-white p-4 rounded-3xl border border-[var(--cr-accent)]/20 shadow-md inline-block mb-4">
             <img

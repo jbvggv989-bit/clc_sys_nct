@@ -80,7 +80,7 @@ function CategoryCard({ label, sublabel, image, onClick }: CategoryCardProps) {
         minWidth: 280,
         padding: "48px 32px",
         borderRadius: 24,
-        border: hovered ? "1.5px solid var(--cr-primary)" : "1.5px solid rgba(90, 106, 81, 0.18)",
+        border: hovered ? "1.5px solid var(--cr-primary)" : "1.5px solid rgba(143, 163, 184, 0.18)",
         background: hovered ? "var(--cr-white)" : "var(--cr-secondary)",
         color: "var(--cr-primary)",
         display: "flex",
@@ -92,7 +92,7 @@ function CategoryCard({ label, sublabel, image, onClick }: CategoryCardProps) {
         textAlign: "center",
         position: "relative",
         boxShadow: hovered 
-          ? "0 12px 30px rgba(90, 61, 52, 0.08)" 
+          ? "0 12px 30px rgba(20, 43, 74, 0.08)" 
           : "none",
       }}
     >
@@ -155,8 +155,8 @@ function ServiceCard({ service, lang, descText }: ServiceCardProps) {
         backgroundColor: "var(--cr-secondary)",
         borderRadius: 24,
         overflow: "hidden",
-        border: "1px solid rgba(90, 106, 81, 0.2)",
-        boxShadow: "0 2px 20px rgba(90,61,52,0.08)",
+        border: "1px solid rgba(143, 163, 184, 0.2)",
+        boxShadow: "0 2px 20px rgba(20, 43, 74,0.08)",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -181,7 +181,7 @@ function ServiceCard({ service, lang, descText }: ServiceCardProps) {
             width: 44,
             height: 44,
             borderRadius: "50%",
-            backgroundColor: "rgba(90, 106, 81, 0.12)",
+            backgroundColor: "rgba(143, 163, 184, 0.12)",
             display: "grid",
             placeItems: "center",
             flexShrink: 0,
@@ -221,7 +221,7 @@ function ServiceCard({ service, lang, descText }: ServiceCardProps) {
                   <span style={{
                     fontSize: 13,
                     fontWeight: 400,
-                    color: "rgba(90, 106, 81, 0.45)",
+                    color: "rgba(143, 163, 184, 0.45)",
                     textDecoration: "line-through",
                   }}>
                     {lang === "ar"
@@ -561,7 +561,7 @@ export function ServicesSection() {
                         style={{
                           padding: "10px 28px",
                           borderRadius: 50,
-                          border: `1.5px solid ${isActive ? "var(--cr-primary)" : "rgba(90, 106, 81, 0.4)"}`,
+                          border: `1.5px solid ${isActive ? "var(--cr-primary)" : "rgba(143, 163, 184, 0.4)"}`,
                           backgroundColor: isActive ? "var(--cr-primary)" : "transparent",
                           color: isActive ? "var(--cr-white)" : "var(--cr-primary)",
                           fontFamily: "var(--font-sora), sans-serif",
@@ -628,7 +628,7 @@ export function ServicesSection() {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          box-shadow: 0 2px 12px rgba(90,61,52,0.15);
+          box-shadow: 0 2px 12px rgba(20, 43, 74,0.15);
         }
         .services-swiper-wrap .swiper-button-prev::after,
         .services-swiper-wrap .swiper-button-next::after {

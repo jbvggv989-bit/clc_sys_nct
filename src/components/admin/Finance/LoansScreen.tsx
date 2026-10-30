@@ -211,7 +211,7 @@ export function LoansScreen({ accessToken }: LoansScreenProps) {
 
       <div
         className="rounded-[32px] border p-6 shadow-sm"
-        style={{ backgroundColor: "var(--cr-white)", borderColor: "rgba(90, 106, 81, 0.15)" }}
+        style={{ backgroundColor: "var(--cr-white)", borderColor: "rgba(143, 163, 184, 0.15)" }}
       >
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
@@ -453,7 +453,7 @@ export function LoansScreen({ accessToken }: LoansScreenProps) {
         >
           <div
             className="max-h-[80vh] w-full max-w-3xl overflow-y-auto rounded-2xl border bg-white p-6 shadow-2xl"
-            style={{ borderColor: "rgba(90, 106, 81, 0.15)" }}
+            style={{ borderColor: "rgba(143, 163, 184, 0.15)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">

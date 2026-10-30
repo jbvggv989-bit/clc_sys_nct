@@ -103,7 +103,7 @@ export function MaterialDatePicker({
       className="w-full max-w-md rounded-[28px] p-5 shadow-xs transition-all"
       style={{
         backgroundColor: "var(--color-brand-tint)", // Clinic light brand background (secondary token)
-        border: "1px solid rgba(65, 78, 54, 0.18)",
+        border: "1px solid rgba(20, 43, 74, 0.18)",
       }}
       dir={isRTL ? "rtl" : "ltr"}
     >

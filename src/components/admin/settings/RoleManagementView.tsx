@@ -505,7 +505,7 @@ export default function RoleManagementView({
       {/* Grid for Roles and Employee Accounts */}
       <div className="grid gap-6 sm:gap-8 lg:grid-cols-1">
         {/* 1. Manage Roles Card */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)]">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)]">
           <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] mb-3 sm:mb-4">{t.defineRoles.cardTitle}</h3>
           
           {/* Create Role Form */}
@@ -745,7 +745,7 @@ export default function RoleManagementView({
         </div>
 
         {/* 2. Manage Employees / Credentials Provisioning */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)]">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)]">
           <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] mb-3 sm:mb-4">{t.provisionEmployees.cardTitle}</h3>
           
           {/* Create Employee Form — OAuth Invite Flow */}
@@ -985,7 +985,7 @@ export default function RoleManagementView({
         </div>
 
         {/* 3. Department Management Card */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)]">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)]">
           <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] mb-1">{t.departments.cardTitle}</h3>
           <p className="text-xs text-[var(--color-brand-secondary)] mb-4 sm:mb-5">{t.departments.subtitle}</p>
 

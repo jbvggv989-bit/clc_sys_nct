@@ -1,6 +1,6 @@
 # ai_docs — Revera Clinics Agent Knowledge Base
 
-> **Last Updated:** 2026-10-30 (DEC-148: Update Attribution to GRAD-TEAM & Preloader Refinements)
+> **Last Updated:** 2026-10-30 (DEC-149: Comprehensive Legacy Color Palette Purification)
 > **Branch:** dev (these docs do not belong on main/production)
 > **Maintained by:** Project manager. Updated whenever architecture, decisions, or risks change.
 

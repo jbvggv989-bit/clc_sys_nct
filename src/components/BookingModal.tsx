@@ -1241,7 +1241,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                               style={{
                                 backgroundColor: isActive ? "var(--cr-primary)" : "var(--cr-secondary)",
                                 color: isActive ? "var(--cr-white)" : "var(--cr-primary)",
-                                border: isActive ? "none" : "1.5px solid rgba(65, 78, 54, 0.18)",
+                                border: isActive ? "none" : "1.5px solid rgba(20, 43, 74, 0.18)",
                               }}
                             >
                               {label}
@@ -1271,7 +1271,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                           style={{
                             backgroundColor: isActive ? "var(--cr-primary)" : "var(--cr-secondary)",
                             color: isActive ? "var(--cr-white)" : "var(--cr-primary)",
-                            border: isActive ? "none" : "1px solid rgba(65, 78, 54, 0.18)",
+                            border: isActive ? "none" : "1px solid rgba(20, 43, 74, 0.18)",
                           }}
                         >
                           {label}
@@ -1335,7 +1335,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                               style={{
                                 backgroundColor: isSelected ? "var(--cr-primary)" : "var(--cr-secondary)",
                                 color: isSelected ? "var(--cr-white)" : "var(--cr-primary)",
-                                border: isSelected ? "none" : "1px solid rgba(65, 78, 54, 0.18)",
+                                border: isSelected ? "none" : "1px solid rgba(20, 43, 74, 0.18)",
                               }}
                             >
                               {isSelected ? "✓ " : "+ "}

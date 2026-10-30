@@ -312,7 +312,7 @@ export default function ProfilePage() {
       <>
         <Navbar />
         <main className="min-h-screen bg-[var(--color-brand-light)] pt-32 pb-20 flex items-center justify-center px-4">
-          <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-[0_20px_50px_rgba(47,61,41,0.05)] border border-[var(--cr-primary)]/10 text-center">
+          <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-[0_20px_50px_rgba(20,43,74,0.05)] border border-[var(--cr-primary)]/10 text-center">
             <div className="mx-auto w-16 h-16 bg-[var(--color-brand-tint)] rounded-full flex items-center justify-center text-[var(--cr-primary)] mb-6">
               <Lock size={28} />
             </div>
@@ -417,7 +417,7 @@ export default function ProfilePage() {
             
             {/* Left Column: Profile form */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white rounded-[32px] p-6 shadow-[0_15px_40px_rgba(47,61,41,0.03)] border border-[var(--cr-primary)]/10">
+              <div className="bg-white rounded-[32px] p-6 shadow-[0_15px_40px_rgba(20,43,74,0.03)] border border-[var(--cr-primary)]/10">
                 <h3 className="text-lg font-bold text-[var(--cr-dark)] mb-4 pb-3 border-b border-[var(--cr-primary)]/10 flex items-center gap-2">
                   <User size={18} className="text-[var(--cr-accent)]" />
                   {isRTL ? "بيانات الملف الشخصي" : "Personal Information"}
@@ -549,7 +549,7 @@ export default function ProfilePage() {
 
             {/* Right Column: Booking history */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_15px_40px_rgba(47,61,41,0.03)] border border-[var(--cr-primary)]/10">
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 shadow-[0_15px_40px_rgba(20,43,74,0.03)] border border-[var(--cr-primary)]/10">
                 <div>
                   <h2 className="text-xl font-bold text-[var(--cr-dark)]">{profileT.bookingsTitle}</h2>
                   <p className="text-sm text-[var(--color-brand-secondary)] mt-1">{profileT.bookingsDesc}</p>

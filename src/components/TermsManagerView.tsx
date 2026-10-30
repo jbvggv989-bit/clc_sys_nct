@@ -330,7 +330,7 @@ export default function TermsManagerView({
       </div>
 
       {/* Main Section */}
-      <div className="rounded-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-6">
+      <div className="rounded-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-6">
         <div className="flex items-center justify-between border-b border-gray-100 pb-4">
           <div>
             <h3 className="text-xl font-bold text-[var(--cr-dark)]">Structured Terms & Conditions List</h3>
@@ -494,7 +494,7 @@ export default function TermsManagerView({
       </div>
 
       {/* Legacy Fallback Text Editor Accordion */}
-      <div className="rounded-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 max-w-4xl">
+      <div className="rounded-[40px] bg-white p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 max-w-4xl">
         <div className="flex items-center justify-between border-b border-gray-100 pb-3">
           <div>
             <h3 className="text-lg font-bold text-[var(--cr-dark)]">Checkout Gate Fallback Text</h3>

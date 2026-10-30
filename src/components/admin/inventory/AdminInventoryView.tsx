@@ -171,7 +171,7 @@ export default function AdminInventoryView({
 
       {/* TAB 3: SUPPLIERS & PURCHASES */}
       {inventorySubTab === "suppliers" && (
-        <div className="rounded-[40px] bg-[var(--color-brand-light)] p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)] border border-[#E6E9EB]">
+        <div className="rounded-[40px] bg-[var(--color-brand-light)] p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)] border border-[#E6E9EB]">
           <SupplierManagementScreen authHeaders={authHeaders} canManage={canManageSuppliers} lang={lang} t={t} />
         </div>
       )}

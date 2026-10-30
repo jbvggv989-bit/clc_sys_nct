@@ -1486,10 +1486,10 @@ export default function AdminNewBookingView({
           <div className="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-[var(--cr-primary)]/10 shadow-xs space-y-6 relative z-30">
             <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-white text-xs font-black">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#36A6A0] text-white text-xs font-black">
                   1
                 </span>
-                <h2 className="text-xs md:text-sm font-black uppercase tracking-wider text-emerald-800">
+                <h2 className="text-xs md:text-sm font-black uppercase tracking-wider text-[#142B4A]">
                   {tr.patientInfoHeading}
                 </h2>
               </div>
@@ -1497,8 +1497,8 @@ export default function AdminNewBookingView({
               {/* Patient Status Indicator & Toggle Button */}
               <div className="flex items-center gap-2 flex-wrap">
                 {patientFound === true && (
-                  <span className="inline-flex items-center gap-1.5 rounded-2xl bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 text-xs font-bold text-emerald-700">
-                    <CheckCircle2 size={15} className="text-emerald-600" /> {tr.patientFoundBadge}
+                  <span className="inline-flex items-center gap-1.5 rounded-2xl bg-[#36A6A0]/10 border border-[#36A6A0]/30 px-3.5 py-1.5 text-xs font-bold text-[#36A6A0]">
+                    <CheckCircle2 size={15} className="text-[#36A6A0]" /> {tr.patientFoundBadge}
                   </span>
                 )}
                 {patientFound === false && (
@@ -1533,7 +1533,7 @@ export default function AdminNewBookingView({
                         setShowCustomerDropdown(true);
                       }
                     }}
-                    className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-[#36A6A0] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Users size={13} />
                     <span>{showCustomerDropdown ? tr.hidePatientsListBtn : tr.browsePatientsBtn}</span>
@@ -1541,7 +1541,7 @@ export default function AdminNewBookingView({
                   </button>
                 </div>
 
-                <div className={`flex items-center rounded-2xl border bg-white overflow-hidden shadow-xs focus-within:border-emerald-700 ${
+                <div className={`flex items-center rounded-2xl border bg-white overflow-hidden shadow-xs focus-within:border-[#36A6A0] ${
                   formErrors.phone ? "border-red-500 ring-2 ring-red-200" : "border-[var(--cr-primary)]/20"
                 }`}>
                   <div className="flex items-center gap-1.5 px-3 py-2.5 bg-[var(--color-brand-light)] border-e border-[var(--cr-primary)]/10 font-bold text-[var(--cr-dark)]">
@@ -1627,7 +1627,7 @@ export default function AdminNewBookingView({
                               setCustomerList(filtered);
                             }
                           }}
-                          className="w-full ps-9 pe-3 py-2 text-xs rounded-xl border border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] text-[var(--cr-dark)] outline-none font-bold focus:border-emerald-700 placeholder:text-gray-400 placeholder:font-normal"
+                          className="w-full ps-9 pe-3 py-2 text-xs rounded-xl border border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] text-[var(--cr-dark)] outline-none font-bold focus:border-[#36A6A0] placeholder:text-gray-400 placeholder:font-normal"
                         />
                       </div>
                     </div>
@@ -1646,7 +1646,7 @@ export default function AdminNewBookingView({
                             setCustomerList(allCustomers);
                             setPatientSearchQuery("");
                           }}
-                          className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
+                          className="text-xs font-bold text-[#36A6A0] hover:underline cursor-pointer"
                         >
                           {lang === "ar" ? "عرض جميع المرضى" : "Show all patients"}
                         </button>
@@ -1662,7 +1662,7 @@ export default function AdminNewBookingView({
                             key={c.id || cPhone}
                             onClick={() => handleSelectCustomer(c)}
                             className={`p-2.5 sm:p-3 rounded-xl cursor-pointer transition flex items-center justify-between gap-3 border-b border-gray-100 last:border-0 ${
-                              isSelected ? "bg-emerald-100/70 border-emerald-300" : "hover:bg-emerald-50/70"
+                              isSelected ? "bg-[#36A6A0]/15 border-[#36A6A0]/40" : "hover:bg-[#36A6A0]/10"
                             }`}
                           >
                             <div className="min-w-0 flex-1">
@@ -1672,7 +1672,7 @@ export default function AdminNewBookingView({
                               </span>
                             </div>
                             <span className={`text-[11px] font-bold px-3 py-1 rounded-xl flex items-center gap-1 shrink-0 ${
-                              isSelected ? "bg-emerald-700 text-white" : "bg-emerald-100 text-emerald-800"
+                              isSelected ? "bg-[#36A6A0] text-white" : "bg-[#36A6A0]/15 text-[#142B4A]"
                             }`}>
                               {isSelected ? <Check size={12} /> : null}
                               {isSelected ? tr.selectedBadge : tr.selectBadge}
@@ -1698,7 +1698,7 @@ export default function AdminNewBookingView({
                       if (e.target.value) setFormErrors((prev) => ({ ...prev, firstName: false }));
                     }}
                     placeholder={tr.firstNamePlaceholder}
-                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 ${
+                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] ${
                       formErrors.firstName ? "border-red-500 ring-2 ring-red-200" : "border-[var(--cr-primary)]/20"
                     }`}
                   />
@@ -1714,7 +1714,7 @@ export default function AdminNewBookingView({
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder={tr.lastNamePlaceholder}
-                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700"
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0]"
                   />
                 </div>
               </div>
@@ -1728,7 +1728,7 @@ export default function AdminNewBookingView({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={tr.emailPlaceholder}
-                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-semibold text-[var(--cr-dark)] outline-none focus:border-emerald-700"
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-semibold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0]"
                   />
                 </div>
                 <div>
@@ -1747,7 +1747,7 @@ export default function AdminNewBookingView({
                         type="checkbox"
                         checked={sameAsPhone}
                         onChange={(e) => setSameAsPhone(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-emerald-700 focus:ring-emerald-600 cursor-pointer"
+                        className="h-4 w-4 rounded border-gray-300 text-[#36A6A0] focus:ring-[#36A6A0] cursor-pointer"
                       />
                       <span>{tr.sameAsPhoneLabel}</span>
                     </label>
@@ -1766,7 +1766,7 @@ export default function AdminNewBookingView({
                         <select
                           value={gender}
                           onChange={(e) => setGender(e.target.value)}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-emerald-700 appearance-none text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-[#36A6A0] appearance-none text-xs"
                         >
                           <option value="">{tr.selectGenderPlaceholder || "Select Gender"}</option>
                           <option value="Female">{tr.genderFemale || "Female"}</option>
@@ -1784,7 +1784,7 @@ export default function AdminNewBookingView({
                         onChange={(e) => setNationalId(e.target.value)}
                         placeholder={tr.nationalIdPlaceholder || "Enter 14-digit National ID"}
                         maxLength={14}
-                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                       />
                     </div>
                   </div>
@@ -1797,7 +1797,7 @@ export default function AdminNewBookingView({
                         <select
                           value={referralSource}
                           onChange={(e) => setReferralSource(e.target.value)}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-emerald-700 appearance-none text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-[#36A6A0] appearance-none text-xs"
                         >
                           <option value="">{tr.selectReferralPlaceholder || "Select Referral Source..."}</option>
                           <option value="Instagram">{tr.referralInstagram || "Instagram"}</option>
@@ -1820,7 +1820,7 @@ export default function AdminNewBookingView({
                         value={occupation}
                         onChange={(e) => setOccupation(e.target.value)}
                         placeholder={tr.occupationPlaceholder || "e.g. Engineer, Doctor"}
-                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                       />
                     </div>
                   </div>
@@ -1839,7 +1839,7 @@ export default function AdminNewBookingView({
                           value={dob}
                           max={new Date().toISOString().slice(0, 10)}
                           onChange={(e) => setDob(e.target.value)}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white ps-9 pe-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white ps-9 pe-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                     </div>
@@ -1856,7 +1856,7 @@ export default function AdminNewBookingView({
                         className={`w-full rounded-2xl border px-3.5 py-2.5 font-bold outline-none text-xs ${
                           dob
                             ? "border-gray-200 bg-[#F8FAFC] text-gray-700 cursor-not-allowed select-none"
-                            : "border-[var(--cr-primary)]/20 bg-white text-[var(--cr-dark)] focus:border-emerald-700"
+                            : "border-[var(--cr-primary)]/20 bg-white text-[var(--cr-dark)] focus:border-[#36A6A0]"
                         }`}
                       />
                       {dob && (
@@ -1882,7 +1882,7 @@ export default function AdminNewBookingView({
                           value={city}
                           onChange={(e) => setCity(e.target.value)}
                           placeholder={tr.cityAreaPlaceholder || "e.g. New Cairo"}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                       <div>
@@ -1892,7 +1892,7 @@ export default function AdminNewBookingView({
                           value={street}
                           onChange={(e) => setStreet(e.target.value)}
                           placeholder={tr.streetPlaceholder || "e.g. 90th Street"}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                       <div>
@@ -1902,7 +1902,7 @@ export default function AdminNewBookingView({
                           value={building}
                           onChange={(e) => setBuilding(e.target.value)}
                           placeholder={tr.buildingPlaceholder || "e.g. Building 14"}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                       <div>
@@ -1912,7 +1912,7 @@ export default function AdminNewBookingView({
                           value={floorApt}
                           onChange={(e) => setFloorApt(e.target.value)}
                           placeholder={tr.floorAptPlaceholder || "e.g. Floor 3, Apt 6"}
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                     </div>
@@ -1935,7 +1935,7 @@ export default function AdminNewBookingView({
                           value={walletBalance}
                           onChange={(e) => setWalletBalance(Number(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                       <div>
@@ -1945,7 +1945,7 @@ export default function AdminNewBookingView({
                           value={totalSpent}
                           onChange={(e) => setTotalSpent(Number(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                       <div>
@@ -1955,7 +1955,7 @@ export default function AdminNewBookingView({
                           value={outstandingBalance}
                           onChange={(e) => setOutstandingBalance(Number(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 text-xs"
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3 py-2 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] text-xs"
                         />
                       </div>
                     </div>
@@ -1969,10 +1969,10 @@ export default function AdminNewBookingView({
           <div className="bg-white rounded-3xl p-4 sm:p-6 md:p-8 border border-[var(--cr-primary)]/10 shadow-xs space-y-6 relative z-10">
             <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-700 text-white text-xs font-black">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#36A6A0] text-white text-xs font-black">
                   2
                 </span>
-                <h2 className="text-xs md:text-sm font-black uppercase tracking-wider text-emerald-800">
+                <h2 className="text-xs md:text-sm font-black uppercase tracking-wider text-[#142B4A]">
                   {tr.appointmentDetailsHeading}
                 </h2>
               </div>
@@ -1989,7 +1989,7 @@ export default function AdminNewBookingView({
                       setSelectedServiceId(e.target.value);
                       if (e.target.value) setFormErrors((prev) => ({ ...prev, service: false }));
                     }}
-                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-emerald-700 ${
+                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-[#36A6A0] ${
                       formErrors.service ? "border-red-500 ring-2 ring-red-200" : "border-[var(--cr-primary)]/20"
                     }`}
                   >
@@ -2012,7 +2012,7 @@ export default function AdminNewBookingView({
                       setSelectedDoctorId(e.target.value);
                       if (e.target.value) setFormErrors((prev) => ({ ...prev, doctor: false }));
                     }}
-                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-emerald-700 ${
+                    className={`w-full rounded-2xl border bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none cursor-pointer focus:border-[#36A6A0] ${
                       formErrors.doctor ? "border-red-500 ring-2 ring-red-200" : "border-[var(--cr-primary)]/20"
                     }`}
                   >
@@ -2032,7 +2032,7 @@ export default function AdminNewBookingView({
                     required
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 cursor-pointer"
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white px-3.5 py-2.5 font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] cursor-pointer"
                   />
                 </div>
               </div>
@@ -2041,12 +2041,12 @@ export default function AdminNewBookingView({
               <div className="space-y-2.5 rounded-2xl border border-[var(--cr-primary)]/15 bg-[#F8FAFC] p-3.5 sm:p-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <Layers size={16} className="text-emerald-800 shrink-0" />
+                    <Layers size={16} className="text-[#142B4A] shrink-0" />
                     <span className="font-bold text-xs text-[var(--cr-dark)]">
                       {lang === "ar" ? "خدمات إضافية لنفس الجلسة" : "Additional Services in Same Session"}
                     </span>
                     {additionalServiceIds.length > 0 && (
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#36A6A0]/15 text-[#142B4A]">
                         +{additionalServiceIds.length} {lang === "ar" ? "إضافية" : "added"}
                       </span>
                     )}
@@ -2063,7 +2063,7 @@ export default function AdminNewBookingView({
                         }
                         e.target.value = "";
                       }}
-                      className="w-full rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-900 outline-none cursor-pointer focus:border-emerald-700 shadow-2xs"
+                      className="w-full rounded-xl border border-[#36A6A0]/40 bg-white px-3 py-1.5 text-xs font-bold text-[#142B4A] outline-none cursor-pointer focus:border-[#36A6A0] shadow-2xs"
                     >
                       <option value="">{lang === "ar" ? "+ إضافة خدمة أخرى للجلسة..." : "+ Add another service..."}</option>
                       {dbServices
@@ -2087,14 +2087,14 @@ export default function AdminNewBookingView({
                       return (
                         <span
                           key={id}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white text-emerald-950 text-xs font-bold border border-emerald-300/80 shadow-2xs"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white text-[#142B4A] text-xs font-bold border border-[#36A6A0]/40/80 shadow-2xs"
                         >
                           <span>{getServiceName(svc, lang)}</span>
-                          <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                          <span className="text-[10px] text-[#36A6A0] bg-[#36A6A0]/10 px-1.5 py-0.5 rounded font-bold">
                             {svcDuration} min
                           </span>
                           {Number(svc.price || 0) > 0 && (
-                            <span className="text-[11px] text-emerald-800 font-extrabold">
+                            <span className="text-[11px] text-[#142B4A] font-extrabold">
                               {Number(svc.price).toLocaleString()} EGP
                             </span>
                           )}
@@ -2121,16 +2121,16 @@ export default function AdminNewBookingView({
 
               {/* ── LASER SERVICE PAYMENT MODE SELECTOR (When Service is Laser) ── */}
               {isLaserService && (
-                <div className="space-y-3 rounded-2xl border-2 border-emerald-700/30 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/20 p-4 sm:p-5 shadow-xs animate-fadeIn">
+                <div className="space-y-3 rounded-2xl border-2 border-[#36A6A0]/30 bg-gradient-to-br from-[#36A6A0]/10/50 via-white to-emerald-50/20 p-4 sm:p-5 shadow-xs animate-fadeIn">
                   <div className="flex items-center justify-between border-b border-emerald-800/10 pb-3 flex-wrap gap-2">
-                    <div className="flex items-center gap-2 text-emerald-950">
-                      <div className="h-7 w-7 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs">
+                    <div className="flex items-center gap-2 text-[#142B4A]">
+                      <div className="h-7 w-7 rounded-xl bg-[#36A6A0] text-white flex items-center justify-center shadow-xs">
                         <Sparkles size={16} />
                       </div>
                       <div>
-                        <h4 className="font-black text-xs sm:text-sm uppercase tracking-wider text-emerald-950 flex items-center gap-2">
+                        <h4 className="font-black text-xs sm:text-sm uppercase tracking-wider text-[#142B4A] flex items-center gap-2">
                           <span>{tr.laserOptionsHeading || "Laser Service Payment Mode"}</span>
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300/60">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/40/60">
                             Laser Service
                           </span>
                         </h4>
@@ -2151,17 +2151,17 @@ export default function AdminNewBookingView({
                       }}
                       className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
                         laserPaymentMode === "SERVICE"
-                          ? "border-emerald-700 bg-emerald-50/90 ring-2 ring-emerald-700/20 shadow-xs"
-                          : "border-[var(--cr-primary)]/15 bg-white hover:border-emerald-600/50 hover:bg-[var(--color-brand-light)]"
+                          ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-2 ring-[#36A6A0]/20 shadow-xs"
+                          : "border-[var(--cr-primary)]/15 bg-white hover:border-[#36A6A0]/50 hover:bg-[var(--color-brand-light)]"
                       }`}
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-[var(--cr-dark)] flex items-center gap-1.5">
-                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-emerald-800 flex items-center justify-center text-[10px] font-black">1</span>
+                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-[#142B4A] flex items-center justify-center text-[10px] font-black">1</span>
                             {tr.laserOption1Title || "Option 1: Pay by Service"}
                           </span>
-                          {laserPaymentMode === "SERVICE" && <Check size={16} className="text-emerald-700 shrink-0 font-bold" />}
+                          {laserPaymentMode === "SERVICE" && <Check size={16} className="text-[#36A6A0] shrink-0 font-bold" />}
                         </div>
                         <p className="text-[11px] text-[var(--color-brand-secondary)] leading-relaxed">
                           {tr.laserOption1Desc || "Fixed catalog price regardless of pulses delivered."}
@@ -2169,7 +2169,7 @@ export default function AdminNewBookingView({
                       </div>
                       <div className="pt-2 mt-2 border-t border-[var(--cr-primary)]/10 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase text-[var(--color-brand-secondary)]">{tr.servicePriceLabel || "Price"}:</span>
-                        <span className="text-xs font-black text-emerald-900">{baseServicePrice} {tr.egpLabel || "EGP"}</span>
+                        <span className="text-xs font-black text-[#142B4A]">{baseServicePrice} {tr.egpLabel || "EGP"}</span>
                       </div>
                     </div>
 
@@ -2182,17 +2182,17 @@ export default function AdminNewBookingView({
                       }}
                       className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
                         laserPaymentMode === "PER_PULSE"
-                          ? "border-emerald-700 bg-emerald-50/90 ring-2 ring-emerald-700/20 shadow-xs"
-                          : "border-[var(--cr-primary)]/15 bg-white hover:border-emerald-600/50 hover:bg-[var(--color-brand-light)]"
+                          ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-2 ring-[#36A6A0]/20 shadow-xs"
+                          : "border-[var(--cr-primary)]/15 bg-white hover:border-[#36A6A0]/50 hover:bg-[var(--color-brand-light)]"
                       }`}
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-[var(--cr-dark)] flex items-center gap-1.5">
-                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-emerald-800 flex items-center justify-center text-[10px] font-black">2</span>
+                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-[#142B4A] flex items-center justify-center text-[10px] font-black">2</span>
                             {tr.laserOption2Title || "Option 2: Pay per Pulse"}
                           </span>
-                          {laserPaymentMode === "PER_PULSE" && <Check size={16} className="text-emerald-700 shrink-0 font-bold" />}
+                          {laserPaymentMode === "PER_PULSE" && <Check size={16} className="text-[#36A6A0] shrink-0 font-bold" />}
                         </div>
                         <p className="text-[11px] text-[var(--color-brand-secondary)] leading-relaxed">
                           {tr.laserOption2Desc || "Deal per pulse at reception. Invoiced after session based on actual pulses used."}
@@ -2207,7 +2207,7 @@ export default function AdminNewBookingView({
                             step={0.5}
                             value={laserPerPulsePrice}
                             onChange={(e) => setLaserPerPulsePrice(Math.max(0.1, parseFloat(e.target.value) || 1))}
-                            className="w-16 rounded-lg border border-[var(--cr-primary)]/20 bg-white px-2 py-0.5 text-xs font-black text-[var(--cr-dark)] text-end outline-none focus:border-emerald-700"
+                            className="w-16 rounded-lg border border-[var(--cr-primary)]/20 bg-white px-2 py-0.5 text-xs font-black text-[var(--cr-dark)] text-end outline-none focus:border-[#36A6A0]"
                           />
                           <span className="text-[10px] font-bold text-[var(--color-brand-secondary)]">{tr.egpLabel || "EGP"}/p</span>
                         </div>
@@ -2240,17 +2240,17 @@ export default function AdminNewBookingView({
                       }}
                       className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
                         laserPaymentMode === "PACKAGE"
-                          ? "border-emerald-700 bg-emerald-50/90 ring-2 ring-emerald-700/20 shadow-xs"
-                          : "border-[var(--cr-primary)]/15 bg-white hover:border-emerald-600/50 hover:bg-[var(--color-brand-light)]"
+                          ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-2 ring-[#36A6A0]/20 shadow-xs"
+                          : "border-[var(--cr-primary)]/15 bg-white hover:border-[#36A6A0]/50 hover:bg-[var(--color-brand-light)]"
                       }`}
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-extrabold text-xs text-[var(--cr-dark)] flex items-center gap-1.5">
-                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-emerald-800 flex items-center justify-center text-[10px] font-black">3</span>
+                            <span className="h-5 w-5 rounded-full bg-[var(--color-brand-tint)] text-[#142B4A] flex items-center justify-center text-[10px] font-black">3</span>
                             {tr.laserOption3Title || "Option 3: Pulses Package"}
                           </span>
-                          {laserPaymentMode === "PACKAGE" && <Check size={16} className="text-emerald-700 shrink-0 font-bold" />}
+                          {laserPaymentMode === "PACKAGE" && <Check size={16} className="text-[#36A6A0] shrink-0 font-bold" />}
                         </div>
                         <p className="text-[11px] text-[var(--color-brand-secondary)] leading-relaxed">
                           {tr.laserOption3Desc || "Deduct session pulses from patient package with deficit spillover support."}
@@ -2258,7 +2258,7 @@ export default function AdminNewBookingView({
                       </div>
                       <div className="pt-2 mt-2 border-t border-[var(--cr-primary)]/10 flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase text-[var(--color-brand-secondary)]">{tr.bookingValueLabel || "Booking"}:</span>
-                        <span className="text-xs font-black text-emerald-900">
+                        <span className="text-xs font-black text-[#142B4A]">
                           {customerPulsePackages.length > 0
                             ? `0 ${tr.egpLabel || "EGP"} (${tr.paymentMethodPackage || "Package"})`
                             : selectedCatalogPulsePkg
@@ -2273,15 +2273,15 @@ export default function AdminNewBookingView({
                   {laserPaymentMode === "PACKAGE" && (
                     <div className="mt-3 space-y-3">
                       {customerPulsePackages.length > 0 ? (
-                        <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-300/80 space-y-3 animate-fadeIn">
+                        <div className="p-3.5 rounded-2xl bg-[#36A6A0]/10 border border-[#36A6A0]/40/80 space-y-3 animate-fadeIn">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-2">
-                              <Zap size={16} className="text-emerald-700 fill-emerald-600 shrink-0" />
-                              <span className="font-bold text-xs text-emerald-950">
+                              <Zap size={16} className="text-[#36A6A0] fill-emerald-600 shrink-0" />
+                              <span className="font-bold text-xs text-[#142B4A]">
                                 {tr.selectPatientActivePulsePackage || "Select which active pulses package to use for this session:"}
                               </span>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#36A6A0]/20 text-[#142B4A]">
                               {customerPulsePackages.length} {tr.activePulsesPackagesCount || "Active Pulses Package(s)"}
                             </span>
                           </div>
@@ -2305,27 +2305,27 @@ export default function AdminNewBookingView({
                                   }}
                                   className={`p-3.5 rounded-2xl border-2 cursor-pointer transition flex flex-col justify-between ${
                                     isSelected
-                                      ? "border-emerald-700 bg-white ring-2 ring-emerald-600/30 shadow-xs"
-                                      : "border-emerald-200 bg-white/70 hover:bg-white"
+                                      ? "border-[#36A6A0] bg-white ring-2 ring-[#36A6A0]/30 shadow-xs"
+                                      : "border-[#36A6A0]/30 bg-white/70 hover:bg-white"
                                   }`}
                                 >
                                   <div className="space-y-1.5">
                                     <div className="flex items-center justify-between gap-1">
-                                      <span className="font-black text-xs text-emerald-950 truncate">
+                                      <span className="font-black text-xs text-[#142B4A] truncate">
                                         {(lang === "ar" && pkg.packageNameAr) ? pkg.packageNameAr : pkg.packageName}
                                       </span>
-                                      {isSelected && <Check size={14} className="text-emerald-700 shrink-0 font-bold" />}
+                                      {isSelected && <Check size={14} className="text-[#36A6A0] shrink-0 font-bold" />}
                                     </div>
                                     <div className="flex items-center justify-between text-[11px]">
-                                      <span className="text-emerald-800 font-bold">
+                                      <span className="text-[#142B4A] font-bold">
                                         {remaining.toLocaleString()} {lang === "ar" ? "نبضة متبقية" : (tr.pulsesRemainingBadge || "pulses left")}
                                       </span>
                                       <span className="text-[10px] text-[var(--color-brand-secondary)]">
                                         / {total.toLocaleString()}
                                       </span>
                                     </div>
-                                    <div className="h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden">
-                                      <div className="h-full bg-emerald-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                    <div className="h-1.5 w-full rounded-full bg-[#36A6A0]/15 overflow-hidden">
+                                      <div className="h-full bg-[#36A6A0] rounded-full transition-all" style={{ width: `${pct}%` }} />
                                     </div>
                                     {pkg.expiresAt && (
                                       <span className="text-[10px] text-[var(--color-brand-secondary)] block mt-1">
@@ -2333,9 +2333,9 @@ export default function AdminNewBookingView({
                                       </span>
                                     )}
                                   </div>
-                                  <div className="pt-2 mt-2 border-t border-emerald-100 flex items-center justify-between">
-                                    <span className="text-[10px] uppercase font-bold text-emerald-800">{tr.bookingValueLabel || "Booking"}:</span>
-                                    <span className="text-xs font-black text-emerald-900">
+                                  <div className="pt-2 mt-2 border-t border-[#36A6A0]/20 flex items-center justify-between">
+                                    <span className="text-[10px] uppercase font-bold text-[#142B4A]">{tr.bookingValueLabel || "Booking"}:</span>
+                                    <span className="text-xs font-black text-[#142B4A]">
                                       0 {tr.egpLabel || "EGP"} ({tr.paymentMethodPackage || "Package"})
                                     </span>
                                   </div>
@@ -2346,23 +2346,23 @@ export default function AdminNewBookingView({
 
                           {/* Green Confirmation Banner for the selected package */}
                           {selectedCustomerPulsePkg && (
-                            <div className="p-3 rounded-2xl bg-white border border-emerald-300/80 flex items-center justify-between flex-wrap gap-2 text-xs">
+                            <div className="p-3 rounded-2xl bg-white border border-[#36A6A0]/40/80 flex items-center justify-between flex-wrap gap-2 text-xs">
                               <div className="flex items-center gap-2">
-                                <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                                <CheckCircle2 size={16} className="text-[#36A6A0] shrink-0" />
                                 <div>
-                                  <span className="font-bold text-emerald-950 block">
+                                  <span className="font-bold text-[#142B4A] block">
                                     {lang === "ar"
                                       ? `الجلسة مغطاة بباقة المريض: ${(selectedCustomerPulsePkg.packageNameAr || selectedCustomerPulsePkg.packageName)}`
                                       : `Session covered by patient package: ${selectedCustomerPulsePkg.packageName}`}
                                   </span>
-                                  <span className="text-[11px] text-emerald-800 font-medium">
+                                  <span className="text-[11px] text-[#142B4A] font-medium">
                                     {lang === "ar"
                                       ? `${getPackagePulsesBalance(selectedCustomerPulsePkg).remaining.toLocaleString()} نبضة متبقية في الرصيد · 0 ج.م مستحق للحجز (سيتم خصم النبضات بعد الجلسة)`
                                       : `${getPackagePulsesBalance(selectedCustomerPulsePkg).remaining.toLocaleString()} pulses remaining in quota · 0 EGP booking fee (session pulses will be deducted upon completion)`}
                                   </span>
                                 </div>
                               </div>
-                              <span className="font-black text-xs text-emerald-900 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs">
+                              <span className="font-black text-xs text-[#142B4A] bg-[#36A6A0]/10 px-2.5 py-1 rounded-lg border border-[#36A6A0]/40 shadow-2xs">
                                 0 EGP
                               </span>
                             </div>
@@ -2448,7 +2448,7 @@ export default function AdminNewBookingView({
                     </div>
                   ) : loadingPackages ? (
                     <div className="flex items-center gap-2 p-4 rounded-2xl bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/10 text-xs text-[var(--color-brand-secondary)]">
-                      <Loader2 size={16} className="animate-spin text-emerald-700" />
+                      <Loader2 size={16} className="animate-spin text-[#36A6A0]" />
                       <span>{tr.loading || "Checking patient packages..."}</span>
                     </div>
                   ) : customerServicePackages.length === 0 ? (
@@ -2462,16 +2462,16 @@ export default function AdminNewBookingView({
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3 rounded-2xl border border-emerald-800/20 bg-emerald-50/30 p-4">
+                    <div className="space-y-3 rounded-2xl border border-emerald-800/20 bg-[#36A6A0]/10 p-4">
                       {/* Header */}
                       <div className="flex items-center justify-between border-b border-emerald-800/10 pb-2.5">
-                        <div className="flex items-center gap-2 text-emerald-900">
-                          <Package size={18} className="text-emerald-700" />
+                        <div className="flex items-center gap-2 text-[#142B4A]">
+                          <Package size={18} className="text-[#36A6A0]" />
                           <h4 className="font-black text-xs uppercase tracking-wider">
                             {tr.packagesHeading || "Patient Packages & Subscriptions"}
                           </h4>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#36A6A0]/15 text-[#142B4A]">
                           {customerServicePackages.length} {tr.activePackagesCount || "Active Package(s)"}
                         </span>
                       </div>
@@ -2495,7 +2495,7 @@ export default function AdminNewBookingView({
                                     {pkg.expiresAt ? `${tr.packageExpires || "Expires:"} ${new Date(pkg.expiresAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}
                                   </p>
                                 </div>
-                                <span className="text-xs font-black text-emerald-800 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/60">
+                                <span className="text-xs font-black text-[#142B4A] px-2.5 py-1 rounded-lg bg-[#36A6A0]/10 border border-[#36A6A0]/30/60">
                                   {totalPkgRemaining} {totalPkgRemaining === 1 ? (tr.sessionRemainingBadge || "session left") : (tr.sessionsRemainingBadge || "sessions left")}
                                 </span>
                               </div>
@@ -2520,13 +2520,13 @@ export default function AdminNewBookingView({
                                         }}
                                         className={`flex items-center justify-between p-2 rounded-lg border text-xs cursor-pointer transition ${
                                           isSelected
-                                            ? "border-emerald-600 bg-emerald-50/80 ring-1 ring-emerald-600 text-emerald-900 font-bold"
+                                            ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-1 ring-[#36A6A0] text-[#142B4A] font-bold"
                                             : "border-gray-200 bg-gray-50/50 hover:bg-white text-[var(--cr-dark)]"
                                         }`}
                                       >
                                         <div className="flex items-center gap-1.5 truncate">
                                           {isSelected ? (
-                                            <Check size={13} className="text-emerald-700 shrink-0" />
+                                            <Check size={13} className="text-[#36A6A0] shrink-0" />
                                           ) : (
                                             <Sparkles size={13} className="text-[#8FA3B8] shrink-0" />
                                           )}
@@ -2534,12 +2534,12 @@ export default function AdminNewBookingView({
                                         </div>
                                         <div className="flex items-center gap-1.5 shrink-0">
                                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                            it.qtyRemaining > 0 ? "bg-emerald-100 text-emerald-800" : "bg-gray-200 text-gray-600"
+                                            it.qtyRemaining > 0 ? "bg-[#36A6A0]/15 text-[#142B4A]" : "bg-gray-200 text-gray-600"
                                           }`}>
                                             {it.qtyRemaining} / {it.qtyTotal}
                                           </span>
                                           {isSelected && (
-                                            <span className="text-[9px] font-black uppercase text-emerald-800 bg-white px-1.5 py-0.5 rounded border border-emerald-300">
+                                            <span className="text-[9px] font-black uppercase text-[#142B4A] bg-white px-1.5 py-0.5 rounded border border-[#36A6A0]/40">
                                               {tr.currentlySelectedService || "Selected"}
                                             </span>
                                           )}
@@ -2571,8 +2571,8 @@ export default function AdminNewBookingView({
                                     }}
                                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
                                       usePackagePayment
-                                        ? "border-emerald-600 bg-emerald-100/60 ring-1 ring-emerald-600"
-                                        : "border-gray-200 bg-[var(--color-brand-light)] hover:bg-emerald-50/40"
+                                        ? "border-[#36A6A0] bg-[#36A6A0]/15 ring-1 ring-[#36A6A0]"
+                                        : "border-gray-200 bg-[var(--color-brand-light)] hover:bg-[#36A6A0]/10"
                                     }`}
                                   >
                                     <input
@@ -2593,23 +2593,23 @@ export default function AdminNewBookingView({
                                           setAmountPaidNow("");
                                         }
                                       }}
-                                      className="mt-0.5 h-4 w-4 rounded text-emerald-700 focus:ring-emerald-600 cursor-pointer"
+                                      className="mt-0.5 h-4 w-4 rounded text-[#36A6A0] focus:ring-[#36A6A0] cursor-pointer"
                                     />
                                     <div className="space-y-0.5 flex-1">
                                       <div className="flex items-center justify-between">
-                                        <span className="font-black text-xs text-emerald-950">
+                                        <span className="font-black text-xs text-[#142B4A]">
                                           {tr.payWithPackageOption || "Pay with Package Session"}
                                         </span>
-                                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-700 text-white">
+                                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#36A6A0] text-white">
                                           0 EGP
                                         </span>
                                       </div>
-                                      <p className="text-[11px] text-emerald-900/80 font-medium">
+                                      <p className="text-[11px] text-[#142B4A]/80 font-medium">
                                         {tr.payWithPackageDesc || "Redeem 1 session from patient's package for this appointment (0 EGP to pay)"}
                                       </p>
                                       {usePackagePayment && (
-                                        <p className="text-[10px] text-emerald-800 font-bold pt-1 flex items-center gap-1">
-                                          <CheckCircle2 size={12} className="text-emerald-700 shrink-0" />
+                                        <p className="text-[10px] text-[#142B4A] font-bold pt-1 flex items-center gap-1">
+                                          <CheckCircle2 size={12} className="text-[#36A6A0] shrink-0" />
                                           <span>{tr.packageDeductionNote || "1 session will be deducted from package upon appointment completion"}</span>
                                         </p>
                                       )}
@@ -2632,7 +2632,7 @@ export default function AdminNewBookingView({
                                           key={it.id}
                                           type="button"
                                           onClick={() => setSelectedServiceId(String(it.serviceId))}
-                                          className="text-[10px] font-bold text-emerald-800 bg-white hover:bg-emerald-100/60 px-2 py-0.5 rounded-md border border-emerald-300 transition cursor-pointer"
+                                          className="text-[10px] font-bold text-[#142B4A] bg-white hover:bg-[#36A6A0]/15 px-2 py-0.5 rounded-md border border-[#36A6A0]/40 transition cursor-pointer"
                                         >
                                           + {(lang === "ar" && it.serviceNameAr) ? it.serviceNameAr : it.serviceName} ({it.qtyRemaining})
                                         </button>
@@ -2681,7 +2681,7 @@ export default function AdminNewBookingView({
                       >
                         <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="h-9 w-9 rounded-full bg-[var(--color-brand-tint)] text-emerald-800 flex items-center justify-center shrink-0">
+                            <div className="h-9 w-9 rounded-full bg-[var(--color-brand-tint)] text-[#142B4A] flex items-center justify-center shrink-0">
                               <Clock size={18} />
                             </div>
                             <div>
@@ -2719,7 +2719,7 @@ export default function AdminNewBookingView({
 
                         {loadingSlots ? (
                           <div className="flex items-center justify-center gap-2 py-10 text-sm font-semibold text-[var(--color-brand-secondary)]">
-                            <Loader2 size={20} className="animate-spin text-emerald-700" /> {tr.fetchingSlotsLabel}
+                            <Loader2 size={20} className="animate-spin text-[#36A6A0]" /> {tr.fetchingSlotsLabel}
                           </div>
                         ) : allTimeSlots.length > 0 ? (
                           <div className="max-h-72 overflow-y-auto pr-1">
@@ -2746,10 +2746,10 @@ export default function AdminNewBookingView({
                                     title={isDisabled && !isSelected ? tr.slotUnavailableTitle : undefined}
                                     className={`h-11 rounded-xl border px-3 text-xs font-bold transition flex items-center justify-between gap-1.5 select-none ${
                                       isSelected
-                                        ? "border-[var(--cr-primary)] bg-[#142B4A] text-white shadow-sm ring-2 ring-emerald-700/20"
+                                        ? "border-[var(--cr-primary)] bg-[#142B4A] text-white shadow-sm ring-2 ring-[#36A6A0]/20"
                                         : isDisabled
                                         ? "cursor-not-allowed border-[var(--cr-divider)] bg-[var(--cr-white)] text-[var(--cr-secondary)] opacity-50"
-                                        : "cursor-pointer border-[var(--cr-primary)]/15 bg-white text-[var(--cr-dark)] hover:border-emerald-700 hover:bg-emerald-50/50"
+                                        : "cursor-pointer border-[var(--cr-primary)]/15 bg-white text-[var(--cr-dark)] hover:border-[#36A6A0] hover:bg-[#36A6A0]/10"
                                     }`}
                                   >
                                     <span>{tSlot}</span>
@@ -2792,7 +2792,7 @@ export default function AdminNewBookingView({
                     onClick={() => setSessionType("in_person")}
                     className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition ${
                       sessionType === "in_person"
-                        ? "border-emerald-700 bg-emerald-50/50 ring-2 ring-emerald-700/20"
+                        ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-2 ring-[#36A6A0]/20"
                         : "border-[var(--cr-primary)]/15 bg-white hover:bg-[var(--color-brand-light)]"
                     }`}
                   >
@@ -2801,7 +2801,7 @@ export default function AdminNewBookingView({
                       name="session_type"
                       checked={sessionType === "in_person"}
                       onChange={() => setSessionType("in_person")}
-                      className="text-emerald-700 focus:ring-emerald-600 cursor-pointer"
+                      className="text-[#36A6A0] focus:ring-[#36A6A0] cursor-pointer"
                     />
                     <span className="font-extrabold text-[var(--cr-dark)]">{tr.inPersonLabel}</span>
                   </label>
@@ -2810,7 +2810,7 @@ export default function AdminNewBookingView({
                     onClick={() => setSessionType("online")}
                     className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition ${
                       sessionType === "online"
-                        ? "border-emerald-700 bg-emerald-50/50 ring-2 ring-emerald-700/20"
+                        ? "border-[#36A6A0] bg-[#36A6A0]/10 ring-2 ring-[#36A6A0]/20"
                         : "border-[var(--cr-primary)]/15 bg-white hover:bg-[var(--color-brand-light)]"
                     }`}
                   >
@@ -2819,7 +2819,7 @@ export default function AdminNewBookingView({
                       name="session_type"
                       checked={sessionType === "online"}
                       onChange={() => setSessionType("online")}
-                      className="text-emerald-700 focus:ring-emerald-600 cursor-pointer"
+                      className="text-[#36A6A0] focus:ring-[#36A6A0] cursor-pointer"
                     />
                     <span className="font-extrabold text-[var(--cr-dark)]">{tr.onlineLabel}</span>
                   </label>
@@ -2838,7 +2838,7 @@ export default function AdminNewBookingView({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={tr.notesPlaceholder}
-                  className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs text-[var(--cr-dark)] outline-none focus:border-emerald-700"
+                  className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[#36A6A0]"
                 />
               </div>
 
@@ -2861,7 +2861,7 @@ export default function AdminNewBookingView({
                           setCustomBookingValue(val === "" ? 0 : Math.max(0, Number(val)));
                         }}
                         placeholder="0"
-                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                   </div>
@@ -2882,7 +2882,7 @@ export default function AdminNewBookingView({
                           setAmountPaidNow(val === "" ? "" : Math.max(0, Number(val)));
                         }}
                         placeholder="0"
-                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs font-bold text-[var(--cr-dark)] outline-none focus:border-emerald-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/20 bg-white p-3.5 text-xs font-bold text-[var(--cr-dark)] outline-none focus:border-[#36A6A0] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                   </div>
@@ -2909,7 +2909,7 @@ export default function AdminNewBookingView({
                           className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                             bookingPaymentMethod === m.id
                               ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)] shadow-sm'
-                              : 'bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 hover:border-emerald-600 hover:bg-emerald-50/50'
+                              : 'bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 hover:border-[#36A6A0] hover:bg-[#36A6A0]/10'
                           }`}
                         >
                           <span>{m.icon}</span>
@@ -2927,7 +2927,7 @@ export default function AdminNewBookingView({
                           value={bookingPaymentReference}
                           onChange={(e) => setBookingPaymentReference(e.target.value)}
                           placeholder="e.g. InstaPay Ref #, Card Auth Code..."
-                          className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-medium text-[var(--cr-dark)] outline-none focus:border-emerald-700"
+                          className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-medium text-[var(--cr-dark)] outline-none focus:border-[#36A6A0]"
                         />
                       </div>
                     )}
@@ -2941,12 +2941,12 @@ export default function AdminNewBookingView({
                     <span className="text-[11px] text-[var(--color-brand-secondary)]">({tr.bookingValueLabel || "Booking Value"} - {tr.actualPaidLabel || "Actual Paid"})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`font-black text-sm ${remainingValue > 0 ? "text-amber-800" : remainingValue < 0 ? "text-blue-800" : "text-emerald-800"}`}>
+                    <span className={`font-black text-sm ${remainingValue > 0 ? "text-amber-800" : remainingValue < 0 ? "text-blue-800" : "text-[#142B4A]"}`}>
                       {remainingValue} {tr.egpLabel || "EGP"}
                     </span>
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                       remainingValue === 0 
-                        ? "bg-emerald-100 text-emerald-800" 
+                        ? "bg-[#36A6A0]/15 text-[#142B4A]" 
                         : remainingValue > 0 
                         ? "bg-amber-100 text-amber-800" 
                         : "bg-blue-100 text-blue-800"
@@ -2992,7 +2992,7 @@ export default function AdminNewBookingView({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
               <div className="flex items-center gap-2.5 text-[#142B4A]">
-                <div className="h-9 w-9 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-800 shrink-0">
+                <div className="h-9 w-9 rounded-2xl bg-[#36A6A0]/10 flex items-center justify-center text-[#142B4A] shrink-0">
                   <CheckCircle2 size={20} />
                 </div>
                 <div>
@@ -3027,7 +3027,7 @@ export default function AdminNewBookingView({
                 <div className="text-end">
                   <span className="font-extrabold text-[var(--cr-dark)] block">{selectedServiceName}</span>
                   {isLaserService && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded mt-0.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#142B4A] bg-[#36A6A0]/15 px-1.5 py-0.2 rounded mt-0.5">
                       <Sparkles size={10} /> Laser Service
                     </span>
                   )}
@@ -3037,7 +3037,7 @@ export default function AdminNewBookingView({
               {isLaserService && (
                 <div className="flex justify-between items-center pb-2.5 border-b border-[var(--cr-primary)]/10">
                   <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.laserPaymentModeLabel || "Laser Payment"}</span>
-                  <span className="font-bold text-emerald-900 text-end text-xs">
+                  <span className="font-bold text-[#142B4A] text-end text-xs">
                     {laserPaymentMode === "SERVICE"
                       ? (tr.laserOption1Title || "Pay by Service (Fixed Price)")
                       : laserPaymentMode === "PER_PULSE"
@@ -3062,7 +3062,7 @@ export default function AdminNewBookingView({
               <div className="flex justify-between items-start pb-2.5 border-b border-[var(--cr-primary)]/10">
                 <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.dateTimeLabel}</span>
                 <div className="text-end">
-                  <span className="font-extrabold text-emerald-800 block">
+                  <span className="font-extrabold text-[#142B4A] block">
                     {formattedDateStr}
                   </span>
                   <span className="text-[11px] font-bold text-[var(--cr-dark)] block mt-0.5">
@@ -3082,20 +3082,20 @@ export default function AdminNewBookingView({
                 <div className="space-y-2 pt-1">
                   <div className="flex justify-between items-center font-extrabold text-[var(--cr-dark)]">
                     <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.pricePaymentLabel}</span>
-                    <span className="text-emerald-800 font-extrabold flex items-center gap-1.5">
-                      <CheckCircle2 size={14} className="text-emerald-700" />
+                    <span className="text-[#142B4A] font-extrabold flex items-center gap-1.5">
+                      <CheckCircle2 size={14} className="text-[#36A6A0]" />
                       <span>0 {tr.egpLabel} ({tr.paymentMethodPackage || "Package Redemption"})</span>
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.activePackageHeading || "Package"}</span>
-                    <span className="font-bold text-emerald-900">
+                    <span className="font-bold text-[#142B4A]">
                       {matchingPackage ? ((lang === "ar" && matchingPackage.packageNameAr) ? matchingPackage.packageNameAr : matchingPackage.packageName) : (activePackage?.name || "Prepaid Package")}
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-1 border-t border-[var(--cr-primary)]/10 font-extrabold">
                     <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.remainingValueLabel || "Remaining Value"}</span>
-                    <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-black text-[#142B4A] bg-[#36A6A0]/15 px-2.5 py-0.5 rounded-full">
                       0 {tr.egpLabel} ({tr.fullySettledBadge || "Fully Settled"})
                     </span>
                   </div>
@@ -3108,16 +3108,16 @@ export default function AdminNewBookingView({
                   </div>
                   <div className="flex justify-between items-center font-extrabold text-[var(--cr-dark)]">
                     <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.actualPaidLabel || tr.amountPaidLabel || "Amount Paid Now"}</span>
-                    <span className="text-emerald-800 font-extrabold">{numAmountPaid} {tr.egpLabel}</span>
+                    <span className="text-[#142B4A] font-extrabold">{numAmountPaid} {tr.egpLabel}</span>
                   </div>
                   <div className="flex justify-between items-center pt-1 border-t border-[var(--cr-primary)]/10 font-extrabold">
                     <span className="text-[var(--color-brand-secondary)] font-semibold">{tr.remainingValueLabel || "Remaining Value"}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className={`font-black ${remainingValue > 0 ? "text-amber-800" : "text-emerald-800"}`}>
+                      <span className={`font-black ${remainingValue > 0 ? "text-amber-800" : "text-[#142B4A]"}`}>
                         {remainingValue} {tr.egpLabel}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        remainingValue === 0 ? "bg-emerald-100 text-emerald-800" : remainingValue > 0 ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+                        remainingValue === 0 ? "bg-[#36A6A0]/15 text-[#142B4A]" : remainingValue > 0 ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
                       }`}>
                         {remainingValue === 0 ? (tr.fullySettledBadge || "Fully Settled") : remainingValue > 0 ? (tr.dueOnVisitBadge || "Due on Visit") : (tr.creditBalanceBadge || "Credit Balance")}
                       </span>

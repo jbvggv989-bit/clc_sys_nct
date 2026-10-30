@@ -72,7 +72,7 @@ export function AboutSection() {
 
               {/* Left Foreground Portrait (Doctor in white coat) - Lower, on Left */}
               <div 
-                className={`absolute bottom-0 w-[55%] aspect-[3/4] rounded-[40px] z-20 overflow-hidden shadow-[0_15px_40px_rgba(90,61,52,0.12)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(90,61,52,0.18)] ${
+                className={`absolute bottom-0 w-[55%] aspect-[3/4] rounded-[40px] z-20 overflow-hidden shadow-[0_15px_40px_rgba(20, 43, 74,0.12)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_50px_rgba(20, 43, 74,0.18)] ${
                   isRTL ? "right-0" : "left-0"
                 }`}
               >
@@ -89,7 +89,7 @@ export function AboutSection() {
 
               {/* Right Background Portrait (Doctor in green scrubs) - Higher, on Right */}
               <div 
-                className={`absolute top-0 w-[55%] aspect-[3/4] rounded-[40px] z-10 overflow-hidden shadow-[0_10px_30px_rgba(90,61,52,0.08)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_15px_40px_rgba(90,61,52,0.12)] ${
+                className={`absolute top-0 w-[55%] aspect-[3/4] rounded-[40px] z-10 overflow-hidden shadow-[0_10px_30px_rgba(20, 43, 74,0.08)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_15px_40px_rgba(20, 43, 74,0.12)] ${
                   isRTL ? "left-0" : "right-0"
                 }`}
               >

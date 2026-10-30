@@ -70,7 +70,7 @@ export default function BookingSettingsView({
         <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[var(--color-brand-secondary)]">{t.subtitle}</p>
       </div>
 
-      <div className="max-w-4xl rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
+      <div className="max-w-4xl rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 sm:space-y-6">
         <h3 className="text-lg sm:text-xl font-bold text-[var(--cr-dark)] border-b border-gray-100 pb-3">{t.bookingRules}</h3>
           <div className="grid gap-6 md:grid-cols-2">
             <div>

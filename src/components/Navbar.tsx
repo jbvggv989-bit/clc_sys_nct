@@ -212,7 +212,7 @@ export function Navbar() {
         zIndex: 100,
         transition: "background 0.3s ease, box-shadow 0.3s ease",
         background: (pathname === "/profile" || scrolled) ? "rgba(255,255,255,0.98)" : "transparent",
-        boxShadow: (pathname === "/profile" || scrolled) ? "0 2px 20px rgba(90,61,52,0.08)" : "none",
+        boxShadow: (pathname === "/profile" || scrolled) ? "0 2px 20px rgba(20, 43, 74,0.08)" : "none",
       }}
     >
       <div className="cr-container">
@@ -323,7 +323,7 @@ export function Navbar() {
                   transition: "background 0.2s ease",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(90,61,52,0.05)";
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(20, 43, 74,0.05)";
                 }}
                 onMouseLeave={(e) => {
                   if (!langOpen) {
@@ -353,7 +353,7 @@ export function Navbar() {
                     background: "white",
                     border: "1px solid var(--cr-divider)",
                     borderRadius: "8px",
-                    boxShadow: "0 4px 12px rgba(90,61,52,0.1)",
+                    boxShadow: "0 4px 12px rgba(20, 43, 74,0.1)",
                     zIndex: 1000,
                     minWidth: "150px",
                     overflow: "hidden",
@@ -367,7 +367,7 @@ export function Navbar() {
                     style={{
                       width: "100%",
                       padding: "10px 16px",
-                      background: language === "en" ? "rgba(90,61,52,0.05)" : "transparent",
+                      background: language === "en" ? "rgba(20, 43, 74,0.05)" : "transparent",
                       border: "none",
                       cursor: "pointer",
                       display: "flex",
@@ -380,7 +380,7 @@ export function Navbar() {
                     }}
                     onMouseEnter={(e) => {
                       if (language !== "en") {
-                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(90,61,52,0.03)";
+                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(20, 43, 74,0.03)";
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -400,7 +400,7 @@ export function Navbar() {
                     style={{
                       width: "100%",
                       padding: "10px 16px",
-                      background: language === "ar" ? "rgba(90,61,52,0.05)" : "transparent",
+                      background: language === "ar" ? "rgba(20, 43, 74,0.05)" : "transparent",
                       border: "none",
                       cursor: "pointer",
                       display: "flex",
@@ -414,7 +414,7 @@ export function Navbar() {
                     }}
                     onMouseEnter={(e) => {
                       if (language !== "ar") {
-                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(90,61,52,0.03)";
+                        (e.currentTarget as HTMLButtonElement).style.background = "rgba(20, 43, 74,0.03)";
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -439,7 +439,7 @@ export function Navbar() {
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    background: "rgba(90,61,52,0.05)",
+                    background: "rgba(20, 43, 74,0.05)",
                     padding: "8px 14px",
                     borderRadius: "8px",
                     color: "var(--cr-primary)",
@@ -450,10 +450,10 @@ export function Navbar() {
                     transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(90,61,52,0.1)";
+                    (e.currentTarget as HTMLElement).style.background = "rgba(20, 43, 74,0.1)";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(90,61,52,0.05)";
+                    (e.currentTarget as HTMLElement).style.background = "rgba(20, 43, 74,0.05)";
                   }}
                 >
                   <User size={16} />
@@ -538,7 +538,7 @@ export function Navbar() {
                   }}
                   onMouseEnter={(e) => {
                     if (!loginDropdownOpen) {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(65, 78, 54, 0.08)";
+                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(20, 43, 74, 0.08)";
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -703,7 +703,7 @@ export function Navbar() {
                               fontWeight: 700,
                               padding: "2px 6px",
                               borderRadius: "6px",
-                              background: "rgba(65, 78, 54, 0.1)",
+                              background: "rgba(20, 43, 74, 0.1)",
                               color: "var(--cr-primary)",
                             }}
                           >
@@ -850,7 +850,7 @@ export function Navbar() {
                 <button
                   onClick={() => setLanguage("en")}
                   style={{
-                    background: language === "en" ? "rgba(90,61,52,0.1)" : "transparent",
+                    background: language === "en" ? "rgba(20, 43, 74,0.1)" : "transparent",
                     border: "1px solid var(--cr-accent)",
                     padding: "8px 12px",
                     cursor: "pointer",
@@ -879,7 +879,7 @@ export function Navbar() {
                 <button
                   onClick={() => setLanguage("ar")}
                   style={{
-                    background: language === "ar" ? "rgba(90,61,52,0.1)" : "transparent",
+                    background: language === "ar" ? "rgba(20, 43, 74,0.1)" : "transparent",
                     border: "1px solid var(--cr-accent)",
                     padding: "8px 12px",
                     cursor: "pointer",
@@ -917,7 +917,7 @@ export function Navbar() {
                       display: "flex",
                       alignItems: "center",
                       gap: "8px",
-                      background: "rgba(90,61,52,0.05)",
+                      background: "rgba(20, 43, 74,0.05)",
                       padding: "12px 16px",
                       borderRadius: "6px",
                       color: "var(--cr-primary)",
@@ -1062,9 +1062,9 @@ export function Navbar() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "8px",
-                      background: "rgba(65, 78, 54, 0.08)",
+                      background: "rgba(20, 43, 74, 0.08)",
                       color: "var(--cr-primary)",
-                      border: "1px solid rgba(65, 78, 54, 0.2)",
+                      border: "1px solid rgba(20, 43, 74, 0.2)",
                       padding: "12px 16px",
                       borderRadius: "6px",
                       textDecoration: "none",

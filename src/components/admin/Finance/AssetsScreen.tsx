@@ -255,7 +255,7 @@ export function AssetsScreen({ accessToken, branches = [] }: AssetsScreenProps) 
 
       <div
         className="rounded-[32px] border p-6 shadow-sm"
-        style={{ backgroundColor: "var(--cr-white)", borderColor: "rgba(90, 106, 81, 0.15)" }}
+        style={{ backgroundColor: "var(--cr-white)", borderColor: "rgba(143, 163, 184, 0.15)" }}
       >
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">

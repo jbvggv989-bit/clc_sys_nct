@@ -6574,7 +6574,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   <Plus size={18} className={`transition-transform duration-200 ${showQuickActionMenu ? "rotate-45" : ""}`} />
                 </button>
                 {showQuickActionMenu && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#E6E9EB] bg-white p-2 shadow-[0_15px_40px_rgba(47,61,41,0.12)] z-50 animate-fadeIn">
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#E6E9EB] bg-white p-2 shadow-[0_15px_40px_rgba(20,43,74,0.12)] z-50 animate-fadeIn">
                     <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] border-b border-[#E6E9EB] mb-1">
                       Quick Creation
                     </div>
@@ -6662,7 +6662,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   </span>
                 )}
                 {showNotificationMenu && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E6E9EB] bg-white shadow-[0_15px_40px_rgba(47,61,41,0.12)] z-50 animate-fadeIn overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E6E9EB] bg-white shadow-[0_15px_40px_rgba(20,43,74,0.12)] z-50 animate-fadeIn overflow-hidden">
                     <div className="flex items-center justify-between border-b border-[#E6E9EB] bg-[var(--color-brand-light)] px-4 py-3">
                       <span className="text-xs font-bold uppercase tracking-wider text-[var(--cr-dark)]">Notifications</span>
                       {unreadCount > 0 && (
@@ -6769,7 +6769,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             )}
 
             {!hasAccessToActiveNav ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center gap-4 bg-white rounded-[40px] shadow-[0_30px_80px_rgba(47,61,41,0.07)] p-8">
+              <div className="flex flex-col items-center justify-center py-24 text-center gap-4 bg-white rounded-[40px] shadow-[0_30px_80px_rgba(20,43,74,0.07)] p-8">
                 <div className="h-16 w-16 flex items-center justify-center rounded-full bg-red-50 text-red-600 border border-red-100">
                   <Shield size={32} />
                 </div>
@@ -7796,7 +7796,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   <div className="mt-2 text-3xl font-extrabold text-[var(--cr-dark)]">{systemTestSuites.length}</div>
                 </div>
 
-                <div className="rounded-3xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+                <div className="rounded-3xl border border-[#36A6A0]/30 bg-[#36A6A0]/10 p-5 shadow-sm">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Passed</span>
                   <div className="mt-2 text-3xl font-extrabold text-emerald-800">
                     {systemTestSuites.filter(t => t.status === 'pass').length}
@@ -7851,7 +7851,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
               </div>
 
               {/* Test Cases Table */}
-              <div className="overflow-hidden rounded-[32px] border border-[var(--cr-primary)]/10 bg-white shadow-[0_30px_80px_rgba(47,61,41,0.05)]">
+              <div className="overflow-hidden rounded-[32px] border border-[var(--cr-primary)]/10 bg-white shadow-[0_30px_80px_rgba(20,43,74,0.05)]">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="border-b border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] text-xs uppercase tracking-wider text-[var(--color-brand-secondary)]">
@@ -9629,17 +9629,17 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     type="button"
                     disabled={deletingCustomer}
                     onClick={() => handleDeleteCustomer(deleteCustomerTarget.id!, 'soft')}
-                    className="flex items-start gap-3 p-3 rounded-xl border border-emerald-600/30 bg-emerald-50/60 hover:bg-emerald-50 text-start transition cursor-pointer disabled:opacity-50"
+                    className="flex items-start gap-3 p-3 rounded-xl border border-[#36A6A0]/40 bg-[#36A6A0]/10 hover:bg-[#36A6A0]/15 text-start transition cursor-pointer disabled:opacity-50"
                   >
-                    <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="h-8 w-8 rounded-lg bg-[#36A6A0]/20 text-[#142B4A] flex items-center justify-center shrink-0 mt-0.5">
                       <Archive size={16} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-emerald-950">Soft Delete (Deactivate)</span>
-                        <span className="text-[9px] font-bold uppercase bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full">Preserves Records</span>
+                        <span className="text-xs font-bold text-[#142B4A]">Soft Delete (Deactivate)</span>
+                        <span className="text-[9px] font-bold uppercase bg-[#36A6A0]/30 text-[#142B4A] px-2 py-0.5 rounded-full">Preserves Records</span>
                       </div>
-                      <p className="text-[11px] text-emerald-900/80 mt-0.5">
+                      <p className="text-[11px] text-[#142B4A]/80 mt-0.5">
                         Deactivates the patient while safely keeping their visit history, invoices, and ledger records.
                       </p>
                     </div>

@@ -41,7 +41,7 @@ export function BookingPageClient({ initialServiceId }: BookingPageClientProps) 
             style={{
               borderColor: "var(--cr-accent)",
               color: "var(--cr-primary)",
-              background: language === "en" ? "rgba(90,61,52,0.1)" : "transparent",
+              background: language === "en" ? "rgba(20, 43, 74,0.1)" : "transparent",
               fontWeight: language === "en" ? 600 : 400,
             }}
           >
@@ -56,7 +56,7 @@ export function BookingPageClient({ initialServiceId }: BookingPageClientProps) 
             style={{
               borderColor: "var(--cr-accent)",
               color: "var(--cr-primary)",
-              background: language === "ar" ? "rgba(90,61,52,0.1)" : "transparent",
+              background: language === "ar" ? "rgba(20, 43, 74,0.1)" : "transparent",
               fontWeight: language === "ar" ? 600 : 400,
             }}
           >

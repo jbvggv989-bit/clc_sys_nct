@@ -63,7 +63,7 @@ export default function ServiceHoursView({
           {savingBranchHours ? t.savingBtn : t.saveBtn}
         </button>
       </div>
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] max-w-2xl space-y-4">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] max-w-2xl space-y-4">
         {serviceHours.map((sh, idx) => (
           <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--color-brand-sand)] pb-3 last:border-b-0 last:pb-0">
             <span className="font-semibold text-[var(--cr-dark)] sm:w-28">{lang === "ar" ? sh.dayAr : sh.day}</span>

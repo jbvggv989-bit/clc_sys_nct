@@ -153,7 +153,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
               backgroundColor: "#ffffff",
               padding: "1.5rem",
               boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
-              border: "1px solid rgba(65, 78, 54, 0.1)",
+              border: "1px solid rgba(20, 43, 74, 0.1)",
               display: "flex",
               flexDirection: "column",
               textAlign: "left",
@@ -204,17 +204,17 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                   <button
                     type="button"
                     onClick={() => handleClose("soft")}
-                    className="flex items-start gap-3 p-3.5 rounded-2xl border border-emerald-600/30 bg-emerald-50/50 hover:bg-emerald-50 text-start transition cursor-pointer group"
+                    className="flex items-start gap-3 p-3.5 rounded-2xl border border-[#36A6A0]/40 bg-[#36A6A0]/10 hover:bg-[#36A6A0]/15 text-start transition cursor-pointer group"
                   >
-                    <div className="h-9 w-9 rounded-xl bg-emerald-100/80 border border-emerald-300 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition">
+                    <div className="h-9 w-9 rounded-xl bg-[#36A6A0]/20 border border-[#36A6A0]/40 text-[#142B4A] flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition">
                       <Archive size={18} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-emerald-950">Soft Delete (Deactivate / Archive)</h4>
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full">Recommended</span>
+                        <h4 className="text-xs font-bold text-[#142B4A]">Soft Delete (Deactivate / Archive)</h4>
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-[#36A6A0]/30 text-[#142B4A] px-2 py-0.5 rounded-full">Recommended</span>
                       </div>
-                      <p className="text-[11px] text-emerald-900/80 mt-1 leading-relaxed">
+                      <p className="text-[11px] text-[#142B4A]/80 mt-1 leading-relaxed">
                         Deactivates and hides this record from active operations while safely preserving all historical appointments, invoices, financial ledger records, and audit history.
                       </p>
                     </div>
@@ -248,7 +248,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
             )}
 
             {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4" style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", borderTop: "1px solid rgba(65, 78, 54, 0.1)", paddingTop: "1rem" }}>
+            <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4" style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", borderTop: "1px solid rgba(20, 43, 74, 0.1)", paddingTop: "1rem" }}>
               {modal.type === "delete" ? (
                 modal.isSuperAdmin ? (
                   <button

@@ -298,7 +298,7 @@ function BeforeAfterSlide({ pair, isRTL, priority = false, onError }: BeforeAfte
         />
         <span
           className="absolute bottom-3 left-3 rounded-full px-3 py-1 text-xs font-semibold text-white"
-          style={{ backgroundColor: "rgba(90, 106, 81, 0.85)" }}
+          style={{ backgroundColor: "rgba(143, 163, 184, 0.85)" }}
         >
           {afterLabel}
         </span>

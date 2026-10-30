@@ -35,13 +35,13 @@ export function LineAreaChart({
           </defs>
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="rgba(90, 106, 81, 0.12)"
+            stroke="rgba(143, 163, 184, 0.12)"
             vertical={false}
           />
           <XAxis
             dataKey="label"
             tick={{ fill: "var(--cr-primary, var(--cr-dark))", fontSize: 12, opacity: 0.7 }}
-            axisLine={{ stroke: "rgba(90, 106, 81, 0.15)" }}
+            axisLine={{ stroke: "rgba(143, 163, 184, 0.15)" }}
             tickLine={false}
           />
           <YAxis
@@ -53,7 +53,7 @@ export function LineAreaChart({
           <Tooltip
             contentStyle={{
               backgroundColor: "var(--cr-white)",
-              border: "1px solid rgba(90, 106, 81, 0.15)",
+              border: "1px solid rgba(143, 163, 184, 0.15)",
               borderRadius: "12px",
               color: "var(--cr-primary, var(--cr-dark))",
             }}

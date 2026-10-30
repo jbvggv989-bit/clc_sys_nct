@@ -4478,3 +4478,25 @@ The user requested removing all location mentions and phone numbers across the f
   - `src/components/Preloader.tsx` & `src/app/globals.css`: Expanded outer and inner arc radiuses (`r=180` and `r=140`) on expanded 400x400 / 320x320 SVG viewBoxes, giving generous spacing around "TEST".
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-149: Comprehensive Legacy Color Palette Purification
+
+- **Date:** 2026-10-30
+- **Context:**
+  The user identified remaining elements with old green/olive/sage palette styling across the site:
+  1. Browser and custom scrollbars still used olive green thumb gradients (`rgba(124, 141, 109, 0.95)`, `rgba(88, 106, 82, 0.95)`).
+  2. The circular experience floating badge on the About page ("Years of Excellence") still had an olive green background (`rgba(65, 78, 54, 0.85)`).
+  3. Booking step numbers, headings, and dropdown triggers in `AdminNewBookingView.tsx` were rendered in `bg-emerald-700` and `text-emerald-800`.
+  4. Session type radio buttons and pills (e.g. "In Person") used `border-emerald-700 bg-emerald-50/50 ring-2 ring-emerald-700/20`.
+  5. Over 20 admin views used hardcoded olive shadow colors (`rgba(47, 61, 41, ...)`).
+- **Changes:**
+  - `src/app/globals.css`: Converted all browser and `.custom-scrollbar` scrollbars to Slate Blue (`#8FA3B8`), hovering to Teal (`#36A6A0`), and active to Navy (`#142B4A`).
+  - `src/components/AboutWhatWeDo.tsx`: Converted `.awwd-exp-badge` background to Navy (`#142B4A`) with proper shadow.
+  - `src/components/admin/bookings/AdminNewBookingView.tsx` & `AdminAddPreviousBookingView.tsx`: Converted all step circle badges and interactive controls to Teal (`#36A6A0`) and primary headers to Navy (`#142B4A`).
+  - Converted all radio pills ("In Person" / "Online") to `#36A6A0` border, `#36A6A0`/10 background, and `#36A6A0` focus ring.
+  - Purged all `rgba(47, 61, 41, ...)` shadows across 21 admin setting views and modals to Navy `rgba(20, 43, 74, ...)`.
+  - Purged all remaining `rgba(65, 78, 54, ...)`, `rgba(90, 106, 81, ...)`, and `rgba(90, 61, 52, ...)` across all components.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).

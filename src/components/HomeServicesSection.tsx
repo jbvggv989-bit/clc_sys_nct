@@ -80,7 +80,7 @@ function CategoryCard({ label, sublabel, image, onClick }: CategoryCardProps) {
         minWidth: 280,
         padding: "48px 32px",
         borderRadius: 24,
-        border: hovered ? "1.5px solid var(--cr-primary)" : "1.5px solid rgba(90, 106, 81, 0.15)",
+        border: hovered ? "1.5px solid var(--cr-primary)" : "1.5px solid rgba(143, 163, 184, 0.15)",
         background: "var(--cr-white)",
         color: "var(--cr-primary)",
         display: "flex",
@@ -92,8 +92,8 @@ function CategoryCard({ label, sublabel, image, onClick }: CategoryCardProps) {
         textAlign: "center",
         position: "relative",
         boxShadow: hovered 
-          ? "0 12px 30px rgba(90, 61, 52, 0.08)" 
-          : "0 4px 12px rgba(90, 61, 52, 0.02)",
+          ? "0 12px 30px rgba(20, 43, 74, 0.08)" 
+          : "0 4px 12px rgba(20, 43, 74, 0.02)",
       }}
     >
       <div style={{ width: "100%", height: 140, borderRadius: 16, overflow: "hidden", marginBottom: 4 }}>
@@ -153,10 +153,10 @@ function ServiceCard({ service, lang, descText, isRTL }: ServiceCardProps) {
         backgroundColor: "var(--cr-secondary)",
         borderRadius: 24,
         overflow: "hidden",
-        border: `1px solid ${hovered ? "rgba(90, 106, 81, 0.5)" : "rgba(90, 106, 81, 0.2)"}`,
+        border: `1px solid ${hovered ? "rgba(143, 163, 184, 0.5)" : "rgba(143, 163, 184, 0.2)"}`,
         boxShadow: hovered
-          ? "0 16px 48px rgba(90, 61, 52, 0.18), 0 4px 12px rgba(90, 61, 52, 0.10)"
-          : "0 2px 20px rgba(90, 61, 52, 0.08)",
+          ? "0 16px 48px rgba(20, 43, 74, 0.18), 0 4px 12px rgba(20, 43, 74, 0.10)"
+          : "0 2px 20px rgba(20, 43, 74, 0.08)",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -182,7 +182,7 @@ function ServiceCard({ service, lang, descText, isRTL }: ServiceCardProps) {
             width: 44,
             height: 44,
             borderRadius: "50%",
-            backgroundColor: hovered ? "rgba(65, 78, 54, 0.20)" : "rgba(90, 106, 81, 0.12)",
+            backgroundColor: hovered ? "rgba(20, 43, 74, 0.20)" : "rgba(143, 163, 184, 0.12)",
             display: "grid",
             placeItems: "center",
             flexShrink: 0,
@@ -223,7 +223,7 @@ function ServiceCard({ service, lang, descText, isRTL }: ServiceCardProps) {
                   <span style={{
                     fontSize: 13,
                     fontWeight: 400,
-                    color: "rgba(90, 106, 81, 0.45)",
+                    color: "rgba(143, 163, 184, 0.45)",
                     textDecoration: "line-through",
                   }}>
                     {lang === "ar"
@@ -446,7 +446,7 @@ export function HomeServicesSection() {
             position: "relative",
             backgroundColor: "var(--cr-secondary)",
             borderRadius: "32px",
-            border: "1px solid rgba(90, 106, 81, 0.25)",
+            border: "1px solid rgba(143, 163, 184, 0.25)",
             overflow: "hidden",
           }}
         >
@@ -638,7 +638,7 @@ export function HomeServicesSection() {
                         style={{
                           padding: "10px 28px",
                           borderRadius: 50,
-                          border: `1.5px solid ${isActive ? "var(--cr-primary)" : "rgba(90, 106, 81, 0.4)"}`,
+                          border: `1.5px solid ${isActive ? "var(--cr-primary)" : "rgba(143, 163, 184, 0.4)"}`,
                           backgroundColor: isActive ? "var(--cr-primary)" : "transparent",
                           color: isActive ? "var(--cr-white)" : "var(--cr-primary)",
                           fontFamily: "var(--font-sora), sans-serif",
@@ -705,7 +705,7 @@ export function HomeServicesSection() {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          box-shadow: 0 2px 12px rgba(90,61,52,0.15);
+          box-shadow: 0 2px 12px rgba(20, 43, 74,0.15);
         }
         .services-swiper-wrap .swiper-button-prev::after,
         .services-swiper-wrap .swiper-button-next::after {

@@ -51,7 +51,7 @@ export default function ClinicProfileSettingsView({ authenticatedJsonHeaders }: 
           {savingClinicProfile ? "Saving..." : "Save Profile"}
         </button>
       </div>
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] max-w-2xl">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] max-w-2xl">
         <form id="clinic-profile-form" className="space-y-6" onSubmit={handleSaveClinicProfile}>
           <div className="grid gap-6 md:grid-cols-2">
             <div>

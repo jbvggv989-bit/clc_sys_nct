@@ -1205,7 +1205,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
             <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
               {tr.cardTodayAppointments || "Today's Appointments"}
             </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#142B4A]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#36A6A0]/15 text-[#36A6A0]">
               <CalendarIcon size={18} />
             </div>
           </div>
@@ -1245,7 +1245,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
           </div>
           <div className="mt-3 flex items-baseline justify-between">
             <span className="text-3xl font-black text-[#111827]">{stats.completedCount}</span>
-            <span className="text-xs font-bold text-emerald-700">
+            <span className="text-xs font-bold text-[#36A6A0]">
               EGP {stats.dayRevenue.toLocaleString()}
             </span>
           </div>

@@ -449,7 +449,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       </div>
 
       {/* ── DOCTOR HERO CARD (WITH INTEGRATED PERSONAL INFORMATION) ── */}
-      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)] space-y-6">
+      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(20,43,74,0.03)] space-y-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           {/* Primary Profile Identity */}
           <div className="flex items-center gap-5 shrink-0">
@@ -523,7 +523,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       </div>
 
       {/* ── WORKING SCHEDULE (FULL WIDTH WITH BRANCH FILTER) ── */}
-      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)] w-full">
+      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(20,43,74,0.03)] w-full">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-4 mb-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">
@@ -633,7 +633,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       </div>
 
       {/* ── SERVICES PROVIDED CARD ── */}
-      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)] w-full">
+      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(20,43,74,0.03)] w-full">
         <div className="flex items-center gap-2.5 border-b border-gray-100 pb-4 mb-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">
             <ShoppingBag size={16} />
@@ -660,7 +660,7 @@ export const DoctorProfileDetailsView: React.FC<DoctorProfileDetailsViewProps> =
       </div>
 
       {/* ── FOURTH SECTION: PATIENT VISIT HISTORY ── */}
-      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(47,61,41,0.03)]">
+      <div className="rounded-[32px] border border-[#E6E9EB] bg-white p-6 shadow-[0_10px_30px_rgba(20,43,74,0.03)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-5 mb-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-sand)] text-[#142B4A]">

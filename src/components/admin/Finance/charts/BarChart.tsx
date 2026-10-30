@@ -32,13 +32,13 @@ export function BarChart({
         <RechartsBarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="rgba(90, 106, 81, 0.12)"
+            stroke="rgba(143, 163, 184, 0.12)"
             vertical={false}
           />
           <XAxis
             dataKey="label"
             tick={{ fill: "var(--cr-primary, var(--cr-dark))", fontSize: 12, opacity: 0.7 }}
-            axisLine={{ stroke: "rgba(90, 106, 81, 0.15)" }}
+            axisLine={{ stroke: "rgba(143, 163, 184, 0.15)" }}
             tickLine={false}
           />
           <YAxis
@@ -49,10 +49,10 @@ export function BarChart({
             tickFormatter={(v) => Number(v).toLocaleString()}
           />
           <Tooltip
-            cursor={{ fill: "rgba(90, 106, 81, 0.05)" }}
+            cursor={{ fill: "rgba(143, 163, 184, 0.05)" }}
             contentStyle={{
               backgroundColor: "var(--cr-white)",
-              border: "1px solid rgba(90, 106, 81, 0.15)",
+              border: "1px solid rgba(143, 163, 184, 0.15)",
               borderRadius: "12px",
               color: "var(--cr-primary, var(--cr-dark))",
             }}

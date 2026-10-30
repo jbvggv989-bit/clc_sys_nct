@@ -51,7 +51,7 @@ export default function InactivitySettingsView({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
         {/* Inactivity Threshold */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 sm:space-y-6">
           <div className="flex items-center gap-3 border-b border-gray-100 pb-3 sm:pb-4">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
               <Hourglass size={20} />
@@ -98,7 +98,7 @@ export default function InactivitySettingsView({
         </div>
 
         {/* Alert Countdown Duration */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 sm:space-y-6">
           <div className="flex items-center gap-3 border-b border-gray-100 pb-3 sm:pb-4">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 shrink-0">
               <Clock size={20} />
@@ -146,7 +146,7 @@ export default function InactivitySettingsView({
       </div>
 
       {/* GPS Location Shift Verification Card */}
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)] space-y-4 sm:space-y-6">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)] space-y-4 sm:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-3 sm:pb-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 flex items-center justify-center rounded-full bg-[#F1F5F9] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 shrink-0">
@@ -216,7 +216,7 @@ export default function InactivitySettingsView({
       </div>
 
       {/* Preview Card */}
-      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(47,61,41,0.07)]">
+      <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-white p-4 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(20,43,74,0.07)]">
         <h3 className="text-base sm:text-lg font-bold text-[var(--cr-dark)] border-b border-gray-100 pb-3 sm:pb-4 mb-4 sm:mb-6">{t.alertPreview}</h3>
         <div className="flex flex-col md:flex-row gap-6 sm:gap-8 items-start">
           <div className="w-full md:flex-1 bg-[var(--color-brand-light)] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-[var(--cr-primary)]/10">

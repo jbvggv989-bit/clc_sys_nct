@@ -71,7 +71,7 @@ export function ContactPageContent() {
     width: "100%",
     padding: "16px 20px",
     borderRadius: 12,
-    border: "1px solid rgba(90, 106, 81, 0.35)",
+    border: "1px solid rgba(143, 163, 184, 0.35)",
     background: "#fff",
     fontSize: 14,
     fontFamily: "var(--font-sora), sans-serif",
@@ -178,8 +178,8 @@ export function ContactPageContent() {
               borderRadius: 32,
               padding: 24,
               background: "var(--cr-secondary)",
-              border: "1px solid rgba(90, 106, 81, 0.25)",
-              boxShadow: "0 12px 40px rgba(90,61,52,0.05)",
+              border: "1px solid rgba(143, 163, 184, 0.25)",
+              boxShadow: "0 12px 40px rgba(20, 43, 74,0.05)",
               direction: isRTL ? "rtl" : "ltr",
             }}
           >
@@ -258,7 +258,7 @@ export function ContactPageContent() {
                     border: "none",
                     cursor: "pointer",
                     transition: "all 0.3s ease",
-                    boxShadow: "0 4px 12px rgba(65, 78, 54, 0.15)",
+                    boxShadow: "0 4px 12px rgba(20, 43, 74, 0.15)",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = "var(--color-brand-primary-hover)";
@@ -281,7 +281,7 @@ export function ContactPageContent() {
                   style={{
                     display: "flex",
                     gap: 8,
-                    backgroundColor: "rgba(90, 61, 52, 0.05)",
+                    backgroundColor: "rgba(20, 43, 74, 0.05)",
                     padding: 6,
                     borderRadius: 50,
                     alignSelf: "center",
@@ -320,7 +320,7 @@ export function ContactPageContent() {
                   position: "relative",
                   flex: 1,
                   minHeight: 440,
-                  border: "1px solid rgba(90, 106, 81, 0.2)",
+                  border: "1px solid rgba(143, 163, 184, 0.2)",
                 }}
               >
                 {activeBranch?.maps_embed ? (

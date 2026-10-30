@@ -161,7 +161,7 @@ export function AppointmentSection() {
               border-radius: 200px 200px 0 0;
               overflow: hidden;
               z-index: 2;
-              box-shadow: 0 15px 35px rgba(90, 61, 52, 0.08);
+              box-shadow: 0 15px 35px rgba(20, 43, 74, 0.08);
             }
             .ap-input-custom {
               background-color: #fff;
@@ -176,7 +176,7 @@ export function AppointmentSection() {
             }
             .ap-input-custom:focus {
               border-color: var(--cr-primary);
-              box-shadow: 0 0 0 3px rgba(90, 61, 52, 0.05);
+              box-shadow: 0 0 0 3px rgba(20, 43, 74, 0.05);
             }
 
             @media (max-width: 1024px) {

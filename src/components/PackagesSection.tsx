@@ -58,10 +58,10 @@ function PackageCard({ pkg, alacarteTotal, isRTL, lang }: PackageCardProps) {
         backgroundColor: "var(--cr-secondary)",
         borderRadius: 24,
         overflow: "hidden",
-        border: `1px solid ${hovered ? "rgba(90, 106, 81, 0.5)" : "rgba(90, 106, 81, 0.2)"}`,
+        border: `1px solid ${hovered ? "rgba(143, 163, 184, 0.5)" : "rgba(143, 163, 184, 0.2)"}`,
         boxShadow: hovered
-          ? "0 16px 48px rgba(90, 61, 52, 0.18), 0 4px 12px rgba(90, 61, 52, 0.10)"
-          : "0 2px 20px rgba(90, 61, 52, 0.08)",
+          ? "0 16px 48px rgba(20, 43, 74, 0.18), 0 4px 12px rgba(20, 43, 74, 0.10)"
+          : "0 2px 20px rgba(20, 43, 74, 0.08)",
         display: "flex",
         flexDirection: "column",
         height: "100%",
@@ -126,7 +126,7 @@ function PackageCard({ pkg, alacarteTotal, isRTL, lang }: PackageCardProps) {
               style={{
                 fontSize: 13,
                 fontWeight: 400,
-                color: "rgba(90, 106, 81, 0.45)",
+                color: "rgba(143, 163, 184, 0.45)",
                 textDecoration: "line-through",
               }}
             >
@@ -210,7 +210,7 @@ export function PackagesSection() {
             position: "relative",
             backgroundColor: "var(--cr-secondary)",
             borderRadius: "32px",
-            border: "1px solid rgba(90, 106, 81, 0.25)",
+            border: "1px solid rgba(143, 163, 184, 0.25)",
             overflow: "hidden",
             padding: "80px 48px",
           }}

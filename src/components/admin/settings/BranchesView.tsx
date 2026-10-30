@@ -58,7 +58,7 @@ export default function BranchesView({
           <p className="text-sm">{t.noBranches}</p>
         </div>
       ) : (
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)] grid gap-4 sm:gap-6 md:grid-cols-2">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-4 sm:p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)] grid gap-4 sm:gap-6 md:grid-cols-2">
           {branches.map((br) => (
             <div key={br.id} className="rounded-2xl sm:rounded-[32px] border border-[#E6E9EB] bg-white p-4 sm:p-6 shadow-sm flex flex-col justify-between min-h-[180px]">
               <div>

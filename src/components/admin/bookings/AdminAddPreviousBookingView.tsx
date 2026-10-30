@@ -1294,8 +1294,8 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
 
       {/* ── SUCCESS BANNER ── */}
       {successMsg && (
-        <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-semibold text-emerald-800 shadow-xs">
-          <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+        <div className="flex items-center gap-3 rounded-2xl bg-[#36A6A0]/10 border border-[#36A6A0]/30 p-4 text-sm font-semibold text-[#142B4A] shadow-xs">
+          <CheckCircle2 size={20} className="text-[#36A6A0] shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
@@ -1321,7 +1321,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                 {isEditMode && <Lock size={12} className="text-[#6B7280]" />}
               </label>
               {matchedCustomer && (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                <span className="text-[11px] font-semibold text-[#36A6A0] bg-[#36A6A0]/10 px-2 py-0.5 rounded-md flex items-center gap-1">
                   <CheckCircle2 size={12} /> {tr.existingPatientFound} {matchedCustomer.name}
                 </span>
               )}
@@ -1462,26 +1462,26 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
 
         {/* ── PATIENT'S EXISTING PACKAGES DISCOVERY BANNER ── */}
         {patientExistingPackages.length > 0 && (
-          <div className="rounded-2xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/90 via-[#F8FAFC] to-white p-4.5 shadow-2xs space-y-3 animate-fadeIn">
+          <div className="rounded-2xl border border-[#36A6A0]/40/80 bg-gradient-to-r from-[#36A6A0]/10/90 via-[#F8FAFC] to-white p-4.5 shadow-2xs space-y-3 animate-fadeIn">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-xs">
+                <div className="p-1.5 rounded-lg bg-[#36A6A0] text-white shadow-xs">
                   <Sparkles size={16} />
                 </div>
                 <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-emerald-950 flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-[#142B4A] flex items-center gap-2">
                     {tr.patientExistingPackagesTitle || "Patient's Existing Packages"}
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/30">
                       {patientExistingPackages.length} {lang === "ar" ? "باقات مسجلة" : "found"}
                     </span>
                   </h4>
-                  <p className="text-[11px] text-emerald-800 font-medium">
+                  <p className="text-[11px] text-[#142B4A] font-medium">
                     {tr.patientExistingPackagesSubtitle || "This patient already has packages in the system. Select one to record session consumption against it, or select a catalog package."}
                   </p>
                 </div>
               </div>
               {loadingExistingPackages && (
-                <Loader2 size={15} className="animate-spin text-emerald-600" />
+                <Loader2 size={15} className="animate-spin text-[#36A6A0]" />
               )}
             </div>
 
@@ -1510,7 +1510,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                     className={`rounded-xl border p-3 flex flex-col justify-between gap-2.5 transition ${
                       isSelected
                         ? "bg-[#F1F5F9] border-[var(--cr-primary)] ring-2 ring-[var(--cr-primary)]/20 shadow-xs"
-                        : "bg-white border-gray-200/90 hover:border-emerald-300"
+                        : "bg-white border-gray-200/90 hover:border-[#36A6A0]/40"
                     }`}
                   >
                     <div className="space-y-1">
@@ -1523,7 +1523,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                             {tr.noRemainingQuota || "Fully Consumed"}
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/30 shrink-0">
                             {lang === "ar" ? "نشطة" : "Active"}
                           </span>
                         )}
@@ -1533,14 +1533,14 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                         {isPulses ? (
                           <span>
                             {used.toLocaleString()} / {total.toLocaleString()} {lang === "ar" ? "نبضة مستهلكة" : "pulses used"} (
-                            <strong className={rem > 0 ? "text-emerald-700 font-bold" : "text-gray-500 font-bold"}>
+                            <strong className={rem > 0 ? "text-[#36A6A0] font-bold" : "text-gray-500 font-bold"}>
                               {rem.toLocaleString()} {lang === "ar" ? "متبقية" : "left"}
                             </strong>)
                           </span>
                         ) : (
                           <span>
                             {used} / {total} {lang === "ar" ? "جلسة مستهلكة" : "sessions used"} (
-                            <strong className={rem > 0 ? "text-emerald-700 font-bold" : "text-gray-500 font-bold"}>
+                            <strong className={rem > 0 ? "text-[#36A6A0] font-bold" : "text-gray-500 font-bold"}>
                               {rem} {lang === "ar" ? "متبقية" : "left"}
                             </strong>)
                           </span>
@@ -1563,7 +1563,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                       className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                         isSelected
                           ? "bg-[var(--cr-primary)] text-white shadow-xs"
-                          : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                          : "bg-[#36A6A0]/10 text-[#142B4A] border border-[#36A6A0]/30 hover:bg-[#36A6A0]/15"
                       }`}
                     >
                       {isSelected ? (
@@ -1731,7 +1731,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                   >
                     <span className="truncate max-w-[150px]">{getServiceName(s)}</span>
                     {Number(s.price || 0) > 0 && (
-                      <span className="text-[10px] text-emerald-800 font-bold">
+                      <span className="text-[10px] text-[#142B4A] font-bold">
                         {Number(s.price).toLocaleString()} EGP
                       </span>
                     )}
@@ -1756,7 +1756,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                 {tr.packageOptional || tr.packageLabel || (lang === "ar" ? "الباقات (اختياري)" : "Packages (Optional)")}
               </label>
               {attachedPackages.length > 0 && (
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-[#142B4A] bg-[#36A6A0]/15 px-2 py-0.5 rounded-full">
                   {attachedPackages.length} {lang === "ar" ? "باقات مضافة" : "attached"}
                 </span>
               )}
@@ -1820,7 +1820,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                 {tr.productsOptional || tr.productsLabel || (lang === "ar" ? "المنتجات (اختياري)" : "Products (Optional)")}
               </label>
               {selectedProducts.length > 0 && (
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-[#142B4A] bg-[#36A6A0]/15 px-2 py-0.5 rounded-full">
                   {selectedProducts.length} {lang === "ar" ? "منتجات مضافة" : "selected"}
                 </span>
               )}
@@ -1888,7 +1888,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                           }}
                           className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm text-start font-medium transition cursor-pointer ${
                             isSelected
-                              ? "bg-emerald-50 text-emerald-900 font-bold"
+                              ? "bg-[#36A6A0]/10 text-[#142B4A] font-bold"
                               : "text-[#111827] hover:bg-[#F8FAFC] hover:text-[#344E41]"
                           }`}
                         >
@@ -1901,7 +1901,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                             )}
                           </div>
                           {isSelected ? (
-                            <Check size={16} className="text-emerald-700 shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
+                            <Check size={16} className="text-[#36A6A0] shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
                           ) : (
                             <Plus size={15} className="text-gray-400 shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
                           )}
@@ -1925,18 +1925,18 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                   return (
                     <span
                       key={pr.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 text-xs font-semibold border border-emerald-200 shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#36A6A0]/10 text-[#142B4A] text-xs font-semibold border border-[#36A6A0]/30 shadow-2xs"
                     >
                       <span className="truncate max-w-[150px]">{getProductName(pr)}</span>
                       {price > 0 && (
-                        <span className="text-[10px] text-emerald-700 font-bold">
+                        <span className="text-[10px] text-[#36A6A0] font-bold">
                           {price.toLocaleString()} EGP
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => handleRemoveProduct(pr.id)}
-                        className="text-emerald-800/70 hover:text-red-600 transition cursor-pointer p-0.5"
+                        className="text-[#142B4A]/70 hover:text-red-600 transition cursor-pointer p-0.5"
                         title="Remove product"
                       >
                         <X size={12} />
@@ -1996,7 +1996,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                             {lang === "ar" && pkg.nameAr ? pkg.nameAr : pkg.name}
                           </h4>
                           {pkg.source === "existing" ? (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/30">
                               ⭐ {tr.linkedExistingPackageBadge || (lang === "ar" ? "باقة سابقة للعميل" : "Existing Package")} (0 EGP)
                             </span>
                           ) : (
@@ -2021,8 +2021,8 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                             <CheckCircle2 size={13} /> {tr.fullyUsedBadge || (lang === "ar" ? "مستهلكة بالكامل (0 متبقي)" : "Fully Consumed (0 Left)")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <Sparkles size={13} className="text-emerald-600" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/30">
+                            <Sparkles size={13} className="text-[#36A6A0]" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
                           </span>
                         )
                       ) : (
@@ -2032,8 +2032,8 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                             <CheckCircle2 size={13} /> {tr.fullyUsedBadge || (lang === "ar" ? "مستهلكة بالكامل (0 متبقي)" : "Fully Consumed (0 Left)")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <Sparkles size={13} className="text-emerald-600" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#36A6A0]/15 text-[#142B4A] border border-[#36A6A0]/30">
+                            <Sparkles size={13} className="text-[#36A6A0]" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
                           </span>
                         )
                       )}
@@ -2096,12 +2096,12 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                         </div>
 
                         {/* Pulses Remaining (Read-Only Input) */}
-                        <div className="p-3.5 bg-gray-50/80 rounded-xl border border-emerald-200 shadow-2xs space-y-1.5">
+                        <div className="p-3.5 bg-gray-50/80 rounded-xl border border-[#36A6A0]/30 shadow-2xs space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <label htmlFor={`pulsesRemainingInput-${pkg.id}`} className="text-xs font-bold text-emerald-900 block">
+                            <label htmlFor={`pulsesRemainingInput-${pkg.id}`} className="text-xs font-bold text-[#142B4A] block">
                               {tr.pulsesRemainingLabel || "Pulses Left (Remaining)"}
                             </label>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#36A6A0] bg-[#36A6A0]/15 px-1.5 py-0.5 rounded border border-[#36A6A0]/30">
                               <Lock size={10} />
                               {lang === "ar" ? "محسوب تلقائياً" : "Auto-calculated"}
                             </span>
@@ -2113,7 +2113,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                               readOnly
                               tabIndex={-1}
                               value={pkg.pulsesRemaining}
-                              className="w-full text-base font-bold text-emerald-950 bg-emerald-50/40 border border-emerald-200/80 rounded-lg px-2.5 py-1.5 outline-none cursor-not-allowed select-none"
+                              className="w-full text-base font-bold text-[#142B4A] bg-[#36A6A0]/10 border border-[#36A6A0]/30/80 rounded-lg px-2.5 py-1.5 outline-none cursor-not-allowed select-none"
                             />
                           </div>
                         </div>
@@ -2189,7 +2189,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                               title={`Used: ${numUsedPulses}`}
                             />
                             <div
-                              className="bg-emerald-500 h-2.5 transition-all duration-300"
+                              className="bg-[#36A6A0] h-2.5 transition-all duration-300"
                               style={{ width: `${Math.min(100, (numRemPulses / pkg.totalPulses) * 100)}%` }}
                               title={`Remaining: ${numRemPulses}`}
                             />
@@ -2226,7 +2226,7 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                                         {tr.fullyUsedBadge || "0 Left"}
                                       </span>
                                     ) : (
-                                      <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-100 font-semibold text-emerald-800">
+                                      <span className="text-xs px-2 py-0.5 rounded-md bg-[#36A6A0]/15 font-semibold text-[#142B4A]">
                                         {usage.qtyRemaining} {lang === "ar" ? "متبقية" : "left"}
                                       </span>
                                     )}
@@ -2260,11 +2260,11 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                                   </div>
 
                                   {/* Remaining Indicator */}
-                                  <div className="flex items-center gap-1.5 bg-emerald-50/70 border border-emerald-200 rounded-lg p-1">
-                                    <span className="text-xs font-bold text-emerald-900 px-1.5">
+                                  <div className="flex items-center gap-1.5 bg-[#36A6A0]/10 border border-[#36A6A0]/30 rounded-lg p-1">
+                                    <span className="text-xs font-bold text-[#142B4A] px-1.5">
                                       {tr.sessionsRemainingLabel || "Left"}:
                                     </span>
-                                    <span className="w-6 text-center text-sm font-bold text-emerald-950">
+                                    <span className="w-6 text-center text-sm font-bold text-[#142B4A]">
                                       {usage.qtyRemaining}
                                     </span>
                                   </div>
@@ -2430,12 +2430,12 @@ export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewPr
                     <span className="font-medium text-[11px] text-rose-600">({tr.ledgerDebt || "Added to Outstanding Debt"})</span>
                   </span>
                 ) : diff < 0 ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 font-bold text-emerald-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#36A6A0]/10 border border-[#36A6A0]/30 px-3 py-1 font-bold text-[#36A6A0]">
                     <span>+{Math.abs(diff).toLocaleString()} EGP</span>
-                    <span className="font-medium text-[11px] text-emerald-600">({tr.ledgerCredit || "Settles Debt & Credits Wallet"})</span>
+                    <span className="font-medium text-[11px] text-[#36A6A0]">({tr.ledgerCredit || "Settles Debt & Credits Wallet"})</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 font-bold text-emerald-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#36A6A0]/10 border border-[#36A6A0]/30 px-3 py-1 font-bold text-[#36A6A0]">
                     <CheckCircle2 size={13} />
                     <span>{tr.ledgerExact || "Fully Settled (0 EGP Debt — Paid)"}</span>
                   </span>

@@ -445,7 +445,7 @@ const InventoryProductsTab = forwardRef<InventoryProductsTabRef, Props>(
         </div>
 
         {/* Main Container */}
-        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-3.5 sm:p-6 shadow-[0_30px_80px_rgba(47,61,41,0.07)] border border-[#E6E9EB] space-y-6">
+        <div className="rounded-2xl sm:rounded-[32px] md:rounded-[40px] bg-[var(--color-brand-light)] p-3.5 sm:p-6 shadow-[0_30px_80px_rgba(20,43,74,0.07)] border border-[#E6E9EB] space-y-6">
           {/* Sub-tabs for Catalog vs Sales History */}
           <div className="flex items-center gap-1.5 p-1 bg-[var(--color-brand-sand)] rounded-xl w-fit mb-6">
             <button

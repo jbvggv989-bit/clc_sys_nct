@@ -95,7 +95,7 @@ export function AboutPageIntro() {
               aspect-ratio: 3 / 4;
               border-radius: 28px;
               overflow: hidden;
-              box-shadow: 0 12px 36px rgba(90,61,52,0.10);
+              box-shadow: 0 12px 36px rgba(20, 43, 74,0.10);
             }
             .api-second-img {
               position: absolute;
@@ -124,7 +124,7 @@ export function AboutPageIntro() {
               align-items: center;
               justify-content: center;
               overflow: hidden;
-              box-shadow: 0 4px 20px rgba(90,61,52,0.12);
+              box-shadow: 0 4px 20px rgba(20, 43, 74,0.12);
               z-index: 5;
             }
             .rtl .api-rose-badge {
