@@ -6,6 +6,7 @@
 > **Previous content was for a different project — discarded entirely**
 
 `supabase/migrations/20260726000000_dev_schema_baseline.sql` is the active dev schema baseline.
+All active migrations are also consolidated in `supabase/complete_schema.sql` for 1-click execution in new Supabase accounts.
 The prior scripts live under `supabase/migrations/_legacy/` as history only. This file is the
 current-state reference; keep it synchronized with future active migrations — see
 `supabase/migrations/README.md`.
