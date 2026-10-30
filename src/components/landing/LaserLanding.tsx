@@ -278,7 +278,7 @@ export function LaserLanding({ variant }: { variant: LandingVariant }) {
             <div className="lp-location-copy">
               <span className="lp-kicker">فين العيادة؟</span>
               <h2>فرع التجمع الخامس<br /><em>سهل توصله.</em></h2>
-              <p className="lp-location-name" dir="ltr">Revera Clinic – Tagamoa Branch</p>
+              <p className="lp-location-name" dir="ltr">{CLIENT.name} – Tagamoa Branch</p>
               <p>{CLIENT.addressAr}</p>
               <div className="lp-location-actions">
                 <a className="lp-wa" href={CLIENT.googleMapsDirectionsUrl} target="_blank" rel="noreferrer" data-lp-event="map_click" data-lp-placement="directions">
@@ -291,7 +291,7 @@ export function LaserLanding({ variant }: { variant: LandingVariant }) {
             <div className="lp-map">
               <iframe
                 src={CLIENT.googleMapsEmbedUrl}
-                title="موقع Revera Clinic فرع التجمع الخامس على خريطة Google"
+                title={`موقع ${CLIENT.nameAr} فرع التجمع الخامس على خريطة Google`}
                 loading="lazy"
                 referrerPolicy="strict-origin-when-cross-origin"
                 allowFullScreen

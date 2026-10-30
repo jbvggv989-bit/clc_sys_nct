@@ -16,57 +16,57 @@ const DEFAULT_SETTINGS = {
       slides: [
         {
           welcome: `Welcome to ${CLIENT.name}`,
-          heading: "Transform Your Beauty Naturally!",
-          description: "Expert dermatology and cosmetic surgery services with personalized care designed to help you achieve your beauty and health goals through advanced medical techniques.",
+          heading: "Comprehensive Healthcare for You & Your Family",
+          description: "Expert medical specialists, advanced diagnostics, and compassionate outpatient care dedicated to supporting your health and vitality at every stage of life.",
           bookBtn: "Book Appointment",
-          rating: "4.5",
-          reviewCount: "(1000+ review)",
+          rating: "4.9",
+          reviewCount: "(1000+ reviews)",
           image: "/images/hero/slide-1.jpg"
         },
         {
           welcome: `Welcome to ${CLIENT.name}`,
           heading: "Advanced Medical Care You Can Trust!",
-          description: "Discover comprehensive dermatology, cosmetic surgery, laser treatments, and physical therapy services tailored to your unique needs. With over 15 years of professional expertise, we're here to guide you toward lasting beauty and wellness.",
+          description: "Discover multidisciplinary healthcare spanning internal medicine, outpatient surgery, diagnostic imaging, and rehabilitation. With over 15 years of clinical excellence, we deliver precision care you can trust.",
           bookBtn: "Book Appointment",
-          rating: "4.5",
-          reviewCount: "(1000+ review)",
+          rating: "4.9",
+          reviewCount: "(1000+ reviews)",
           image: "/images/hero/slide-2.jpg"
         },
         {
           welcome: `Welcome to ${CLIENT.name}`,
-          heading: "Your Beauty & Health Journey Starts Here!",
-          description: "Specialized clinics under full medical supervision offering services in dermatology, cosmetic surgery, laser treatments, and physical therapy care for all ages.",
+          heading: "Your Health & Vitality Journey Starts Here!",
+          description: "State-of-the-art polyclinic facilities under full medical supervision offering comprehensive healthcare, preventative medicine, and specialized rehabilitation for all ages.",
           bookBtn: "Book Appointment",
-          rating: "4.5",
-          reviewCount: "(1000+ review)",
+          rating: "4.9",
+          reviewCount: "(1000+ reviews)",
           image: "/images/hero/slide-3.jpg"
         }
       ],
       slides_ar: [
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
-          heading: "حوّل جمالك بشكل طبيعي!",
-          description: "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية مصممة لمساعدتك على تحقيق أهدافك في الجمال والصحة من خلال تقنيات طبية متقدمة.",
+          welcome: `مرحباً بكم في عيادات ${CLIENT.nameAr}`,
+          heading: "رعاية صحية شاملة لك ولعائلتك",
+          description: "نخبة من الاستشاريين المتخصصين والتشخيص المتقدم والرعاية الطبية الشاملة لدعم صحتك وعافيتك في كل مرحلة من مراحل حياتك.",
           bookBtn: "احجز موعدًا",
-          rating: "4.5",
+          rating: "4.9",
           reviewCount: "(1000+ تقييم)",
           image: "/images/hero/slide-1.jpg"
         },
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
-          heading: "رعاية طبية متقدمة يمكنك الوثوق بها!",
-          description: "اكتشف خدمات شاملة في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان المصممة لاحتياجاتك الفريدة. مع أكثر من 15 عامًا من الخبرة المهنية، نحن هنا لإرشادك نحو الجمال الدائم والعافية.",
+          welcome: `مرحباً بكم في عيادات ${CLIENT.nameAr}`,
+          heading: "رعاية طبية متطورة يمكنك الوثوق بها!",
+          description: "اكتشف خدمات طبية متكاملة تشمل الباطنة العامة، الجراحة اليومية، الفحوصات التشخيصية، وإعادة التأهيل. مع أكثر من 15 عاماً من التميز الطبي، نقدم رعاية متناهية الدقة تثق بها.",
           bookBtn: "احجز موعدًا",
-          rating: "4.5",
+          rating: "4.9",
           reviewCount: "(1000+ تقييم)",
           image: "/images/hero/slide-2.jpg"
         },
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
-          heading: "رحلتك نحو الجمال والصحة تبدأ هنا!",
-          description: "عيادات متخصصة تحت إشراف طبي كامل تقدم خدمات في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان لجميع الأعمار.",
+          welcome: `مرحباً بكم في عيادات ${CLIENT.nameAr}`,
+          heading: "رحلتك نحو الصحة والعافية تبدأ هنا!",
+          description: "مراكز طبية متعددة التخصصات تحت إشراف نخبة من الأطباء لتقديم رعاية وقائية وعلاجية شاملة وإعادة تأهيل لجميع الأعمار.",
           bookBtn: "احجز موعدًا",
-          rating: "4.5",
+          rating: "4.9",
           reviewCount: "(1000+ تقييم)",
           image: "/images/hero/slide-3.jpg"
         }

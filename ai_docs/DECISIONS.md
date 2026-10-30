@@ -4379,3 +4379,28 @@ Following the brand mark update to the bold text "TEST", the preloader's dual sp
    - `.arc2` enlarged to `300px x 300px` (`68vw`).
 3. **Verification**:
    - Tested and verified with `npm run build`.
+
+
+## DEC-145: Multi-Specialty Polyclinic Content & Clinical Stock Photos Update
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+The website copy and visual assets were originally tailored around dermatology and cosmetic aesthetics. The clinic requested replacing all photos and website copy to present a modern, comprehensive Multi-Specialty Healthcare & Polyclinic spanning Internal Medicine, Diagnostics & Imaging, Outpatient Surgery, and Physical Therapy & Rehabilitation.
+
+**Decision:**
+1. **Clinical Stock Photography Overhaul**:
+   - Replaced hero banners in `public/images/hero/` (`slide-1.jpg`, `slide-2.jpg`, `slide-3.jpg`) with high-resolution clinical multi-specialty imagery.
+   - Replaced doctor portraits in `public/images/doctor/` (`portrait-main.jpg`, `portrait-about.jpg`, `portrait-faq.jpg`) and `public/images/author-2.jpg` with modern medical professional portraits.
+   - Replaced clinic facilities and care photos in `public/images/clinic/` (`clinic.jpeg`, `interior.jpg`, `room.jpg`, `treatment.jpg`, `support-agent.jpg`, `video-thumbnail.jpg`).
+   - Replaced landing assets in `public/images/landing/` (`clinic.webp`, `consultation.webp`, `doctor-portrait.webp`).
+2. **Comprehensive Copywriting Overhaul (`src/lib/translations.ts`, `src/config/client.ts`)**:
+   - Rebranded client tagline in `src/config/client.ts` to `"Multi-Specialty Medical Center"` and updated meta description to reflect comprehensive outpatient medical care.
+   - Overhauled both English (`en`) and Arabic (`ar`) translation catalogs for `hero`, `about`, `results`, `whatWeDo`, `whyChooseUs`, `howItWorks`, `testimonials`, `aboutPage`, `servicesPage`, `blogPage`, and `contactPage`.
+   - Updated client testimonials and doctor titles to reflect multi-specialty clinical care, recovery, and diagnostic accuracy.
+3. **Settings & Admin Synchronization**:
+   - Updated `data/page_settings.json` and default fallback payloads in `src/app/api/page-settings/route.ts` and `src/app/admin/page.tsx` so database-less and fresh deployments reflect the new polyclinic copy.
+   - Removed all remaining instances of "Revera" / "ريفيرا" in `LaserLanding.tsx`, `DoctorAccountView.tsx`, `useCustomerProfile.ts`, `AdminBookingsView.tsx`, and `ServicesPageSettingsView.tsx`.
+4. **Verification**:
+   - Verified through full Next.js production build (`npm run build`) with zero TypeScript, compiler, or lint errors.

@@ -1452,7 +1452,7 @@ export const AdminBookingsView = React.memo(function AdminBookingsView({
               const intlPhone = cleanPhone.startsWith("0") ? `20${cleanPhone.slice(1)}` : cleanPhone;
               const formattedDocName = cleanDoctorName(fu.doctorName);
               const waMessage = lang === "ar"
-                ? `مرحباً ${fu.patientName}، عيادات ريفيرا تتواصل معك. أوصى ${formattedDocName} بموعد متابعة يوم ${fu.followUpDate}. هل تود تأكيد وحجز الموعد؟`
+                ? `مرحباً ${fu.patientName}، عيادات clc-sys تتواصل معك. أوصى ${formattedDocName} بموعد متابعة يوم ${fu.followUpDate}. هل تود تأكيد وحجز الموعد؟`
                 : `Hello ${fu.patientName}, this is ${CLIENT.name}. ${formattedDocName} recommended a follow-up visit on ${fu.followUpDate}. Would you like us to confirm and book your appointment?`;
               const waUrl = `https://wa.me/${intlPhone}?text=${encodeURIComponent(waMessage)}`;
 

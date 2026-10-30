@@ -39,7 +39,7 @@ const getLocalDateString = (d: Date = new Date()): string => {
 function DoctorAccountView({
   doctorDbId,
   doctorName = "Doctor",
-  doctorEmail = "doctor@revera.com",
+  doctorEmail = "doctor@clc-sys.com",
   doctorBranch = "Main Branch",
   branches = [],
   onLogout,

@@ -482,7 +482,7 @@ const DEFAULT_HERO_SLIDES = [
   {
     welcome: `Welcome to ${CLIENT.name}`,
     heading: "Transform Your Beauty Naturally!",
-    description: "Expert dermatology and cosmetic surgery services with personalized care designed to help you achieve your beauty and health goals through advanced medical techniques.",
+    description: "Expert medical specialists, advanced diagnostics, and compassionate outpatient care dedicated to supporting your health and vitality at every stage of life.",
     bookBtn: "Book Appointment",
     rating: "4.5",
     reviewCount: "(1000+ review)",
@@ -491,7 +491,7 @@ const DEFAULT_HERO_SLIDES = [
   {
     welcome: `Welcome to ${CLIENT.name}`,
     heading: "Advanced Medical Care You Can Trust!",
-    description: "Discover comprehensive dermatology, cosmetic surgery, laser treatments, and physical therapy services tailored to your unique needs. With over 15 years of professional expertise, we're here to guide you toward lasting beauty and wellness.",
+    description: "Discover multidisciplinary healthcare spanning internal medicine, outpatient surgery, diagnostic imaging, and rehabilitation. With over 15 years of clinical excellence, we deliver precision care you can trust.",
     bookBtn: "Book Appointment",
     rating: "4.5",
     reviewCount: "(1000+ review)",
@@ -500,7 +500,7 @@ const DEFAULT_HERO_SLIDES = [
   {
     welcome: `Welcome to ${CLIENT.name}`,
     heading: "Your Beauty & Health Journey Starts Here!",
-    description: "Specialized clinics under full medical supervision offering services in dermatology, cosmetic surgery, laser treatments, and physical therapy care for all ages.",
+    description: "State-of-the-art polyclinic facilities under full medical supervision offering comprehensive healthcare, preventative medicine, and specialized rehabilitation for all ages.",
     bookBtn: "Book Appointment",
     rating: "4.5",
     reviewCount: "(1000+ review)",
@@ -4390,7 +4390,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           setWhatWeDoImage1(data.aboutPage?.whatWeDoImage1 || "");
           setWhatWeDoImage2(data.aboutPage?.whatWeDoImage2 || "");
           setWhatWeDoList(data.aboutPage?.whatWeDoList || [
-            "Dermatology & Aesthetic Treatments",
+            "Internal Medicine & Specialist Clinics",
             "Gynecology & Women's Health",
             "Physical Therapy & Rehabilitation",
             "Osteopathy & Therapeutic Nutrition",
@@ -4412,7 +4412,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           setFaqs(data.aboutPage?.faqs || [
             {
               question: `1. What services does ${CLIENT.nameShort} offer?`,
-              answer: `${CLIENT.nameShort} is a premium polyclinic specializing in dermatology and aesthetic treatments, gynecology and women's health, physical therapy and rehabilitation, and osteopathy and therapeutic nutrition. Every service is delivered with medical precision and a luxury experience tailored to you.`
+              answer: `${CLIENT.nameShort} offers a comprehensive range of clinical specialties including internal medicine, diagnostic imaging and laboratory, physical therapy and rehabilitation, outpatient surgical care, and preventive health screenings.`
             },
             {
               question: `2. Who is ${CLIENT.nameShort} designed for?`,
@@ -5031,7 +5031,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
     const newEnSlide = {
       welcome: `Welcome to ${CLIENT.name}`,
       heading: "New Slide Title",
-      description: "Expert dermatology and cosmetic surgery services designed for you.",
+      description: "Comprehensive medical and outpatient healthcare services designed for you.",
       bookBtn: "Book Appointment",
       rating: "4.5",
       reviewCount: "(1000+ review)",

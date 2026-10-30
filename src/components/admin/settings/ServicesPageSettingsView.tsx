@@ -500,7 +500,7 @@ export default function ServicesPageSettingsView({
                 rows={5}
                 value={wcuDescriptionAr}
                 onChange={(e) => setWcuDescriptionAr(e.target.value)}
-                placeholder="في ريفيرا، كل تفصيل مقصود..."
+                placeholder="في clc-sys، كل تفصيل مقصود..."
                 className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-3 py-2.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] resize-none leading-relaxed text-right"
               />
             </div>

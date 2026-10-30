@@ -4,10 +4,12 @@
 export const CLIENT = {
   name: "clc-sys Clinics",
   nameShort: "clc-sys",
+  nameAr: "clc-sys",
+  nameShortAr: "clc-sys",
 
   // Used in page <head> metadata
-  tagline: "Medical Center",
-  metaDescription: "Expert dermatology and cosmetic surgery services in Egypt.",
+  tagline: "Multi-Specialty Medical Center",
+  metaDescription: "Comprehensive multi-specialty healthcare polyclinic: internal medicine, advanced diagnostics, outpatient specialties, and wellness.",
 
   // Contact Information
   phoneDisplay: "(+20) 01035595691",
