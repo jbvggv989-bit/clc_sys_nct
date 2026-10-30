@@ -226,7 +226,7 @@ export default function RoomsManagerView({ branches, services, selectedBranchId 
         </div>
         <button
           onClick={() => setRoomModal({ open: true, mode: "add", room: { status: "available", type: "clinical", branchId: selectedBranchId } })}
-          className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26]"
+          className="inline-flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-primary-hover)]"
         >
           <Plus size={16} /> Add Room
         </button>
@@ -390,7 +390,7 @@ export default function RoomsManagerView({ branches, services, selectedBranchId 
               <button
                 type="submit"
                 disabled={savingRoom}
-                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-2"
+                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-primary-hover)] disabled:opacity-50 mt-2"
               >
                 {savingRoom ? "Saving..." : roomModal.mode === "add" ? "Create Room" : "Save Changes"}
               </button>
@@ -454,7 +454,7 @@ export default function RoomsManagerView({ branches, services, selectedBranchId 
             <button
               onClick={handleSaveMapping}
               disabled={savingMapping}
-              className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-auto"
+              className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-primary-hover)] disabled:opacity-50 mt-auto"
             >
               {savingMapping ? "Saving Mappings..." : "Save Mappings"}
             </button>

@@ -70,7 +70,7 @@ export function HeroSlider() {
       style={{
         height: "calc(100svh - 176px)",
         minHeight: "380px",
-        backgroundColor: "var(--color-brand-primary-deep, #2E3A26)",
+        backgroundColor: "var(--color-brand-primary-hover, #0E1F36)",
       }}
     >
       <Swiper

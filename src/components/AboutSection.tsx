@@ -250,7 +250,7 @@ export function AboutSection() {
               <div>
                 <button
                   onClick={handleBooking}
-                  className="group inline-flex items-center gap-3.5 bg-[var(--cr-primary)] hover:bg-[#2e3a26] text-white text-sm font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
+                  className="group inline-flex items-center gap-3.5 bg-[var(--cr-primary)] hover:bg-[var(--color-brand-primary-hover)] text-white text-sm font-semibold py-3 px-6 rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
                   type="button"
                 >
                   <span className="tracking-wide capitalize">{t.about.readMore}</span>

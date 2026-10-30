@@ -34,14 +34,14 @@
 /* ── Revera Design Tokens ──────────────────────────────── */
 :root {
   /* Brand colors */
-  --color-brand-primary: #414E36;    /* Deep Olive Green */
-  --color-brand-dark: #1F251A;       /* Deepest Olive-Black */
-  --color-brand-secondary: #5A6A51;  /* Muted Sage Olive */
-  --color-brand-sand: #F2EFE9;       /* Sophisticated Sand */
-  --color-brand-light: #FBFBF9;      /* Luxurious Warm Ivory */
-  --color-brand-tint: #EDF1EC;       /* Sage Tint Canvas */
-  --color-brand-accent: #C4AE7C;     /* Warm Royal Gold */
-  --color-brand-primary-hover: #2E3A26; /* Deeper Sage hover tone */
+  --color-brand-primary: #142B4A;    /* Deep Olive Green */
+  --color-brand-dark: #0D1C30;       /* Deepest Olive-Black */
+  --color-brand-secondary: #8FA3B8;  /* Muted Sage Olive */
+  --color-brand-sand: #E2E8F0;       /* Sophisticated Sand */
+  --color-brand-light: #FFFFFF;      /* Luxurious Warm Ivory */
+  --color-brand-tint: #F8FAFC;       /* Sage Tint Canvas */
+  --color-brand-accent: #36A6A0;     /* Warm Royal Gold */
+  --color-brand-primary-hover: #0E1F36; /* Deeper Sage hover tone */
 
   /* Aliases for existing component tokens */
   --cr-primary: var(--color-brand-primary);
@@ -432,7 +432,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: radial-gradient(ellipse at 60% 40%, #2E3A26 0%, #1F251A 65%);
+  background: radial-gradient(ellipse at 60% 40%, #142B4A 0%, #0D1C30 65%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -467,7 +467,7 @@
 }
 .arc circle {
   fill: none;
-  stroke: #C4AE7C;
+  stroke: var(--cr-accent);
   stroke-linecap: round;
 }
 .arc1 {

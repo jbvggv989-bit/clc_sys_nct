@@ -1866,7 +1866,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                     type="button"
                     onClick={handlePayDeposit}
                     disabled={isPaying || ((hasTerms || termsText.trim() !== "") && !acceptedTerms)}
-                    className="w-full justify-center rounded-2xl py-3.5 px-4 text-xs sm:text-sm font-extrabold text-white bg-[var(--cr-primary)] transition shadow-md flex items-center justify-center gap-2 hover:bg-[#2e3a26] disabled:opacity-50 cursor-pointer"
+                    className="w-full justify-center rounded-2xl py-3.5 px-4 text-xs sm:text-sm font-extrabold text-white bg-[var(--cr-primary)] transition shadow-md flex items-center justify-center gap-2 hover:bg-[var(--color-brand-primary-hover)] disabled:opacity-50 cursor-pointer"
                   >
                     {isPaying ? (
                       <>
@@ -1981,7 +1981,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
                 href={currentPaymentLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[#2e3a26] transition shadow"
+                className="mt-4 rounded-xl bg-[var(--cr-primary)] px-5 py-2 text-xs font-bold text-white hover:bg-[var(--color-brand-primary-hover)] transition shadow"
               >
                 {selectedDepositMethod === "wallet"
                   ? (walletLink ? (isRTL ? "فتح رابط المحفظة" : "Open Wallet App") : (isRTL ? "اتصال بالرقم" : "Dial Number"))

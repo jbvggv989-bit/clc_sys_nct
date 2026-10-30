@@ -288,7 +288,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setAlertMessage(null)}
-              className="w-full rounded-xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#2E3A26] hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full rounded-xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[var(--color-brand-primary-hover)] hover:scale-[1.02] active:scale-[0.98]"
             >
               {language === "ar" ? "موافق" : "OK"}
             </button>

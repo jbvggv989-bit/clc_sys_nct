@@ -243,14 +243,14 @@ these fallbacks route by route as each table is confirmed in production.
 Brand colors are CSS custom properties in `src/app/globals.css` (`:root`):
 
 ```css
---color-brand-primary: #414E36;   /* Deep Olive Green */    --cr-primary: var(--color-brand-primary);
---color-brand-dark:    #1F251A;                              --cr-dark:    var(--color-brand-dark);
---color-brand-secondary: #5A6A51; /* Muted Sage Olive */
---color-brand-sand:    #F2EFE9;                              --cr-divider: var(--color-brand-sand);
---color-brand-light:   #FBFBF9;                              --cr-white:   var(--color-brand-light);
---color-brand-tint:    #EDF1EC;                              --cr-secondary: var(--color-brand-tint);
---color-brand-accent:  #C4AE7C;   /* Warm Royal Gold */     --cr-accent:  var(--color-brand-accent);
---color-brand-primary-hover: #2E3A26;
+--color-brand-primary: #142B4A;   /* Navy Blue (primary) */    --cr-primary: var(--color-brand-primary);
+--color-brand-dark:    #0D1C30;   /* Deep Navy */                              --cr-dark:    var(--color-brand-dark);
+--color-brand-secondary: #8FA3B8; /* Slate Blue (secondary) */
+--color-brand-sand:    #E2E8F0;   /* Slate Border */                              --cr-divider: var(--color-brand-sand);
+--color-brand-light:   #FFFFFF;   /* Pure White */                              --cr-white:   var(--color-brand-light);
+--color-brand-tint:    #F8FAFC;   /* Slate Tint Canvas */                              --cr-secondary: var(--color-brand-tint);
+--color-brand-accent:  #36A6A0;   /* Teal (accent) */     --cr-accent:  var(--color-brand-accent);
+--color-brand-primary-hover: #0E1F36;
 /* plus --cr-error, --cr-success, --cr-dark-divider and the shadcn semantic aliases (--primary, --card, …) */
 ```
 

@@ -209,7 +209,7 @@ export function WhatWeDo() {
                     cursor: "pointer",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#2e3a26";
+                    e.currentTarget.style.backgroundColor = "var(--color-brand-primary-hover)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = "var(--cr-primary)";

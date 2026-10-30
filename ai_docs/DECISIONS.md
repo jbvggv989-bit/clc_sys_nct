@@ -4305,3 +4305,33 @@ A failure in steps 2 to 5 undoes the earlier steps (figures restored, sessions t
    - Added `tests/components/patients/SettleDebtModal.test.tsx` verifying zero-debt guard, populated sessions list, and direct balance fallback (3 tests passing).
    - Re-verified all 22 tests in `tests/routes/settle-debt.test.ts`.
    - Verified `npm run typecheck` and `npm run build` completed with zero compiler or TypeScript errors across all 45 pages.
+
+
+## DEC-142: Color Palette Rebrand to Navy Blue, Pure White, Teal, and Slate Blue
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+The brand identity palette was updated from olive green (`#414E36`) and gold (`#C4AE7C`) to a modern, clinical, premium palette:
+- Navy blue (primary): `#142B4A`
+- Pure white (background): `#FFFFFF`
+- Teal (accent): `#36A6A0`
+- Slate blue (secondary): `#8FA3B8`
+
+**Decision:**
+1. **Centralized Token System (`src/app/globals.css`)**:
+   - Updated `--color-brand-primary` to `#142B4A` (Navy Blue).
+   - Updated `--color-brand-dark` to `#0D1C30` (Deep Navy / Text).
+   - Updated `--color-brand-secondary` to `#8FA3B8` (Slate Blue).
+   - Updated `--color-brand-sand` to `#E2E8F0` (Slate-200 border and subtle dividers).
+   - Updated `--color-brand-light` to `#FFFFFF` (Pure White background).
+   - Updated `--color-brand-tint` to `#F8FAFC` (Slate tint canvas).
+   - Updated `--color-brand-accent` to `#36A6A0` (Teal).
+   - Updated `--color-brand-primary-hover` to `#0E1F36` (Deep Navy hover tone).
+   - Updated `--accent-foreground` to `var(--color-brand-light)` (`#FFFFFF`) for crisp contrast against teal accents.
+2. **Component Cleanup**:
+   - Eliminated lingering hardcoded hover tones (`#2e3a26`) in `AboutSection`, `AppointmentSection`, `BookingModal`, `HeroSlider`, `HowItWorks`, `RoomsManagerView`, `TermsManagerView`, `WhatWeDo`, `AlertConfirmContext`, and `LanguageContext`, replacing them with `var(--color-brand-primary-hover)`.
+   - Updated page loader spinner stroke in `globals.css` from legacy `#C4AE7C` to `var(--cr-accent)`.
+3. **Verification**:
+   - Full production build (`npm run build`) verified clean with zero TypeScript or compiler errors.

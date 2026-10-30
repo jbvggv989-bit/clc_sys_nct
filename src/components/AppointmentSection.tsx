@@ -345,7 +345,7 @@ export function AppointmentSection() {
                     marginTop: "8px",
                     width: "100%",
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#2e3a26"}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--color-brand-primary-hover)"}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--color-brand-primary)"}
                 >
                   {t.appointment.sendBtn}

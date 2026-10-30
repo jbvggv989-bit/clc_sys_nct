@@ -288,7 +288,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                   <button
                     type="button"
                     onClick={() => handleClose(true)}
-                    className="rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md cursor-pointer"
+                    className="rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[var(--color-brand-primary-hover)] transition shadow-md cursor-pointer"
                   >
                     Confirm
                   </button>
@@ -297,7 +297,7 @@ export function AlertConfirmProvider({ children }: { children: React.ReactNode }
                 <button
                   type="button"
                   onClick={() => handleClose(true)}
-                  className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md cursor-pointer"
+                  className="rounded-3xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-[var(--color-brand-light)] hover:bg-[var(--color-brand-primary-hover)] transition shadow-md cursor-pointer"
                 >
                   OK
                 </button>

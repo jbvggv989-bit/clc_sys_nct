@@ -321,7 +321,7 @@ export default function TermsManagerView({
         <div className="flex items-center gap-3">
           <button
             onClick={handleOpenAddModal}
-            className="flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] shadow-md cursor-pointer"
+            className="flex items-center gap-2 rounded-3xl bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-primary-hover)] shadow-md cursor-pointer"
           >
             <Plus size={16} />
             <span>Add Terms Item</span>
@@ -371,7 +371,7 @@ export default function TermsManagerView({
               </button>
               <button
                 onClick={handleOpenAddModal}
-                className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26] shadow-sm cursor-pointer"
+                className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[var(--color-brand-primary-hover)] shadow-sm cursor-pointer"
               >
                 <Plus size={14} />
                 <span>Add First Item</span>
@@ -505,7 +505,7 @@ export default function TermsManagerView({
           <button
             onClick={handleSaveBookingSettings}
             disabled={savingBookingSettings}
-            className="rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 shadow-sm cursor-pointer"
+            className="rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-primary-hover)] disabled:opacity-50 shadow-sm cursor-pointer"
           >
             {savingBookingSettings ? "Saving…" : "Save Fallback Text"}
           </button>
@@ -663,7 +663,7 @@ export default function TermsManagerView({
                 <button
                   type="submit"
                   disabled={submittingForm}
-                  className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-white hover:bg-[#2e3a26] transition disabled:opacity-50 shadow-md cursor-pointer"
+                  className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-xs font-semibold text-white hover:bg-[var(--color-brand-primary-hover)] transition disabled:opacity-50 shadow-md cursor-pointer"
                 >
                   {submittingForm ? "Saving…" : modalMode === "add" ? "Add Item" : "Save Changes"}
                 </button>
