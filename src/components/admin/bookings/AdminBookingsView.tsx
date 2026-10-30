@@ -1,0 +1,2532 @@
+"use client";
+
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { CLIENT } from "@/config/client";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Clock,
+  Filter,
+  ArrowRight,
+  Printer,
+  Download,
+  MoreVertical,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Check,
+  X,
+  User,
+  Phone,
+  Sparkles,
+  Search,
+  ChevronDown,
+  Eye,
+  Loader2,
+  List,
+  Coins,
+  DollarSign,
+  History,
+  CalendarPlus,
+  MessageSquare,
+  Trash2,
+  CalendarClock
+} from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { getAuthHeaders } from "@/lib/authHeaders";
+import { pollDataEqual } from "@/lib/pollEqual";
+import { getSessionStaleness } from "@/lib/services";
+import { adminTranslations } from "@/components/admin/translations";
+import { extractPrimaryPulses } from "./BookingDetailsModal";
+import { extractPulsePackageQuota } from "@/lib/laserDeficit";
+
+// How often follow-up reminders are re-read while the tab is open (they are also refreshed on tab focus and on prescription events).
+const FOLLOW_UP_POLL_MS = 15000;
+
+interface ReservationItem {
+  id: string | number;
+  date: string;
+  time?: string;
+  customer_name: string;
+  customer_phone: string;
+  service_name: string;
+  service_variant?: string;
+  doctor_name: string;
+  doctorSpecialty?: string;
+  room?: string;
+  status: string;
+  paymentStatus: string;
+  isStaleSession?: boolean;
+  staleElapsedLabel?: string | null;
+  raw?: any;
+}
+
+interface AdminBookingsViewProps {
+  allReservations?: any[];
+  requests?: any[];
+  providers?: any[];
+  localServices?: any[];
+  userName?: string;
+  onNewBooking?: (initialData?: any) => void;
+  onAddPreviousBooking?: () => void;
+  onPendingApprovalsClick?: () => void;
+  onFilterClick?: () => void;
+  onViewBookingDetails?: (booking: any) => void;
+  onPrint?: () => void;
+  onExportCSV?: () => void;
+  onApproveBooking?: (booking: any) => void;
+  // Resolves to false when the rejection was not saved; the row then stays in the pending list.
+  onRejectBooking?: (booking: any) => void | boolean | Promise<boolean | void>;
+  /** SuperAdmin-configured "Stale Session Alert" from Booking Settings. Defaults to 2 hours. */
+  staleSessionThresholdHours?: number;
+  /** SuperAdmin-configured "Follow-Up Reminder Lead Time" from Booking Settings. Defaults to 2 days. */
+  followUpLeadDays?: number;
+  hasPermission?: (perm: string) => boolean;
+  lang?: "en" | "ar";
+  t?: any;
+}
+
+const formatDisplayTime = (timeStr?: string): string => {
+  if (!timeStr) return "09:00 AM";
+  const trimmed = String(timeStr).trim();
+  if (!trimmed) return "09:00 AM";
+  if (trimmed.toLowerCase().includes("am") || trimmed.toLowerCase().includes("pm")) {
+    return trimmed;
+  }
+  const startPart = trimmed.split("-")[0].trim();
+  const parts = startPart.split(":");
+  if (parts.length >= 2) {
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1].slice(0, 2);
+    if (!isNaN(hours)) {
+      const period = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      const formattedHours = String(hours).padStart(2, "0");
+      return `${formattedHours}:${minutes} ${period}`;
+    }
+  }
+  return trimmed;
+};
+
+function computeReminderDate(targetDateStr: string, leadDays: number): string {
+  if (!targetDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(targetDateStr)) return targetDateStr;
+  const [y, m, d] = targetDateStr.split("-").map(Number);
+  const targetDate = new Date(y, m - 1, d);
+  targetDate.setDate(targetDate.getDate() - (leadDays || 0));
+  const remY = targetDate.getFullYear();
+  const remM = String(targetDate.getMonth() + 1).padStart(2, "0");
+  const remD = String(targetDate.getDate()).padStart(2, "0");
+  return `${remY}-${remM}-${remD}`;
+}
+
+function cleanDoctorName(doc: string | undefined | null): string {
+  if (!doc || doc === "—" || doc === "-") return "Doctor";
+  let d = String(doc).trim();
+  if (d.includes("@")) {
+    d = d.split("@")[0].replace(/[._-]/g, " ");
+  }
+  d = d.replace(/^Dr\.?\s*/i, "").trim();
+  d = d.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+  return d ? `Dr. ${d}` : "Doctor";
+}
+
+// Memoized: the admin shell re-renders on every state change (polls, timers),
+// and this is the heaviest mounted view. All props passed from page.tsx are
+// stabilized (useCallback/useMemo/state references) so an unchanged render is
+// skipped. If a new unstable prop is ever added here, the memo silently stops
+// helping — keep props referentially stable.
+export const AdminBookingsView = React.memo(function AdminBookingsView({
+  allReservations = [],
+  requests = [],
+  providers = [],
+  localServices = [],
+  userName = "Sara",
+  onNewBooking,
+  onAddPreviousBooking,
+  onPendingApprovalsClick,
+  onFilterClick,
+  onViewBookingDetails,
+  onPrint,
+  onExportCSV,
+  onApproveBooking,
+  onRejectBooking,
+  staleSessionThresholdHours,
+  followUpLeadDays = 2,
+  hasPermission,
+  lang = "en",
+  t,
+}: AdminBookingsViewProps) {
+  const tr = t || adminTranslations[lang].bookings.adminBookingsView;
+  // View Mode State: 'calendar' (Default) vs 'pending' vs 'all'
+  const [viewMode, setViewMode] = useState<"pending" | "calendar" | "all">("calendar");
+  // All Appointments View Filter & Search State
+  const [allAppointmentsSearch, setAllAppointmentsSearch] = useState("");
+  const [allAppointmentsStatusFilter, setAllAppointmentsStatusFilter] = useState("All");
+  const [allAppointmentsDoctorFilter, setAllAppointmentsDoctorFilter] = useState("All");
+  const [allAppointmentsPage, setAllAppointmentsPage] = useState(1);
+  const [allAppointmentsPerPage, setAllAppointmentsPerPage] = useState(10);
+  const [showAllAppointmentsFilters, setShowAllAppointmentsFilters] = useState(false);
+
+  // Mini calendar state - Default to REAL CURRENT DATE
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date());
+  const [activeMenuId, setActiveMenuId] = useState<string | number | null>(null);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close More dropdown on outside click or global dropdown toggle
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    const globalHandler = (e: any) => {
+      if (e.detail !== "bookingsMore") {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("close-admin-dropdowns", globalHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("close-admin-dropdowns", globalHandler);
+    };
+  }, []);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(5);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+
+  // Today's Schedule Inline Filter State (Inventory style)
+  const [showTodayFilters, setShowTodayFilters] = useState(false);
+  const [todayStatusFilter, setTodayStatusFilter] = useState("All");
+  const [todayDoctorFilter, setTodayDoctorFilter] = useState("All");
+  const [todayServiceFilter, setTodayServiceFilter] = useState("All");
+  const [todayPaymentFilter, setTodayPaymentFilter] = useState("All");
+
+  // Direct Supabase database fallback state
+  const [dbPrescriptions, setDbPrescriptions] = useState<any[]>([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+  const [convertedFollowUpIds, setConvertedFollowUpIds] = useState<Set<string>>(() => new Set());
+
+  // Follow-Up Management Modal State
+  const [managingFollowUp, setManagingFollowUp] = useState<any | null>(null);
+  const [newFollowUpDateInput, setNewFollowUpDateInput] = useState<string>("");
+  const [updatingFollowUp, setUpdatingFollowUp] = useState<boolean>(false);
+  const [cancellingFollowUp, setCancellingFollowUp] = useState<boolean>(false);
+
+  const handleOpenManageFollowUp = (fu: any) => {
+    setManagingFollowUp(fu);
+    setNewFollowUpDateInput(fu.followUpDate || "");
+  };
+
+  const handleBookOnTargetDate = (fu: any, targetDate?: string) => {
+    const finalDate = targetDate || fu.followUpDate;
+    setConvertedFollowUpIds(prev => {
+      const next = new Set(prev);
+      if (fu.id) next.add(String(fu.id));
+      if (fu.bookingId) next.add(String(fu.bookingId));
+      if (fu.customerId) next.add(String(fu.customerId));
+      if (fu.patientName) next.add(`name-${fu.patientName.toLowerCase().trim()}`);
+      return next;
+    });
+    if (onNewBooking) {
+      onNewBooking({
+        customerId: fu.customerId,
+        patientName: fu.patientName,
+        phone: fu.phone,
+        doctorName: fu.doctorName,
+        doctorId: fu.doctorId,
+        serviceName: fu.serviceName,
+        serviceId: fu.serviceId,
+        date: finalDate,
+        notes: fu.notes ? `Follow-up from ${fu.doctorName}: ${fu.notes}` : `Follow-up visit recommended by ${fu.doctorName}`,
+        raw: fu.raw
+      });
+    }
+    setManagingFollowUp(null);
+  };
+
+  const handleCancelFollowUp = async (fu: any) => {
+    if (!fu) return;
+    if (!confirm(tr.cancelFollowUpConfirm || "Are you sure you want to cancel and remove this follow-up reminder?")) return;
+    setCancellingFollowUp(true);
+    try {
+      const headers = await getAuthHeaders();
+      // 1. If has bookingId, clear followUpDate on reservations
+      if (fu.bookingId) {
+        await fetch(`/api/reservations?id=${encodeURIComponent(fu.bookingId)}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ followUpDate: null, follow_up_date: null })
+        }).catch(() => {});
+      }
+      // 2. If prescription record, clear follow_up_date on prescriptions
+      const rxId = fu.raw?.id || (String(fu.id).startsWith("fu-rx-") ? String(fu.id).replace("fu-rx-", "") : null);
+      if (rxId) {
+        await fetch(`/api/prescriptions?id=${encodeURIComponent(rxId)}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ follow_up_date: null })
+        }).catch(() => {});
+      }
+      // 3. Mark in local converted state
+      setConvertedFollowUpIds(prev => {
+        const next = new Set(prev);
+        if (fu.id) next.add(String(fu.id));
+        if (fu.bookingId) next.add(String(fu.bookingId));
+        if (fu.customerId) next.add(String(fu.customerId));
+        if (fu.patientName) next.add(`name-${fu.patientName.toLowerCase().trim()}`);
+        return next;
+      });
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("revera-prescription-change"));
+        window.dispatchEvent(new CustomEvent("revera-booking-change"));
+      }
+      setManagingFollowUp(null);
+    } catch (err) {
+      console.error("Error cancelling follow up:", err);
+      alert("Error cancelling follow up. Please try again.");
+    } finally {
+      setCancellingFollowUp(false);
+    }
+  };
+
+  const handleSaveNewFollowUpDate = async (fu: any, newDate: string, thenBook: boolean = false) => {
+    if (!fu || !newDate) return;
+    setUpdatingFollowUp(true);
+    try {
+      const headers = await getAuthHeaders();
+      if (fu.bookingId) {
+        await fetch(`/api/reservations?id=${encodeURIComponent(fu.bookingId)}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ followUpDate: newDate, follow_up_date: newDate })
+        }).catch(() => {});
+      }
+      const rxId = fu.raw?.id || (String(fu.id).startsWith("fu-rx-") ? String(fu.id).replace("fu-rx-", "") : null);
+      if (rxId) {
+        await fetch(`/api/prescriptions?id=${encodeURIComponent(rxId)}`, {
+          method: "PATCH",
+          headers,
+          body: JSON.stringify({ follow_up_date: newDate })
+        }).catch(() => {});
+      }
+
+      // If moving as a reminder to the new date, clear any converted status so it is active
+      if (!thenBook) {
+        setConvertedFollowUpIds(prev => {
+          const next = new Set(prev);
+          if (fu.id) next.delete(String(fu.id));
+          if (fu.bookingId) next.delete(String(fu.bookingId));
+          if (fu.customerId) next.delete(String(fu.customerId));
+          if (fu.patientName) next.delete(`name-${fu.patientName.toLowerCase().trim()}`);
+          return next;
+        });
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("revera-prescription-change"));
+        window.dispatchEvent(new CustomEvent("revera-booking-change"));
+      }
+
+      if (thenBook) {
+        handleBookOnTargetDate(fu, newDate);
+      } else {
+        setManagingFollowUp(null);
+      }
+    } catch (err) {
+      console.error("Error updating follow up date:", err);
+      alert("Error updating follow up date.");
+    } finally {
+      setUpdatingFollowUp(false);
+    }
+  };
+
+  // Follow-up reminders come from the prescriptions API. This effect used to read reservations and providers
+  // straight from Supabase with the browser key every 3 s as well; row-level security blocks that (the reads
+  // came back empty on the dev database), and the bookings and doctors this screen shows already arrive through
+  // props from the shell's authenticated poll. One request at a time, only while the tab is visible.
+  useEffect(() => {
+    let isMounted = true;
+    let inFlight = false;
+
+    async function fetchPrescriptions(silent = false) {
+      if (inFlight) return;
+      inFlight = true;
+      if (!silent) setLoadingDb(true);
+      try {
+        const authHeaders = await getAuthHeaders().catch(() => ({ "Content-Type": "application/json" }));
+        const res = await fetch("/api/prescriptions", { headers: authHeaders });
+        if (!isMounted || !res.ok) return;
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+
+        const rxMap = new Map<string, any>();
+        data.forEach((item) => {
+          if (item?.follow_up_date) {
+            const key = String(item.id || `${item.booking_id || item.customer_id}-${item.follow_up_date}`);
+            rxMap.set(key, { ...(rxMap.get(key) || {}), ...item });
+          }
+        });
+        const next = Array.from(rxMap.values()).sort((x, y) => String(y.follow_up_date).localeCompare(String(x.follow_up_date)));
+        setDbPrescriptions(prev => (pollDataEqual(prev, next) ? prev : next));
+      } catch (err) {
+        console.error("Error fetching prescriptions:", err);
+      } finally {
+        inFlight = false;
+        if (isMounted && !silent) setLoadingDb(false);
+      }
+    }
+
+    fetchPrescriptions(false);
+
+    const pollInterval = setInterval(() => {
+      if (isMounted && document.visibilityState === "visible") fetchPrescriptions(true);
+    }, FOLLOW_UP_POLL_MS);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchPrescriptions(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    // Real-time synchronization (only delivers for tables the browser key may read)
+    const channel = supabase
+      .channel("admin-bookings-realtime-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prescriptions" },
+        () => {
+          fetchPrescriptions(true);
+        }
+      )
+      .subscribe();
+
+    const onSyncChange = () => fetchPrescriptions(true);
+    window.addEventListener("revera-prescription-change", onSyncChange);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", onVisible);
+      supabase.removeChannel(channel);
+      window.removeEventListener("revera-prescription-change", onSyncChange);
+    };
+  }, []);
+
+  // Helper to format date string YYYY-MM-DD
+  const formatDateISO = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const selectedDateStr = useMemo(() => formatDateISO(selectedDate), [selectedDate]);
+
+  // RISK-043: SuperAdmin-configured threshold (Booking Settings → "Stale Session Alert"), falling
+  // back to the 2-hour default when the setting hasn't been set or is invalid.
+  const staleThresholdMs = useMemo(() => {
+    const hours = Number(staleSessionThresholdHours);
+    return Number.isFinite(hours) && hours > 0 ? hours * 60 * 60 * 1000 : undefined;
+  }, [staleSessionThresholdHours]);
+
+  // Combine prop reservations with database reservations (strict real data)
+  const mergedAppointments = useMemo(() => {
+    const combinedMap = new Map<string, any>();
+
+    // Add items from allReservations prop
+    (allReservations || []).forEach((r, idx) => {
+      const id = String(r.id || `prop-${idx}`);
+      combinedMap.set(id, r);
+    });
+
+    const rawList = Array.from(combinedMap.values());
+    const allProv = providers || [];
+
+    // Map real reservations to clean structure
+    return rawList.map((r, idx) => {
+      const pName = r.customer_name || r.patient_name || r.clientName || r.patientName || r.name || `Patient #${r.id || idx + 1}`;
+      const phone = r.customer_phone || r.phone || r.mobile || "—";
+      const sName = r.service_name || r.service || (localServices.find(s => String(s.id) === String(r.service_id || r.serviceId))?.en) || "Clinic Session";
+      const sVariant = r.service_variant || (localServices.find(s => String(s.id) === String(r.service_id || r.serviceId))?.cat) || "Session";
+      
+      // Thorough Doctor Name Resolution
+      const rawDoc = r.doctor_name || r.doctorName || (typeof r.doctor === "string" && r.doctor !== "Doctor" ? r.doctor : r.doctor?.name) || r.provider_name || r.providerName || (typeof r.provider === "string" && r.provider !== "Doctor" ? r.provider : r.provider?.name);
+
+      const targetProvId = String(r.provider_id || r.providerId || r.doctorId || r.doctor_id || "");
+      let doc = rawDoc;
+
+      if ((!doc || doc === "Doctor") && targetProvId && allProv.length > 0) {
+        const matchedP = allProv.find(p => String(p.id) === targetProvId || String(p.provider_id) === targetProvId);
+        if (matchedP) {
+          doc = matchedP.name || matchedP.full_name || matchedP.name_en;
+        }
+      }
+
+      if (!doc || doc === "Doctor") doc = "—";
+
+      const rm = r.room || r.room_name || "—";
+      
+      let st = (r.status || "confirmed").toLowerCase();
+      if (st === "approved") st = "confirmed";
+      if (st === "started") st = "in_progress";
+
+      // amount_left is nullable in the DB (mapRow returns it as `?? null`), so a missing value
+      // must stay "unknown" — coercing it to 0 would render "Paid" for a booking whose balance
+      // was never recorded, which is the exact fabrication this block was rewritten to remove.
+      const rawPaid = r.amountPaid ?? r.amount_paid;
+      const rawLeft = r.amountLeft ?? r.amount_left;
+      const amtPaid = Number(rawPaid);
+      const amtLeft = Number(rawLeft);
+      const isPkgCovered = Boolean(
+        r.laserPaymentMode === "PACKAGE" ||
+        r.laser_payment_mode === "PACKAGE" ||
+        r.customerPackageId ||
+        r.customer_package_id ||
+        r.packageId ||
+        r.package_id ||
+        (r as any).purchasingPackageId ||
+        (r as any).purchasing_package_id ||
+        String(r.notes || "").toLowerCase().includes("package session") ||
+        String(r.notes || "").toLowerCase().includes("package redemption") ||
+        String(r.notes || "").toLowerCase().includes("pulses package") ||
+        String(r.notes || "").includes("[Laser Package]") ||
+        String(r.notes || "").includes("[Laser Package Redemption]") ||
+        String(r.notes || "").includes("[Purchasing New Pulses Package]") ||
+        String(r.notes || "").includes("Option 3: Pay with Pulses Package")
+      );
+      const notesStr = String(r.notes || "");
+      const notePkgRem = extractPulsePackageQuota(notesStr);
+      const deliveredPulsesVal = Number(r.deliveredPulses || r.delivered_pulses || extractPrimaryPulses(notesStr, r) || 0);
+      const hasSettledDeficit = Boolean(
+        notesStr.includes("[Laser Package Deficit Settlement]") ||
+        notesStr.includes("Choice 3A") ||
+        notesStr.includes("Choice 3B")
+      );
+      const resolvedPkgQuota = notePkgRem !== null ? notePkgRem : 0;
+      const isDeficit = !hasSettledDeficit && isPkgCovered && deliveredPulsesVal > resolvedPkgQuota;
+
+      const isHistorical = Boolean(
+        r.is_historical ||
+        (r as any).isHistorical ||
+        notesStr.includes("[Historical Booking]")
+      );
+      const histInvMatch = notesStr.match(/\[Invoice Total\]:\s*(\d+(?:\.\d+)?)\s*EGP|Invoice Value:\s*(\d+(?:\.\d+)?)\s*EGP/i);
+      const isExplicitZeroHistorical = isHistorical && ((histInvMatch && Number(histInvMatch[1] || histInvMatch[2]) === 0) || (amtPaid === 0 && (amtLeft === 0 || rawLeft === null || rawLeft === undefined)));
+
+      let paySt: string;
+      if (isExplicitZeroHistorical || (isHistorical && amtLeft === 0)) {
+        paySt = "Paid";
+      } else if (rawPaid === null || rawPaid === undefined || Number.isNaN(amtPaid)) {
+        paySt = (isPkgCovered || isHistorical) && (st === "completed" || amtLeft === 0) ? "Paid" : "—";
+      } else if (amtPaid < 1 && (amtLeft > 0 || !isPkgCovered)) {
+        // If 0 EGP was paid, status is strictly "Unpaid" (even if session started/ended/completed)
+        paySt = (isPkgCovered && (st === "completed" || amtLeft === 0)) ? "Paid" : "Unpaid";
+      } else if (amtLeft !== null && amtLeft !== undefined && amtLeft <= 0) {
+        paySt = "Paid";
+      } else if (amtPaid >= 1 && (amtLeft > 0 || isDeficit)) {
+        // Partially Paid starts strictly when at least 1 EGP is paid and balance remains
+        paySt = "Partially Paid";
+      } else if (amtLeft > 0) {
+        paySt = amtPaid >= 1 ? "Partially Paid" : "Unpaid";
+      } else {
+        paySt = "Paid";
+      }
+
+      const bookingDate = String(r.date || selectedDateStr).slice(0, 10);
+
+      // RISK-043: a session the doctor never completed stays `started` forever. Computed off the
+      // raw status, not the normalised `st`, so the check reads the state the DB actually holds.
+      // Threshold is SuperAdmin-configurable (Booking Settings → "Stale Session Alert"); falls
+      // back to the 2-hour default when unset.
+      const staleness = getSessionStaleness(r.status, r.startedAt ?? r.started_at, bookingDate, staleThresholdMs);
+
+      return {
+        ...r,
+        id: r.id || `res-${idx}`,
+        date: bookingDate,
+        time: formatDisplayTime(r.start_time || r.time || r.timeSlot || r.time_slot),
+        customer_name: pName,
+        customer_phone: phone,
+        service_name: sName,
+        service_variant: sVariant,
+        doctor_name: doc,
+        room: rm,
+        status: r.status || st,
+        raw_status: r.status || st,
+        display_status: st,
+        paymentStatus: paySt,
+        isStaleSession: staleness.isStale,
+        staleElapsedLabel: staleness.elapsedLabel,
+        followUpDate: r.followUpDate || r.follow_up_date || null,
+        follow_up_notes: r.follow_up_notes || null
+      };
+    });
+  }, [allReservations, localServices, providers, selectedDateStr, staleThresholdMs]);
+
+  // Aggregate all Follow-Up Reminders from bookings and prescriptions with lead time calculation
+  const allFollowUpReminders = useMemo(() => {
+    const list: any[] = [];
+    const keyIndexMap = new Map<string, number>();
+
+    const makeKeys = (bookingId?: string | number, custId?: string, pName?: string, dateStr?: string): string[] => {
+      const keys: string[] = [];
+      const d = String(dateStr || "").slice(0, 10);
+      if (bookingId) keys.push(`bid-${bookingId}-${d}`);
+      if (custId) keys.push(`cid-${custId}-${d}`);
+      if (pName) keys.push(`name-${String(pName).trim().toLowerCase()}-${d}`);
+      return keys;
+    };
+
+    // 1. From merged appointments
+    mergedAppointments.forEach((apt) => {
+      const fDate = apt.followUpDate || apt.follow_up_date;
+      if (fDate) {
+        const cleanFDate = String(fDate).slice(0, 10);
+        const remDate = computeReminderDate(cleanFDate, followUpLeadDays ?? 2);
+        const keys = makeKeys(apt.id, apt.customer_id || apt.customerId, apt.customer_name, cleanFDate);
+        const existingIdx = keys.map(k => keyIndexMap.get(k)).find(idx => idx !== undefined);
+
+        const item = {
+          id: `fu-apt-${apt.id}`,
+          bookingId: apt.id,
+          customerId: apt.customer_id || apt.customerId,
+          patientName: apt.customer_name,
+          phone: apt.customer_phone || apt.phone,
+          doctorName: apt.doctor_name,
+          doctorId: apt.provider_id || apt.providerId || apt.doctorId || apt.doctor_id,
+          serviceName: apt.service_name,
+          serviceId: apt.service_id || apt.serviceId,
+          followUpDate: cleanFDate,
+          reminderDate: remDate,
+          notes: apt.follow_up_notes || apt.notes || "",
+          raw: apt
+        };
+
+        if (existingIdx !== undefined) {
+          list[existingIdx] = { ...list[existingIdx], ...item };
+        } else {
+          const newIdx = list.length;
+          list.push(item);
+          keys.forEach(k => keyIndexMap.set(k, newIdx));
+        }
+      }
+    });
+
+    // 2. From dbPrescriptions
+    dbPrescriptions.forEach((rx) => {
+      if (rx.follow_up_date) {
+        const cleanFDate = String(rx.follow_up_date).slice(0, 10);
+        const remDate = computeReminderDate(cleanFDate, followUpLeadDays ?? 2);
+        const matchingApt = mergedAppointments.find((a) =>
+          (rx.booking_id && String(a.id) === String(rx.booking_id)) ||
+          (rx.customer_id && a.customer_id && String(a.customer_id) === String(rx.customer_id)) ||
+          (rx.patient_name && a.customer_name && a.customer_name.trim().toLowerCase() === String(rx.patient_name).trim().toLowerCase())
+        );
+        const rawPhone = rx.customer_phone || rx.phone || matchingApt?.customer_phone || matchingApt?.phone || "";
+        const docName = rx.doctor_name || matchingApt?.doctor_name || "Doctor";
+        const patName = rx.patient_name || rx.customer_name || matchingApt?.customer_name || "Patient";
+
+        const keys = makeKeys(rx.booking_id, rx.customer_id || matchingApt?.customer_id, patName, cleanFDate);
+        const existingIdx = keys.map(k => keyIndexMap.get(k)).find(idx => idx !== undefined);
+        const rxNotes = rx.follow_up_notes || rx.instructions || rx.general_notes || rx.doctor_notes || "";
+
+        const item = {
+          id: `fu-rx-${rx.id}`,
+          bookingId: rx.booking_id || matchingApt?.id,
+          customerId: rx.customer_id || matchingApt?.customer_id,
+          patientName: patName,
+          phone: rawPhone,
+          doctorName: docName,
+          doctorId: rx.provider_id || rx.doctor_id || matchingApt?.provider_id,
+          serviceName: rx.service_name || matchingApt?.service_name || "Follow-Up Consultation",
+          serviceId: rx.service_id || matchingApt?.service_id,
+          followUpDate: cleanFDate,
+          reminderDate: remDate,
+          notes: rxNotes || matchingApt?.follow_up_notes || matchingApt?.notes || "",
+          raw: rx
+        };
+
+        if (existingIdx !== undefined) {
+          list[existingIdx] = {
+            ...list[existingIdx],
+            ...item,
+            phone: rawPhone || list[existingIdx].phone,
+            notes: rxNotes || list[existingIdx].notes
+          };
+        } else {
+          const newIdx = list.length;
+          list.push(item);
+          keys.forEach(k => keyIndexMap.set(k, newIdx));
+        }
+      }
+    });
+
+    // 3. Filter out follow-ups that have already been converted or have an active upcoming/target booking
+    return list.filter((fu) => {
+      // Check converted in session
+      if (convertedFollowUpIds.has(String(fu.id))) return false;
+      if (fu.bookingId && convertedFollowUpIds.has(String(fu.bookingId))) return false;
+      if (fu.customerId && convertedFollowUpIds.has(String(fu.customerId))) return false;
+      if (fu.patientName && convertedFollowUpIds.has(`name-${fu.patientName.toLowerCase().trim()}`)) return false;
+
+      // Check if patient already has a separate active (non-cancelled / non-rejected) reservation scheduled for this follow-up
+      const hasActiveBooking = mergedAppointments.some((r) => {
+        // ALWAYS skip the origin appointment where this follow-up was prescribed/created!
+        if (fu.bookingId && String(r.id) === String(fu.bookingId)) {
+          return false;
+        }
+
+        const isCancelled = r.status === "canceled" || r.status === "cancelled" || r.status === "rejected";
+        if (isCancelled) return false;
+
+        const isSameCustomer =
+          (fu.customerId && r.customer_id && String(fu.customerId) === String(r.customer_id)) ||
+          (fu.phone && r.customer_phone && String(fu.phone).replace(/\D/g, "") === String(r.customer_phone).replace(/\D/g, "") && String(fu.phone).replace(/\D/g, "").length >= 7) ||
+          (fu.patientName && r.customer_name && fu.patientName.trim().toLowerCase() === r.customer_name.trim().toLowerCase());
+
+        if (!isSameCustomer) return false;
+
+        const rDate = String(r.date || "").slice(0, 10);
+
+        // If the appointment date is before the reminderDate, it cannot be the follow-up appointment
+        if (rDate < fu.reminderDate) return false;
+
+        // An appointment fulfills the follow-up if it is a separate booking on the target date or within the follow-up window (within 7 days)
+        const diffDays = Math.abs((new Date(rDate).getTime() - new Date(fu.followUpDate).getTime()) / (1000 * 3600 * 24));
+        return rDate === fu.followUpDate || diffDays <= 7;
+      });
+
+      return !hasActiveBooking;
+    });
+  }, [mergedAppointments, dbPrescriptions, followUpLeadDays, convertedFollowUpIds]);
+
+  const selectedDayFollowUps = useMemo(() => {
+    const todayISO = formatDateISO(new Date());
+    const isToday = selectedDateStr === todayISO;
+
+    return allFollowUpReminders.filter((fu) => {
+      // If viewing Today (default view mode for receptionists):
+      // Show all active reminders that are due today or overdue (reminderDate <= todayISO)
+      if (isToday) {
+        if (fu.reminderDate <= todayISO) {
+          const targetTime = new Date(fu.followUpDate).getTime();
+          const todayTime = new Date(todayISO).getTime();
+          const daysOverdue = (todayTime - targetTime) / (1000 * 60 * 60 * 24);
+          return daysOverdue <= 90; // Exclude ancient follow-ups older than 90 days
+        }
+        return false;
+      }
+
+      // If browsing a specific date on calendar (past or future):
+      // Show follow-ups active on that date (between reminderDate and followUpDate) or exactly on followUpDate
+      if (fu.reminderDate <= selectedDateStr && selectedDateStr <= fu.followUpDate) return true;
+      if (fu.followUpDate === selectedDateStr) return true;
+      return false;
+    });
+  }, [allFollowUpReminders, selectedDateStr]);
+
+  // Chronological Booking Flow Order
+  const FLOW_ORDER: Record<string, number> = {
+    pending: 1,
+    waiting: 1,
+    pending_deposit: 1,
+    confirmed: 2,
+    approved: 2,
+    checked_in: 3,
+    in_progress: 4,
+    started: 4,
+    completed: 5,
+    postponed: 6,
+    rescheduled: 6,
+    canceled: 7,
+    cancelled: 7,
+    rejected: 7,
+    no_show: 8
+  };
+
+  // Unique doctors and services for dropdown filters
+  const uniqueDoctors = useMemo(() => {
+    const docSet = new Set<string>();
+    (providers || []).forEach((p: any) => {
+      if (p.name) docSet.add(p.name);
+    });
+    mergedAppointments.forEach((a: any) => {
+      if (a.doctor_name && a.doctor_name !== "—" && a.doctor_name !== "-") {
+        docSet.add(a.doctor_name);
+      }
+    });
+    return Array.from(docSet).sort();
+  }, [providers, mergedAppointments]);
+
+  const uniqueServices = useMemo(() => {
+    const srvSet = new Set<string>();
+    (localServices || []).forEach((s: any) => {
+      if (s.en) srvSet.add(s.en);
+      else if (s.name) srvSet.add(s.name);
+    });
+    mergedAppointments.forEach((a: any) => {
+      if (a.service_name && a.service_name !== "—" && a.service_name !== "-") {
+        srvSet.add(a.service_name);
+      }
+    });
+    return Array.from(srvSet).sort();
+  }, [localServices, mergedAppointments]);
+
+  // Filter & sort appointments strictly for the selected date according to Flow Order & active filters
+  const selectedDayAppointments = useMemo(() => {
+    let dayList = mergedAppointments.filter(r => r.date === selectedDateStr);
+
+    // 1. Status filter
+    if (todayStatusFilter !== "All") {
+      dayList = dayList.filter(r => {
+        const st = (r.status || "").toLowerCase();
+        if (todayStatusFilter === "pending") return ["pending", "waiting", "pending_deposit"].includes(st);
+        if (todayStatusFilter === "confirmed") return ["confirmed", "approved"].includes(st);
+        if (todayStatusFilter === "in_progress") return ["in_progress", "started"].includes(st);
+        if (todayStatusFilter === "completed") return ["completed", "done"].includes(st);
+        if (todayStatusFilter === "postponed") return ["postponed", "rescheduled"].includes(st);
+        if (todayStatusFilter === "canceled") return ["canceled", "cancelled", "rejected"].includes(st);
+        return st === todayStatusFilter.toLowerCase();
+      });
+    }
+
+    // 2. Doctor filter
+    if (todayDoctorFilter !== "All") {
+      dayList = dayList.filter(r => {
+        return String(r.doctor_name || "").toLowerCase() === todayDoctorFilter.toLowerCase();
+      });
+    }
+
+    // 3. Service filter
+    if (todayServiceFilter !== "All") {
+      dayList = dayList.filter(r => {
+        const sName = (r.service_name || r.service || "").toLowerCase();
+        return sName.includes(todayServiceFilter.toLowerCase());
+      });
+    }
+
+    // 4. Payment filter
+    if (todayPaymentFilter !== "All") {
+      dayList = dayList.filter(r => {
+        const payStr = (r.paymentStatus || "").toLowerCase();
+        if (todayPaymentFilter === "paid") return payStr === "paid";
+        if (todayPaymentFilter === "outstanding") return payStr === "unpaid" || payStr === "partial" || payStr === "—";
+        return true;
+      });
+    }
+
+    // Sort by Flow Order rank then time
+    return [...dayList].sort((a, b) => {
+      const rankA = FLOW_ORDER[(a.status || "").toLowerCase()] || 99;
+      const rankB = FLOW_ORDER[(b.status || "").toLowerCase()] || 99;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.time || "").localeCompare(b.time || "");
+    });
+  }, [mergedAppointments, selectedDateStr, todayStatusFilter, todayDoctorFilter, todayServiceFilter, todayPaymentFilter]);
+
+  // Pagination calculation
+  const totalAppointments = selectedDayAppointments.length;
+  const totalPages = Math.max(1, Math.ceil(totalAppointments / rowsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * rowsPerPage;
+
+  const paginatedAppointments = useMemo(() => {
+    return selectedDayAppointments.slice(startIndex, startIndex + rowsPerPage);
+  }, [selectedDayAppointments, startIndex, rowsPerPage]);
+
+  // Filter & sort for All Appointments Directory view
+  const filteredAllAppointments = useMemo(() => {
+    let list = [...mergedAppointments];
+
+    // 1. Search Query
+    if (allAppointmentsSearch.trim()) {
+      const q = allAppointmentsSearch.toLowerCase().trim();
+      list = list.filter((item) => {
+        const pName = String(item.customer_name || "").toLowerCase();
+        const phone = String(item.customer_phone || "").toLowerCase();
+        const sName = String(item.service_name || "").toLowerCase();
+        const dName = String(item.doctor_name || "").toLowerCase();
+        const aptId = String(item.id || "").toLowerCase();
+        const nationalId = String(item.national_id || item.nationalId || "").toLowerCase();
+        return (
+          pName.includes(q) ||
+          phone.includes(q) ||
+          sName.includes(q) ||
+          dName.includes(q) ||
+          aptId.includes(q) ||
+          nationalId.includes(q)
+        );
+      });
+    }
+
+    // 2. Status Filter
+    if (allAppointmentsStatusFilter !== "All") {
+      list = list.filter((item) => {
+        const st = (item.status || "").toLowerCase();
+        if (allAppointmentsStatusFilter === "pending") return ["pending", "waiting", "pending_deposit"].includes(st);
+        if (allAppointmentsStatusFilter === "confirmed") return ["confirmed", "approved"].includes(st);
+        if (allAppointmentsStatusFilter === "in_progress") return ["in_progress", "started"].includes(st);
+        if (allAppointmentsStatusFilter === "postponed") return ["postponed", "rescheduled"].includes(st);
+        if (allAppointmentsStatusFilter === "canceled") return ["canceled", "cancelled", "rejected"].includes(st);
+        return st === allAppointmentsStatusFilter.toLowerCase();
+      });
+    }
+
+    // 3. Doctor Filter
+    if (allAppointmentsDoctorFilter !== "All") {
+      list = list.filter((item) => {
+        return String(item.doctor_name || "").toLowerCase() === allAppointmentsDoctorFilter.toLowerCase();
+      });
+    }
+
+    // Sort by date (descending) then time
+    return list.sort((a, b) => {
+      const dateA = a.date || "";
+      const dateB = b.date || "";
+      if (dateA !== dateB) return dateB.localeCompare(dateA);
+      return (a.time || "").localeCompare(b.time || "");
+    });
+  }, [mergedAppointments, allAppointmentsSearch, allAppointmentsStatusFilter, allAppointmentsDoctorFilter]);
+
+  const totalAllAppointments = filteredAllAppointments.length;
+  const totalAllPages = Math.max(1, Math.ceil(totalAllAppointments / allAppointmentsPerPage));
+  const safeAllPage = Math.min(allAppointmentsPage, totalAllPages);
+  const allAppointmentsStartIndex = (safeAllPage - 1) * allAppointmentsPerPage;
+
+  const paginatedAllAppointments = useMemo(() => {
+    return filteredAllAppointments.slice(allAppointmentsStartIndex, allAppointmentsStartIndex + allAppointmentsPerPage);
+  }, [filteredAllAppointments, allAppointmentsStartIndex, allAppointmentsPerPage]);
+
+  // Analytics counts calculation (Strict DB data)
+  //
+  // Analytics counts calculation (Daily Only across all views)
+  const stats = useMemo(() => {
+    const todays = mergedAppointments.filter(r => r.date === selectedDateStr);
+
+    const upcomingToday = todays.filter(r =>
+      ["confirmed", "approved", "pending", "waiting", "checked_in", "in_progress", "started"].includes(
+        (r.status || "").toLowerCase()
+      )
+    );
+    // Sort upcoming today chronologically by time to find the next appointment
+    const sortedUpcoming = [...upcomingToday].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    const nextTime = sortedUpcoming.length > 0 ? (sortedUpcoming[0].time || "—") : "—";
+
+    const completedToday = todays.filter(r =>
+      ["completed", "done"].includes((r.status || "").toLowerCase())
+    );
+
+    const canceledToday = todays.filter(r =>
+      ["canceled", "cancelled", "rejected"].includes((r.status || "").toLowerCase())
+    );
+
+    const dayRevenue = todays.reduce((sum, r) => {
+      const paid = Number(r.amountPaid ?? r.amount_paid ?? 0);
+      if (paid > 0) return sum + paid;
+      if (["completed", "done"].includes((r.status || "").toLowerCase())) {
+        const total = Number(r.total_price ?? r.totalPrice ?? r.final_price ?? r.price ?? 0);
+        return sum + total;
+      }
+      return sum;
+    }, 0);
+
+    return {
+      todayCount: todays.length,
+      nextTime: nextTime,
+      upcomingCount: upcomingToday.length,
+      dayRevenue: dayRevenue,
+      completedCount: completedToday.length,
+      canceledCount: canceledToday.length
+    };
+  }, [mergedAppointments, selectedDateStr]);
+
+  // RISK-043: every session still sitting in `started` past the threshold, newest first. Scoped to
+  // the whole loaded set rather than the selected day on purpose — the point of this list is to
+  // surface sessions from days nobody is looking at any more.
+  const staleSessions = useMemo(
+    () => mergedAppointments.filter(r => r.isStaleSession),
+    [mergedAppointments]
+  );
+
+  // Pending approvals count
+  const pendingApprovalsCount = useMemo(() => {
+    if (requests && requests.length > 0) return requests.length;
+    return mergedAppointments.filter(r => ["pending", "waiting", "pending_deposit"].includes((r.status || "").toLowerCase())).length;
+  }, [requests, mergedAppointments]);
+
+  // Mini Calendar grid generation
+  const calendarCells = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    const prevDays: { day: number; currentMonth: boolean; dateStr: string }[] = [];
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const d = daysInPrevMonth - i;
+      const prevDate = new Date(year, month - 1, d);
+      prevDays.push({ day: d, currentMonth: false, dateStr: formatDateISO(prevDate) });
+    }
+
+    const currentDays: { day: number; currentMonth: boolean; dateStr: string }[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cDate = new Date(year, month, d);
+      currentDays.push({ day: d, currentMonth: true, dateStr: formatDateISO(cDate) });
+    }
+
+    const totalCellsSoFar = prevDays.length + currentDays.length;
+    const totalGridCells = totalCellsSoFar > 35 ? 42 : 35;
+
+    const nextDays: { day: number; currentMonth: boolean; dateStr: string }[] = [];
+    for (let d = 1; d <= totalGridCells - totalCellsSoFar; d++) {
+      const nextDate = new Date(year, month + 1, d);
+      nextDays.push({ day: d, currentMonth: false, dateStr: formatDateISO(nextDate) });
+    }
+
+    return [...prevDays, ...currentDays, ...nextDays];
+  }, [currentMonth]);
+
+  // Real Database Appointment dots mapping per date
+  const appointmentsByDate = useMemo(() => {
+    const map: Record<string, { color: string; isFollowUp?: boolean }[]> = {};
+
+    mergedAppointments.forEach(app => {
+      if (!app.date) return;
+      if (!map[app.date]) map[app.date] = [];
+      const st = (app.status || "").toLowerCase();
+
+      let color = "#22C55E"; // green for confirmed/approved
+      if (st === "pending" || st === "waiting" || st === "pending_deposit") color = "#F97316"; // orange
+      else if (st === "checked_in") color = "#3B82F6"; // blue
+      else if (st === "in_progress" || st === "started") color = "#A855F7"; // purple
+      else if (st === "completed") color = "#0D9488"; // teal
+      else if (st === "postponed" || st === "rescheduled") color = "#EAB308"; // yellow
+      else if (st === "canceled" || st === "cancelled" || st === "rejected") color = "#EF4444"; // red
+      else if (st === "no_show") color = "#6B7280"; // gray
+
+      if (!map[app.date].some(d => d.color === color) && map[app.date].length < 3) {
+        map[app.date].push({ color });
+      }
+    });
+
+    allFollowUpReminders.forEach(fu => {
+      if (fu.followUpDate) {
+        const dStr = fu.followUpDate;
+        if (!map[dStr]) map[dStr] = [];
+        const fuColor = "#6366F1"; // Indigo/purple for follow-up reminders
+        if (!map[dStr].some(d => d.isFollowUp) && map[dStr].length < 3) {
+          map[dStr].push({ color: fuColor, isFollowUp: true });
+        }
+      }
+    });
+
+    return map;
+  }, [mergedAppointments, allFollowUpReminders]);
+
+  // Format header date string (e.g. "Wednesday, 6 August 2026")
+  const formattedHeaderDate = useMemo(() => {
+    return selectedDate.toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+  }, [selectedDate]);
+
+  // Helper status color details (Flow Order: Pending -> Confirmed -> Checked In -> In Progress -> Completed -> Postponed -> Canceled -> No Show)
+  const getStatusConfig = (status?: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "pending":
+      case "waiting":
+      case "pending_deposit":
+        return { label: tr.statusLabels.pending, bg: "bg-orange-50", text: "text-orange-700", dot: "bg-orange-500", border: "border-l-orange-500" };
+      case "checked_in":
+        return { label: tr.statusLabels.checkedIn, bg: "bg-blue-50", text: "text-blue-700", dot: "bg-blue-500", border: "border-l-blue-500" };
+      case "in_progress":
+      case "started":
+        return { label: tr.statusLabels.inProgress, bg: "bg-purple-50", text: "text-purple-700", dot: "bg-purple-500", border: "border-l-purple-500" };
+      case "completed":
+        return { label: tr.statusLabels.completed, bg: "bg-teal-50", text: "text-teal-700", dot: "bg-teal-500", border: "border-l-teal-500" };
+      case "postponed":
+      case "rescheduled":
+        return { label: tr.statusLabels.postponed, bg: "bg-yellow-50", text: "text-yellow-800", dot: "bg-yellow-500", border: "border-l-yellow-500" };
+      case "canceled":
+      case "cancelled":
+      case "rejected":
+        return { label: tr.statusLabels.canceled, bg: "bg-rose-50", text: "text-rose-700", dot: "bg-rose-500", border: "border-l-rose-500" };
+      case "no_show":
+        return { label: tr.statusLabels.noShow, bg: "bg-gray-100", text: "text-gray-700", dot: "bg-gray-500", border: "border-l-gray-500" };
+      case "confirmed":
+      case "approved":
+      default:
+        return { label: tr.statusLabels.confirmed, bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", border: "border-l-emerald-500" };
+    }
+  };
+
+  const getPaymentStyle = (payStatus?: string) => {
+    if (payStatus === "Paid") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (payStatus === "Deposit Paid") return "bg-amber-100 text-amber-800 border-amber-200";
+    return "bg-gray-100 text-gray-700 border-gray-200";
+  };
+
+  const paymentStatusLabel = (payStatus?: string): string => {
+    if (!payStatus) return "";
+    return tr.paymentStatusLabels[payStatus] ?? payStatus;
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Pending Approvals List State & Pagination
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingRowsPerPage, setPendingRowsPerPage] = useState(10);
+  const [rejectedIds, setRejectedIds] = useState<Set<string>>(new Set());
+  const [rejectedObjects, setRejectedObjects] = useState<Set<any>>(new Set());
+
+  // Compute pending list items
+  const pendingApprovalsList = useMemo(() => {
+    const sourceList = (requests && requests.length > 0) ? requests : mergedAppointments;
+    const rawPending = sourceList.filter(r => {
+      if (rejectedObjects.has(r)) return false;
+
+      const idStr = String(r.id || "");
+      if (idStr && rejectedIds.has(idStr)) return false;
+
+      return ["pending", "waiting", "pending_deposit"].includes((r.status || "pending").toLowerCase());
+    });
+
+    return rawPending.map((item: any, idx: number) => {
+      const code = item.bookingCode || item.code || item.id || `#BK-${idx + 1}`;
+      const pName = item.patientName || item.customer_name || item.name || `Patient #${idx + 1}`;
+      const pPhone = item.phone || item.customer_phone || item.mobile || "—";
+      const sName = item.serviceName || item.service_name || item.service || "Clinic Session";
+      const sVariant = item.serviceVariant || item.service_variant || "Session";
+      const dName = item.doctorName || item.doctor_name || item.doctor || "—";
+      const dSpec = item.doctorSpecialty || "Specialist";
+      const dFormatted = item.dateFormatted || item.date || selectedDateStr;
+      const tSlot = item.time || item.start_time || item.requestedTime || "09:00 AM";
+      const bName = item.branchName || item.branch_name || "New Cairo Branch";
+      const reqDate = item.requestedDate || item.created_at?.slice(0, 10) || dFormatted;
+      const reqTime = item.requestedTime || item.created_at?.slice(11, 16) || "08:45 AM";
+
+      return {
+        id: item.id || `pending-${idx}`,
+        code: code,
+        bookingType: item.bookingType || "New Booking",
+        patientName: pName,
+        patientAge: item.patientAge || item.age || "",
+        patientAvatar: item.patientAvatar || item.avatar_url,
+        phone: pPhone,
+        serviceName: sName,
+        serviceVariant: sVariant,
+        doctorName: dName,
+        doctorSpecialty: dSpec,
+        doctorAvatar: item.doctorAvatar || item.doctor_avatar,
+        dateFormatted: dFormatted,
+        time: tSlot,
+        branchName: bName,
+        status: "pending",
+        requestedDate: reqDate,
+        requestedTime: reqTime,
+        raw: item
+      };
+    });
+  }, [requests, mergedAppointments, selectedDateStr, rejectedIds, rejectedObjects]);
+
+  const startIndexPending = (pendingPage - 1) * pendingRowsPerPage;
+  const paginatedPendingList = useMemo(() => {
+    return pendingApprovalsList.slice(startIndexPending, startIndexPending + pendingRowsPerPage);
+  }, [pendingApprovalsList, startIndexPending, pendingRowsPerPage]);
+
+  // RISK-125: Approve only asks the parent to open the approve dialog. Nothing is hidden or marked approved
+  // here: the row leaves the pending list when the approval has really been saved (the parent refetches
+  // after a confirmed approve), so cancelling the dialog leaves the request where it was. A direct browser
+  // write used to run here as well; RLS blocks it, and it would have approved the booking before the
+  // dialog was confirmed.
+  const handleApproveItem = (item: any) => {
+    const rawObj = item.raw || item;
+    const targetId = String(rawObj?.id || item.id || "");
+    if (!targetId || !onApproveBooking) return;
+    onApproveBooking({ ...rawObj, id: targetId, status: "approved" });
+  };
+
+  // RISK-122: saving is the parent's job (a server call). The row is hidden only after it reports success,
+  // so a rejection that did not save never looks saved. A direct browser write used to run here; RLS blocks
+  // it, and it failed without any error.
+  const handleRejectItem = async (item: any) => {
+    try {
+      const rawObj = item.raw || item;
+      const targetId = String(rawObj?.id || item.id || "");
+      if (!targetId || !onRejectBooking) return;
+
+      const saved = await onRejectBooking({ ...rawObj, id: targetId, status: "rejected" });
+      if (saved === false) return;
+
+      setRejectedObjects(prev => new Set(prev).add(rawObj));
+      setRejectedIds(prev => new Set(prev).add(targetId));
+    } catch (e) {
+      console.error("Reject error:", e);
+    }
+  };
+
+  return (
+    <div dir={lang === "ar" ? "rtl" : "ltr"} className="w-full space-y-6 pb-12 text-[var(--cr-dark)] relative">
+      
+      {/* ── TOP HEADER BAR ── */}
+      <div className="relative z-10 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-[#111827] flex items-center gap-2 sm:text-2xl">
+            {tr.greeting} {userName} <span className="inline-block">👋</span>
+          </h1>
+          <p className="text-xs text-[#6B7280]">
+            {tr.subtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* ── 4 ANALYTIC SUMMARY CARDS (DAILY) ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        
+        {/* Card 1: Today's Appointments with (next appointment) */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+              {tr.cardTodayAppointments || "Today's Appointments"}
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-[#1E3A2B]">
+              <CalendarIcon size={18} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-black text-[#111827]">{stats.todayCount}</span>
+            <span className="text-xs font-medium text-[#6B7280]">
+              {tr.nextPrefix || "Next:"} {stats.nextTime}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Upcoming */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+              {tr.cardUpcoming || "Upcoming"}
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Clock size={18} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-black text-[#111827]">{stats.upcomingCount}</span>
+            <span className="text-xs font-semibold text-blue-600">{tr.todayLabel || "Today"}</span>
+          </div>
+        </div>
+
+        {/* Card 3: Complete with (revenue) */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+              {tr.cardCompleted || "Completed"}
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-black text-[#111827]">{stats.completedCount}</span>
+            <span className="text-xs font-bold text-emerald-700">
+              EGP {stats.dayRevenue.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Canceled */}
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+              {tr.cardCanceled || "Canceled"}
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
+              <XCircle size={18} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <span className="text-3xl font-black text-[#111827]">{stats.canceledCount}</span>
+            <span className="text-xs font-semibold text-rose-600">{tr.todayLabel || "Today"}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── CONTROLS BAR (DIRECTLY ABOVE CALENDAR & TABLE) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        {/* VIEW MODE TOGGLE */}
+        <div className="inline-flex items-center rounded-2xl bg-[var(--color-brand-sand)] border border-[var(--cr-primary)]/10 p-1 gap-1 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setViewMode("pending")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer ${
+              viewMode === "pending"
+                ? "bg-[var(--cr-accent)] text-[var(--cr-primary)] shadow-xs"
+                : "text-[var(--color-brand-secondary)] hover:bg-white/80 hover:text-[var(--cr-dark)]"
+            }`}
+          >
+            <Clock size={15} />
+            <span>{tr.pendingToggle}</span>
+            {pendingApprovalsCount > 0 && (
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold bg-[#EF4444] text-white">
+                {pendingApprovalsCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold cursor-pointer ${
+              viewMode === "calendar"
+                ? "bg-[var(--cr-accent)] text-[var(--cr-primary)] shadow-xs"
+                : "text-[var(--color-brand-secondary)] hover:bg-white/80 hover:text-[var(--cr-dark)]"
+            }`}
+          >
+            <CalendarIcon size={15} />
+            <span>{tr.calendarViewToggle}</span>
+          </button>
+        </div>
+
+        {/* RIGHT ACTIONS: NEW BOOKING + 3 DOTS MENU */}
+        <div className="flex items-center gap-2">
+          {(!hasPermission || hasPermission("bookings.create")) && (
+            <button
+              type="button"
+              onClick={onNewBooking}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A2B] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#162C20] active:scale-95 cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>{tr.newBookingBtn}</span>
+            </button>
+          )}
+
+          {(() => {
+            const canPrint = !hasPermission || hasPermission("bookings.action_print_schedule");
+            const canExport = !hasPermission || hasPermission("bookings.action_export_csv");
+            const canAddPrev = !hasPermission || hasPermission("bookings.action_add_previous");
+            if (!canPrint && !canExport && !canAddPrev) return null;
+
+            return (
+              <div className="relative" ref={moreMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMoreMenuOpen(prev => {
+                      const nextState = !prev;
+                      if (nextState) {
+                        window.dispatchEvent(new CustomEvent("close-admin-dropdowns", { detail: "bookingsMore" }));
+                      }
+                      return nextState;
+                    });
+                  }}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-[#374151] shadow-sm transition hover:bg-gray-50 active:scale-95 cursor-pointer"
+                  title={tr.moreOptionsTitle}
+                >
+                  <MoreVertical size={18} className="text-[#6B7280]" />
+                </button>
+
+                {isMoreMenuOpen && (
+                  <div className="absolute end-0 top-full z-30 mt-2 min-w-56 w-max overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+                    {canPrint && (
+                      <button
+                        onClick={() => { onPrint?.(); setIsMoreMenuOpen(false); }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#374151] hover:bg-gray-50 transition cursor-pointer whitespace-nowrap"
+                      >
+                        <Printer size={15} className="text-[#6B7280] shrink-0" />
+                        <span>{tr.printScheduleBtn}</span>
+                      </button>
+                    )}
+                    {canPrint && (canExport || canAddPrev) && <div className="mx-4 border-t border-gray-100" />}
+                    {canExport && (
+                      <button
+                        onClick={() => { onExportCSV?.(); setIsMoreMenuOpen(false); }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#374151] hover:bg-gray-50 transition cursor-pointer whitespace-nowrap"
+                      >
+                        <Download size={15} className="text-[#6B7280] shrink-0" />
+                        <span>{tr.exportCsvBtn}</span>
+                      </button>
+                    )}
+                    {canExport && canAddPrev && <div className="mx-4 border-t border-gray-100" />}
+                    {canAddPrev && (
+                      <button
+                        onClick={() => { onAddPreviousBooking?.(); setIsMoreMenuOpen(false); }}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#374151] hover:bg-[#F4F7F2] hover:text-[#2D3F2A] transition cursor-pointer whitespace-nowrap"
+                      >
+                        <History size={15} className="text-[#3D5A45] shrink-0" />
+                        <span>{tr.addPreviousBookingBtn || "Add Previous Booking"}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* ── NEEDS ATTENTION: sessions left open (RISK-043) ── */}
+      {staleSessions.length > 0 && (
+        <div className="rounded-3xl border border-red-200 bg-red-50/60 p-5 shadow-xs space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
+              <AlertCircle size={17} className="text-red-600" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-red-900">
+                {tr.needsAttentionPrefix} — {staleSessions.length} {staleSessions.length !== 1 ? tr.sessionsPlural : tr.sessionSingular} {tr.leftOpenSuffix}
+              </h2>
+              <p className="text-xs text-red-700/80 mt-0.5">
+                {tr.attentionBodyPrefix} {staleSessionThresholdHours || 2} {(staleSessionThresholdHours || 2) !== 1 ? tr.hoursPlural : tr.hourSingular}. {tr.attentionBodySuffix}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {staleSessions.map((row) => (
+              <button
+                key={`stale-${row.id}`}
+                onClick={() => onViewBookingDetails && onViewBookingDetails(row)}
+                className="flex w-full items-center justify-between gap-3 rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-start transition hover:border-red-300 hover:bg-red-50/50"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-xs font-bold text-[#111827]">{row.customer_name}</span>
+                  <span className="truncate text-[10px] font-medium text-[#6B7280]">
+                    {row.service_name} · {row.doctor_name} · {row.date}
+                  </span>
+                </div>
+                <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                  {row.staleElapsedLabel ? `${tr.openPrefix} ${row.staleElapsedLabel}` : tr.leftOpenBadge}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── FOLLOW-UP REMINDERS BANNER (FULL WIDTH & COMPACT) ── */}
+      {selectedDayFollowUps.length > 0 && (
+        <div className="rounded-3xl border border-indigo-200 bg-indigo-50/70 p-4 sm:p-5 shadow-xs space-y-3 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+                <CalendarPlus size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-bold text-indigo-950">
+                    {tr.followUpRemindersHeading || "Follow-Up Reminders (Not Reservations)"}
+                  </h2>
+                  <span className="rounded-full bg-indigo-100 border border-indigo-300 px-2.5 py-0.5 text-[10px] font-extrabold text-indigo-800">
+                    {selectedDayFollowUps.length} {selectedDayFollowUps.length === 1 ? (lang === "ar" ? "مريض" : "Patient") : (lang === "ar" ? "مرضى" : "Patients")}
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-700/90 mt-0.5">
+                  {lang === "ar" 
+                    ? `تذكيرات متابعة مستحقة (قبل ${followUpLeadDays || 2} ${followUpLeadDays === 1 ? "يوم" : "أيام"} من الموعد) — تواصل مع المرضى لتأكيد الحجز.` 
+                    : `Patients due for follow-up (${followUpLeadDays || 2} ${followUpLeadDays === 1 ? "day" : "days"} lead time) — contact to schedule.`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {selectedDayFollowUps.map((fu) => {
+              const rawPhone = fu.phone || "";
+              const cleanPhone = rawPhone.replace(/\D/g, "");
+              const intlPhone = cleanPhone.startsWith("0") ? `20${cleanPhone.slice(1)}` : cleanPhone;
+              const formattedDocName = cleanDoctorName(fu.doctorName);
+              const waMessage = lang === "ar"
+                ? `مرحباً ${fu.patientName}، عيادات ريفيرا تتواصل معك. أوصى ${formattedDocName} بموعد متابعة يوم ${fu.followUpDate}. هل تود تأكيد وحجز الموعد؟`
+                : `Hello ${fu.patientName}, this is ${CLIENT.name}. ${formattedDocName} recommended a follow-up visit on ${fu.followUpDate}. Would you like us to confirm and book your appointment?`;
+              const waUrl = `https://wa.me/${intlPhone}?text=${encodeURIComponent(waMessage)}`;
+
+              return (
+                <div
+                  key={fu.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-white px-4 py-2.5 shadow-2xs hover:border-indigo-300 transition"
+                >
+                  {/* Patient and Doctor info */}
+                  <div className="flex min-w-0 items-start sm:items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 mt-0.5 sm:mt-0">
+                      <User size={15} />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      {/* Top Line: Patient Name + Follow-Up Target Date Badge */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-xs sm:text-sm text-[#111827]">{fu.patientName}</span>
+                        <span className="rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                          {lang === "ar" ? `موعد المتابعة: ${fu.followUpDate}` : `Target: ${fu.followUpDate}`}
+                        </span>
+                      </div>
+                      {/* Underneath Line: Doctor Name · Follow-Up · Patient Phone Number · Clinical Notes */}
+                      <div className="text-[11px] text-[#4B5563] flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-indigo-950">{formattedDocName}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-indigo-700 font-semibold">{lang === "ar" ? "متابعة" : "Follow-Up"}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="font-mono text-gray-700 font-medium dir-ltr">{rawPhone || "—"}</span>
+                        {fu.notes && (
+                          <>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-[10px] text-gray-500 italic max-w-xs truncate" title={fu.notes}>
+                              "{fu.notes}"
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                    {rawPhone && rawPhone !== "—" && (
+                      <>
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 border border-emerald-300 px-2.5 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-600 hover:text-white transition shadow-2xs cursor-pointer"
+                          title={tr.whatsAppReminderBtn || "Send WhatsApp Reminder"}
+                        >
+                          <MessageSquare size={12} />
+                          <span className="hidden md:inline">{tr.whatsAppReminderBtn || "WhatsApp"}</span>
+                        </a>
+                        <a
+                          href={`tel:${rawPhone}`}
+                          className="inline-flex items-center gap-1 rounded-xl bg-gray-50 border border-gray-200 px-2.5 py-1.5 text-[11px] font-bold text-[#374151] hover:bg-gray-200 transition shadow-2xs"
+                          title={tr.callPatientBtn || "Call Patient"}
+                        >
+                          <Phone size={12} />
+                          <span className="hidden md:inline">{tr.callPatientBtn || "Call"}</span>
+                        </a>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleOpenManageFollowUp({
+                          ...fu,
+                          doctorName: formattedDocName || fu.doctorName
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-[11px] font-bold text-white hover:bg-indigo-700 active:scale-95 transition shadow-xs cursor-pointer"
+                      title={tr.convertToBookingBtn || "Convert to Full Booking"}
+                    >
+                      <Plus size={13} />
+                      <span>{tr.convertToBookingBtn || "Convert to Full Booking"}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── CONDITIONAL VIEW: PENDING APPROVALS or CALENDAR+SCHEDULE ── */}
+      {viewMode === "pending" ? (
+      <div id="pending-approvals-section" className="rounded-3xl border border-gray-100 bg-white p-4 sm:p-6 shadow-xs space-y-4">
+        {/* Section Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-bold text-[#111827]">{tr.pendingApprovalsHeading}</h2>
+            <p className="text-xs text-[#6B7280] mt-0.5">{pendingApprovalsList.length} {pendingApprovalsList.length !== 1 ? tr.bookingsPlural : tr.bookingSingular} {tr.awaitingReviewSuffix}</p>
+          </div>
+        </div>
+        {/* Table Container */}
+        <div className="w-full overflow-x-auto [scrollbar-width:thin]">
+          <table className="w-full text-start text-xs border-collapse min-w-[750px]">
+            <thead>
+              <tr className="border-b border-gray-100 text-[11px] font-bold text-[#6B7280]">
+                <th className="py-3 px-2 text-start w-[16%]">{tr.colPatient} ˅</th>
+                <th className="py-3 px-2 text-start w-[15%]">{tr.colService}</th>
+                <th className="py-3 px-2 text-start w-[14%]">{tr.colDoctor}</th>
+                <th className="py-3 px-2 text-start w-[14%]">{tr.colDateTime}</th>
+                <th className="py-3 px-2 text-start w-[15%]">{tr.colBranch}</th>
+                <th className="py-3 px-2 text-start w-[10%]">{tr.colStatus}</th>
+                <th className="py-3 px-2 text-start w-[11%]">{tr.colRequestedAt}</th>
+                <th className="py-3 px-2 text-start w-[5%]">{tr.colActions}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {paginatedPendingList.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-sm text-[#6B7280]">
+                    {tr.noPendingRequests}
+                  </td>
+                </tr>
+              ) : (
+                paginatedPendingList.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => onViewBookingDetails ? onViewBookingDetails(item.raw) : null}
+                    className="hover:bg-gray-50/70 transition cursor-pointer"
+                  >
+                    {/* 1. Patient */}
+                  <td className="py-3 px-2">
+                    <div className="min-w-0">
+                      <span className="font-extrabold text-[#111827] text-xs block truncate">{item.patientName}</span>
+                      <span className="text-[11px] font-mono text-gray-500 font-medium block truncate">{item.phone}</span>
+                      {item.patientAge && <span className="text-[11px] text-gray-400 font-medium block truncate">{item.patientAge} {tr.yearsSuffix}</span>}
+                    </div>
+                  </td>
+
+                  {/* 2. Service */}
+                  <td className="py-3 px-2">
+                    <span className="font-extrabold text-[#111827] text-xs block truncate">{item.serviceName}</span>
+                    <span className="text-[11px] text-gray-400 font-medium block truncate">{item.serviceVariant}</span>
+                  </td>
+
+                  {/* 3. Doctor */}
+                  <td className="py-3 px-2">
+                    <div className="min-w-0">
+                      <span className="font-extrabold text-[#111827] text-xs block truncate">{item.doctorName}</span>
+                      <span className="text-[11px] text-gray-400 font-medium block truncate">{item.doctorSpecialty}</span>
+                    </div>
+                  </td>
+
+                  {/* 4. Date & Time */}
+                  <td className="py-3 px-2">
+                    <span className="font-extrabold text-[#111827] text-xs block truncate">{item.dateFormatted}</span>
+                    <span className="text-[11px] font-bold text-emerald-800 block truncate">{item.time}</span>
+                  </td>
+
+                  {/* 5. Branch */}
+                  <td className="py-3 px-2">
+                    <span className="font-extrabold text-[#111827] text-xs block truncate">{item.branchName}</span>
+                  </td>
+
+                  {/* 6. Status */}
+                  <td className="py-3 px-2">
+                    <span className="inline-flex items-center rounded-xl bg-orange-50 px-2 py-0.5 text-[11px] font-bold text-orange-700 border border-orange-200 truncate">
+                      {tr.statusLabels.pending}
+                    </span>
+                  </td>
+
+                  {/* 7. Requested At */}
+                  <td className="py-3 px-2 text-[11px] font-medium text-gray-500">
+                    <span className="font-extrabold text-[#111827] text-xs block truncate">{item.requestedDate}</span>
+                    <span className="block truncate">{item.requestedTime}</span>
+                  </td>
+
+                  {/* 8. Actions */}
+                  <td className="py-3 px-2 text-start">
+                    <div className="flex items-center justify-start gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApproveItem(item);
+                        }}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition active:scale-95 shadow-2xs cursor-pointer"
+                        title={tr.approveTitle}
+                      >
+                        <Check size={14} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectItem(item);
+                        }}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-xl border border-rose-300 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition active:scale-95 shadow-2xs cursor-pointer"
+                        title={tr.rejectTitle}
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom Pagination Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 pt-4 gap-3 text-xs font-semibold text-gray-500">
+          <div>
+            {tr.showingPrefix} {pendingApprovalsList.length > 0 ? startIndexPending + 1 : 0} {tr.toWord} {Math.min(startIndexPending + pendingRowsPerPage, pendingApprovalsList.length)} {tr.ofWord} {pendingApprovalsList.length} {tr.pendingApprovalsSuffix}
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {/* Pagination controls */}
+            <div className="flex items-center gap-1">
+              <button
+                disabled={pendingPage === 1}
+                onClick={() => setPendingPage(p => Math.max(1, p - 1))}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="px-3 py-1 bg-[#1E3A2B] text-white font-bold rounded-lg text-xs">
+                {pendingPage}
+              </span>
+              <button
+                disabled={pendingPage >= Math.ceil(pendingApprovalsList.length / pendingRowsPerPage)}
+                onClick={() => setPendingPage(p => p + 1)}
+                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            {/* Rows per page */}
+            <div className="flex items-center gap-1.5">
+              <span>{tr.rowsPerPageLabel}</span>
+              <select
+                value={pendingRowsPerPage}
+                onChange={(e) => {
+                  setPendingRowsPerPage(Number(e.target.value));
+                  setPendingPage(1);
+                }}
+                className="rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-[#111827] outline-none cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      ) : viewMode === "all" ? (
+        /* ── ALL APPOINTMENTS DIRECTORY VIEW ── */
+        <div id="all-appointments-section" className="rounded-3xl border border-[var(--cr-primary)]/10 bg-white p-4 sm:p-6 shadow-sm space-y-5">
+          {/* Top Header & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-xl font-bold text-[#111827]">{tr.allAppointmentsHeading || "All Appointments Directory"}</h2>
+              <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">
+                {filteredAllAppointments.length} {filteredAllAppointments.length !== 1 ? tr.appointmentsSuffix || "appointments" : tr.bookingSingular || "booking"}
+              </p>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex items-center gap-2.5 flex-1 sm:max-w-md justify-end">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={allAppointmentsSearch}
+                  onChange={(e) => {
+                    setAllAppointmentsSearch(e.target.value);
+                    setAllAppointmentsPage(1);
+                  }}
+                  placeholder={tr.searchPlaceholder || "Search by name, phone, national ID..."}
+                  className="w-full rounded-2xl border border-gray-200 bg-[var(--color-brand-light)] pl-10 pr-8 py-2.5 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)] focus:bg-white transition"
+                />
+                {allAppointmentsSearch && (
+                  <button
+                    onClick={() => { setAllAppointmentsSearch(""); setAllAppointmentsPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Button */}
+              <button
+                type="button"
+                onClick={() => setShowAllAppointmentsFilters(prev => !prev)}
+                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition shadow-xs cursor-pointer ${
+                  showAllAppointmentsFilters || allAppointmentsStatusFilter !== "All" || allAppointmentsDoctorFilter !== "All"
+                    ? "bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]"
+                    : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+                title={tr.filterTitle || "Filter"}
+              >
+                <Filter size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Expandable Filter Bar */}
+          {showAllAppointmentsFilters && (
+            <div className="p-4 rounded-2xl bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs animate-fadeIn">
+              <div>
+                <label className="block font-bold text-[var(--cr-dark)] mb-1">{tr.colStatus || "Status"}</label>
+                <select
+                  value={allAppointmentsStatusFilter}
+                  onChange={(e) => { setAllAppointmentsStatusFilter(e.target.value); setAllAppointmentsPage(1); }}
+                  className="w-full rounded-xl border border-gray-200 bg-white p-2 text-xs font-semibold text-[var(--cr-dark)] outline-none"
+                >
+                  <option value="All">{tr.filterStatusAll || "All Statuses"}</option>
+                  <option value="pending">{tr.statusLabels?.pending || "Pending"}</option>
+                  <option value="confirmed">{tr.statusLabels?.confirmed || "Confirmed"}</option>
+                  <option value="checked_in">{tr.statusLabels?.checkedIn || "Checked In"}</option>
+                  <option value="in_progress">{tr.statusLabels?.inProgress || "In Progress"}</option>
+                  <option value="completed">{tr.statusLabels?.completed || "Completed"}</option>
+                  <option value="postponed">{tr.statusLabels?.postponed || "Postponed"}</option>
+                  <option value="canceled">{tr.statusLabels?.canceled || "Canceled"}</option>
+                  <option value="no_show">{tr.statusLabels?.noShow || "No Show"}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-[var(--cr-dark)] mb-1">{tr.colDoctor || "Doctor"}</label>
+                <select
+                  value={allAppointmentsDoctorFilter}
+                  onChange={(e) => { setAllAppointmentsDoctorFilter(e.target.value); setAllAppointmentsPage(1); }}
+                  className="w-full rounded-xl border border-gray-200 bg-white p-2 text-xs font-semibold text-[var(--cr-dark)] outline-none"
+                >
+                  <option value="All">{tr.filterDoctorAll || "All Doctors"}</option>
+                  {Array.from(new Set(mergedAppointments.map((r: any) => r.doctor_name).filter(Boolean))).map((doc: any) => (
+                    <option key={doc} value={doc}>{doc}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllAppointmentsSearch("");
+                    setAllAppointmentsStatusFilter("All");
+                    setAllAppointmentsDoctorFilter("All");
+                    setAllAppointmentsPage(1);
+                  }}
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2 text-xs font-bold text-[var(--color-brand-secondary)] hover:bg-gray-100 transition"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Table Container */}
+          <div className="w-full overflow-x-auto rounded-2xl border border-gray-100 [scrollbar-width:thin]">
+            <table className="w-full text-start text-xs border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b border-gray-100 bg-[#F9F9F7] text-[10px] uppercase font-bold tracking-tight text-[#9CA3AF]">
+                  <th className="py-3 px-2.5 text-start font-bold w-[14%]">{tr.colDateTime || "DATE & TIME"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[20%]">{tr.colPatient || "PATIENT"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[18%]">{tr.colService || "SERVICE"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[16%]">{tr.colDoctor || "DOCTOR"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[8%]">{tr.colRoom || "ROOM"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[12%]">{tr.colStatus || "STATUS"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[10%]">{tr.colPayment || "PAYMENT"}</th>
+                  <th className="py-3 px-2.5 text-start font-bold w-[12%]">{tr.colAmount || "AMOUNT"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 bg-white">
+                {paginatedAllAppointments.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-14 text-center text-sm text-[var(--color-brand-secondary)]">
+                      {tr.noAllAppointmentsFound || "No appointments match your search or filter criteria."}
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedAllAppointments.map((item) => {
+                    const stConfig = getStatusConfig(item.status);
+                    const payStyle = getPaymentStyle(item.paymentStatus);
+                    const displayTimeStr = formatDisplayTime(item.time);
+                    const rawAmt = Number(item.total_price || item.totalPrice || item.final_price || item.price || (Number(item.amountPaid || 0) + Number(item.amountLeft || 0))) || 0;
+
+                    return (
+                      <tr
+                        key={item.id}
+                        onClick={() => onViewBookingDetails ? onViewBookingDetails(item.raw || item) : null}
+                        className="hover:bg-[var(--color-brand-light)] transition cursor-pointer group"
+                      >
+                        {/* 1. Date & Time */}
+                        <td className="py-3 px-2.5">
+                          <span className="font-extrabold text-[#111827] text-xs block truncate">{item.date}</span>
+                          <span className="text-[11px] font-bold text-[var(--cr-primary)] block truncate">{displayTimeStr}</span>
+                        </td>
+
+                        {/* 2. Patient & Phone */}
+                        <td className="py-3 px-2.5">
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-[#111827] text-xs block truncate">{item.customer_name}</span>
+                            <span className="text-[11px] font-mono text-gray-500 font-medium block truncate">{item.customer_phone}</span>
+                          </div>
+                        </td>
+
+                        {/* 3. Service */}
+                        <td className="py-3 px-2.5">
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-[#111827] text-xs block truncate">{item.service_name}</span>
+                            <span className="text-[10px] text-gray-400 font-medium truncate block">{item.service_variant}</span>
+                          </div>
+                        </td>
+
+                        {/* 4. Doctor */}
+                        <td className="py-3 px-2.5">
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-[#111827] text-xs block truncate">{item.doctor_name}</span>
+                            <span className="text-[10px] text-gray-400 font-medium block truncate">{item.doctorSpecialty || "Specialist"}</span>
+                          </div>
+                        </td>
+
+                        {/* 5. Room */}
+                        <td className="py-3 px-2.5 text-[#6B7280] font-medium text-xs truncate">
+                          {item.room}
+                        </td>
+
+                        {/* 6. Status */}
+                        <td className="py-3 px-2.5">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${stConfig.bg} ${stConfig.text}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${stConfig.dot}`}></span>
+                            {stConfig.label}
+                          </span>
+                        </td>
+
+                        {/* 7. Payment */}
+                        <td className="py-3 px-2.5">
+                          <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${payStyle}`}>
+                            {paymentStatusLabel(item.paymentStatus)}
+                          </span>
+                        </td>
+
+                        {/* 8. Amount */}
+                        <td className="py-3 px-2.5 font-extrabold text-[#111827] text-xs">
+                          {rawAmt > 0 ? `EGP ${rawAmt.toLocaleString()}` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-[#6B7280] border-t border-gray-100 pt-3">
+            <div>
+              {tr.showingPrefix || "Showing"} <span className="font-semibold text-[#111827]">{totalAllAppointments > 0 ? allAppointmentsStartIndex + 1 : 0}</span> {tr.toWord || "to"}{" "}
+              <span className="font-semibold text-[#111827]">{Math.min(allAppointmentsStartIndex + allAppointmentsPerPage, totalAllAppointments)}</span>{" "}
+              {tr.ofWord || "of"} <span className="font-semibold text-[#111827]">{totalAllAppointments}</span> {tr.appointmentsSuffix || "appointments"}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span>{tr.rowsPerPageLabel || "Rows per page:"}</span>
+                <select
+                  value={allAppointmentsPerPage}
+                  onChange={(e) => { setAllAppointmentsPerPage(Number(e.target.value)); setAllAppointmentsPage(1); }}
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-1 font-semibold text-[#374151] outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={allAppointmentsPage <= 1}
+                  onClick={() => setAllAppointmentsPage(prev => Math.max(1, prev - 1))}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white font-semibold text-[#374151] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  ‹
+                </button>
+                {Array.from({ length: Math.min(5, totalAllPages) }, (_, i) => {
+                  let pageNum = i + 1;
+                  if (totalAllPages > 5 && allAppointmentsPage > 3) {
+                    pageNum = Math.min(totalAllPages - 4 + i, allAppointmentsPage - 2 + i);
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => setAllAppointmentsPage(pageNum)}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold transition ${
+                        allAppointmentsPage === pageNum
+                          ? "bg-[var(--cr-primary)] text-white shadow-xs"
+                          : "border border-gray-200 bg-white text-[#374151] hover:bg-gray-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={allAppointmentsPage >= totalAllPages}
+                  onClick={() => setAllAppointmentsPage(prev => Math.min(totalAllPages, prev + 1))}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white font-semibold text-[#374151] hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* ── CALENDAR VIEW: MINI CALENDAR + TODAY'S SCHEDULE ── */
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+
+          {/* ── LEFT: MINI CALENDAR ── */}
+          <div className="space-y-4 lg:col-span-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              {/* Month & View Switcher Header */}
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <button onClick={handlePrevMonth} className="rounded-lg p-1 text-[#6B7280] hover:bg-gray-100">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <h3 className="text-base font-bold text-[#111827]">
+                    {currentMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                  </h3>
+                  <button onClick={handleNextMonth} className="rounded-lg p-1 text-[#6B7280] hover:bg-gray-100">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setCurrentMonth(new Date());
+                  }}
+                  className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-semibold text-[#374151] hover:bg-gray-50 transition"
+                >
+                  {tr.todayBtn}
+                </button>
+              </div>
+
+              {/* Weekday Labels */}
+              <div className="grid grid-cols-7 text-center text-xs font-semibold text-[#6B7280] mb-2">
+                {[tr.weekdays.sun, tr.weekdays.mon, tr.weekdays.tue, tr.weekdays.wed, tr.weekdays.thu, tr.weekdays.fri, tr.weekdays.sat].map((d, wIdx) => <span key={wIdx}>{d}</span>)}
+              </div>
+
+              {/* Day Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarCells.map((cell, idx) => {
+                  const isSelected = cell.dateStr === selectedDateStr;
+                  const dots = appointmentsByDate[cell.dateStr] || [];
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        const [y, m, d] = cell.dateStr.split("-").map(Number);
+                        setSelectedDate(new Date(y, m - 1, d));
+                        setCurrentPage(1);
+                      }}
+                      className="group flex flex-col items-center justify-center py-1 transition cursor-pointer outline-none bg-transparent hover:bg-transparent focus:bg-transparent"
+                    >
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-xs transition-all ${
+                          !cell.currentMonth
+                            ? "text-gray-300 group-hover:bg-gray-100/60"
+                            : isSelected
+                            ? "bg-[#1E3A2B] text-white font-bold shadow-xs group-hover:bg-[#162C20]"
+                            : "text-[#374151] font-semibold group-hover:bg-gray-100 group-hover:text-[#111827]"
+                        }`}
+                      >
+                        {cell.day}
+                      </div>
+                      <div className="mt-1 flex h-2 min-h-[8px] items-center justify-center gap-0.5">
+                        {dots.map((dot, dIdx) => (
+                          dot.isFollowUp ? (
+                            <span
+                              key={dIdx}
+                              className="h-1.5 w-1.5 rounded-full bg-[#6366F1] animate-warning-light shrink-0"
+                              title={tr.followUpBadge || "Follow-Up Reminder"}
+                            />
+                          ) : (
+                            <span
+                              key={dIdx}
+                              className="h-1.5 w-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: dot.color }}
+                            />
+                          )
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 text-xs font-medium text-[#4B5563]">
+                  {[
+                    { color: "#F97316", label: tr.statusLabels.pending },
+                    { color: "#22C55E", label: tr.statusLabels.confirmed },
+                    { color: "#3B82F6", label: tr.statusLabels.checkedIn },
+                    { color: "#A855F7", label: tr.statusLabels.inProgress },
+                    { color: "#0D9488", label: tr.statusLabels.completed },
+                    { color: "#EAB308", label: tr.statusLabels.postponed },
+                    { color: "#EF4444", label: tr.statusLabels.canceled },
+                    { color: "#6B7280", label: tr.statusLabels.noShow },
+                  ].map(({ color, label }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
+                      <span>{label}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[#6366F1]" />
+                    <span>{tr.followUpBadge || "Follow-Up Reminder"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── RIGHT: TODAY'S SCHEDULE TABLE ── */}
+          <div className="space-y-4 lg:col-span-8">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              {/* Header */}
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-[#111827]">{tr.todaysScheduleHeading}</h2>
+                  <p className="text-xs font-medium text-[#6B7280]">{formattedHeaderDate}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setViewMode("all")}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-[#374151] hover:bg-gray-50 active:scale-95 cursor-pointer"
+                  >
+                    <span>{tr.allAppointmentsBtn}</span>
+                    <ArrowRight size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTodayFilters(prev => !prev)}
+                    title={tr.filterTitle || "Filter"}
+                    className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer shadow-2xs ${
+                      showTodayFilters || todayStatusFilter !== "All" || todayDoctorFilter !== "All" || todayServiceFilter !== "All" || todayPaymentFilter !== "All"
+                        ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                        : "border-gray-200 bg-white text-[#374151] hover:bg-gray-50 active:scale-95"
+                    }`}
+                  >
+                    <Filter size={15} />
+                    {(todayStatusFilter !== "All" || todayDoctorFilter !== "All" || todayServiceFilter !== "All" || todayPaymentFilter !== "All") && (
+                      <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--cr-primary)] text-[9px] font-bold text-white">!</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Expandable Filter Panel (Inventory style) */}
+              {showTodayFilters && (
+                <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4 shadow-2xs animate-fadeIn">
+                  {/* Status Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      {tr.colStatus || "Status"}
+                    </label>
+                    <select
+                      value={todayStatusFilter}
+                      onChange={(e) => {
+                        setTodayStatusFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                    >
+                      <option value="All">{tr.filterAllStatuses || "All Statuses"}</option>
+                      <option value="pending">{tr.statusPending || "Pending"}</option>
+                      <option value="confirmed">{tr.statusConfirmed || "Confirmed"}</option>
+                      <option value="in_progress">{tr.statusInProgress || "In Progress"}</option>
+                      <option value="completed">{tr.statusCompleted || "Completed"}</option>
+                      <option value="postponed">{tr.statusPostponed || "Postponed"}</option>
+                      <option value="canceled">{tr.statusCanceled || "Canceled"}</option>
+                    </select>
+                  </div>
+
+                  {/* Doctor Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      {tr.colDoctor || "Doctor / Provider"}
+                    </label>
+                    <select
+                      value={todayDoctorFilter}
+                      onChange={(e) => {
+                        setTodayDoctorFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                    >
+                      <option value="All">{tr.filterAllDoctors || "All Doctors"}</option>
+                      {uniqueDoctors.map(doc => (
+                        <option key={doc} value={doc}>{doc}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Service Filter */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      {tr.colService || "Service"}
+                    </label>
+                    <select
+                      value={todayServiceFilter}
+                      onChange={(e) => {
+                        setTodayServiceFilter(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                    >
+                      <option value="All">{tr.filterAllServices || "All Services"}</option>
+                      {uniqueServices.map(srv => (
+                        <option key={srv} value={srv}>{srv}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Payment Filter & Reset */}
+                  <div className="flex flex-col gap-1.5 justify-between">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      {tr.colPayment || "Payment"}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={todayPaymentFilter}
+                        onChange={(e) => {
+                          setTodayPaymentFilter(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                      >
+                        <option value="All">All Payments</option>
+                        <option value="paid">{tr.paymentPaid || "Paid"}</option>
+                        <option value="outstanding">{tr.paymentOutstanding || "Outstanding"}</option>
+                      </select>
+                      {(todayStatusFilter !== "All" || todayDoctorFilter !== "All" || todayServiceFilter !== "All" || todayPaymentFilter !== "All") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTodayStatusFilter("All");
+                            setTodayDoctorFilter("All");
+                            setTodayServiceFilter("All");
+                            setTodayPaymentFilter("All");
+                            setCurrentPage(1);
+                          }}
+                          className="shrink-0 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition cursor-pointer"
+                        >
+                          {tr.resetFilters || "Reset"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Table */}
+              <div className="w-full overflow-x-auto [scrollbar-width:thin]">
+                <table className="w-full text-start border-collapse text-xs min-w-[700px]">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-[10px] uppercase font-bold tracking-tight text-[#9CA3AF]">
+                      <th className="py-2.5 px-2 text-start font-bold w-[12%]">{tr.colTime}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[20%]">{tr.colPatient}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[18%]">{tr.colService}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[16%]">{tr.colDoctor}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[10%]">{tr.colRoom}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[12%]">{tr.colStatus}</th>
+                      <th className="py-2.5 px-2 text-start font-bold w-[12%]">{tr.colPayment}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {loadingDb ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-xs text-[var(--color-brand-secondary)]">
+                          <Loader2 size={20} className="animate-spin mx-auto mb-2 text-[#1E3A2B]" />
+                          {tr.loadingAppointments}
+                        </td>
+                      </tr>
+                    ) : paginatedAppointments.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-sm text-[#6B7280]">
+                          <div className="max-w-sm mx-auto space-y-3">
+                            <p className="font-semibold text-[#111827]">{tr.noAppointmentsPrefix} {formattedHeaderDate}.</p>
+                            <button
+                              type="button"
+                              onClick={onNewBooking}
+                              className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A2B] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#162C20]"
+                            >
+                              <Plus size={14} />
+                              <span>{tr.createNewBookingBtn}</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedAppointments.map((row) => {
+                        const stConfig = getStatusConfig(row.status);
+                        const payStyle = getPaymentStyle(row.paymentStatus);
+                        const displayTimeStr = formatDisplayTime(row.time);
+                        return (
+                          <tr
+                            key={row.id}
+                            onClick={() => onViewBookingDetails && onViewBookingDetails(row)}
+                            className="group cursor-pointer transition hover:bg-emerald-50/50"
+                          >
+                            <td className="py-2.5 px-2 font-bold text-[#111827] text-[11px] whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1 h-3.5 rounded-full shrink-0 ${stConfig.dot}`}></span>
+                                <span>{displayTimeStr}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2">
+                              <div className="min-w-0">
+                                <span className="font-semibold text-[#111827] block text-xs truncate">{row.customer_name}</span>
+                                <span className="text-[10px] font-mono text-gray-500 font-medium block truncate">{row.customer_phone}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2">
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-[#111827] text-xs truncate">{row.service_name}</span>
+                                <span className="text-[10px] font-medium text-[#9CA3AF] truncate">{row.service_variant}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2">
+                              <span className="font-medium text-[#374151] text-xs truncate block">{row.doctor_name}</span>
+                            </td>
+                            <td className="py-2.5 px-2 text-[#6B7280] font-medium text-xs truncate">{row.room}</td>
+                            <td className="py-2.5 px-2">
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${stConfig.bg} ${stConfig.text} whitespace-nowrap`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${stConfig.dot}`}></span>
+                                  {stConfig.label}
+                                </span>
+                                {row.isStaleSession && (
+                                  <span
+                                    title={
+                                      row.staleElapsedLabel
+                                        ? `${tr.staleTooltipPrefix} ${row.staleElapsedLabel} ${tr.staleTooltipSuffix}`
+                                        : tr.staleTooltipNoElapsed
+                                    }
+                                    className="inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-bold text-red-700 border border-red-200 whitespace-nowrap"
+                                  >
+                                    <AlertCircle size={9} />
+                                    {row.staleElapsedLabel ? `${tr.openPrefix} ${row.staleElapsedLabel}` : tr.leftOpenBadge}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-2">
+                              <span className={`inline-flex items-center rounded-md border px-1 py-0.5 text-[9px] font-bold ${payStyle} whitespace-nowrap`}>
+                                {paymentStatusLabel(row.paymentStatus)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-[#6B7280] border-t border-gray-100 pt-3">
+                <div>
+                  {tr.showingPrefix} <span className="font-semibold text-[#111827]">{totalAppointments > 0 ? startIndex + 1 : 0}</span> {tr.toWord}{" "}
+                  <span className="font-semibold text-[#111827]">{Math.min(startIndex + rowsPerPage, totalAppointments)}</span>{" "}
+                  {tr.ofWord} <span className="font-semibold text-[#111827]">{totalAppointments}</span> {tr.appointmentsSuffix}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span>{tr.rowsPerPageLabel}</span>
+                    <select
+                      value={rowsPerPage}
+                      onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                      className="rounded-lg border border-gray-200 bg-white px-2 py-1 font-semibold text-[#374151] outline-none"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={safePage <= 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-[#374151] hover:bg-gray-50 disabled:opacity-40"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span className="px-2 font-semibold text-[#111827]">{tr.pageLabel} {safePage} {tr.ofWord} {totalPages}</span>
+                    <button
+                      disabled={safePage >= totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-[#374151] hover:bg-gray-50 disabled:opacity-40"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* ── FOLLOW-UP ACTION MODAL (Book on target date / Change date / Cancel) ── */}
+      {managingFollowUp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div
+            dir={lang === "ar" ? "rtl" : "ltr"}
+            className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl border border-gray-100 space-y-5 animate-scaleUp overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-2xs">
+                  <CalendarClock size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#111827]">
+                    {tr.manageFollowUpModalTitle || "Manage Follow-Up Appointment"}
+                  </h3>
+                  <p className="text-xs text-[#6B7280]">
+                    {tr.manageFollowUpModalSubtitle || "Choose an action for this recommended follow-up visit."}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setManagingFollowUp(null)}
+                className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Patient & Doctor Context Card */}
+            <div className="rounded-2xl bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/10 p-4 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-sm text-[#111827]">
+                  {managingFollowUp.patientName}
+                </div>
+                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-bold text-indigo-800">
+                  {tr.targetDateLabel || "Recommended:"} {managingFollowUp.followUpDate}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                <span className="font-semibold text-indigo-950">{managingFollowUp.doctorName}</span>
+                <span>·</span>
+                <span>{managingFollowUp.serviceName}</span>
+                {managingFollowUp.phone && (
+                  <>
+                    <span>·</span>
+                    <span className="font-mono dir-ltr">{managingFollowUp.phone}</span>
+                  </>
+                )}
+              </div>
+              {managingFollowUp.notes && (
+                <div className="mt-1 text-[11px] italic text-gray-500 bg-white/80 rounded-xl p-2 border border-gray-200/50">
+                  "{managingFollowUp.notes}"
+                </div>
+              )}
+            </div>
+
+            {/* Action Options Grid */}
+            <div className="space-y-3">
+              {/* OPTION 1: Book on Recommended Date */}
+              <button
+                type="button"
+                onClick={() => handleBookOnTargetDate(managingFollowUp)}
+                className="w-full text-left rtl:text-right group flex items-center justify-between p-3.5 rounded-2xl border-2 border-indigo-600/20 bg-indigo-50/50 hover:bg-indigo-600 hover:text-white transition shadow-2xs cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white group-hover:bg-white group-hover:text-indigo-600 transition shadow-2xs">
+                    <Plus size={18} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#111827] group-hover:text-white transition">
+                      {tr.bookOnTargetDateBtn || "Book on Target Date"} ({managingFollowUp.followUpDate})
+                    </div>
+                    <div className="text-[11px] text-gray-500 group-hover:text-indigo-100 transition">
+                      {tr.bookOnTargetDateDesc || "Create appointment on the doctor's recommended date"}
+                    </div>
+                  </div>
+                </div>
+                <ArrowRight size={16} className={`text-indigo-600 group-hover:text-white transition ${lang === "ar" ? "rotate-180" : ""}`} />
+              </button>
+
+              {/* OPTION 2: Change to Another Day */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-3.5 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                      <CalendarIcon size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111827]">
+                        {tr.changeFollowUpDateTitle || "Reschedule Follow-Up Reminder to Another Date"}
+                      </div>
+                      <div className="text-[10px] text-gray-500">
+                        {tr.changeFollowUpDateDesc || "Moves the reminder to the new date (notification only, not a full booking yet)."}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="date"
+                    value={newFollowUpDateInput}
+                    onChange={(e) => setNewFollowUpDateInput(e.target.value)}
+                    className="shrink-0 rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-xs font-semibold text-[#111827] focus:border-indigo-500 focus:bg-white focus:outline-hidden transition"
+                  />
+                  <button
+                    type="button"
+                    disabled={updatingFollowUp || !newFollowUpDateInput || newFollowUpDateInput === managingFollowUp.followUpDate}
+                    onClick={() => handleSaveNewFollowUpDate(managingFollowUp, newFollowUpDateInput, false)}
+                    className="flex-1 whitespace-nowrap rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white hover:bg-amber-700 transition disabled:opacity-40 cursor-pointer text-center shadow-xs flex items-center justify-center gap-1.5"
+                    title={tr.saveNewDateOnlyBtn || "Reschedule Reminder"}
+                  >
+                    {updatingFollowUp ? <Loader2 size={13} className="animate-spin inline" /> : null}
+                    <span>{tr.saveNewDateOnlyBtn || "Reschedule Reminder"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updatingFollowUp || !newFollowUpDateInput || newFollowUpDateInput === managingFollowUp.followUpDate}
+                    onClick={() => handleSaveNewFollowUpDate(managingFollowUp, newFollowUpDateInput, true)}
+                    className="shrink-0 whitespace-nowrap rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-40 cursor-pointer text-center"
+                    title={tr.bookOnNewDateBtn || "Book on New Date"}
+                  >
+                    <span>{tr.bookOnNewDateBtn || "Book on New Date"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* OPTION 3: Cancel Follow-Up */}
+              <button
+                type="button"
+                disabled={cancellingFollowUp}
+                onClick={() => handleCancelFollowUp(managingFollowUp)}
+                className="w-full text-left rtl:text-right group flex items-center justify-between p-3.5 rounded-2xl border border-rose-200 bg-rose-50/40 hover:bg-rose-600 hover:text-white transition shadow-2xs cursor-pointer disabled:opacity-50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700 group-hover:bg-white group-hover:text-rose-600 transition shadow-2xs">
+                    {cancellingFollowUp ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-rose-900 group-hover:text-white transition">
+                      {tr.cancelFollowUpBtn || "Cancel This Follow-Up"}
+                    </div>
+                    <div className="text-[11px] text-rose-600/80 group-hover:text-rose-100 transition">
+                      {tr.cancelFollowUpDesc || "Patient declined or cancelled follow-up visit"}
+                    </div>
+                  </div>
+                </div>
+                <X size={16} className="text-rose-500 group-hover:text-white transition" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+});

@@ -1,0 +1,60 @@
+import type { Metadata } from "next";
+import { Marcellus, Sora } from "next/font/google";
+import "./globals.css";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AlertConfirmProvider } from "@/contexts/AlertConfirmContext";
+import { GlobalBookingModal } from "@/components/GlobalBookingModal";
+
+import { CLIENT } from "@/config/client";
+import { AD_LANDING_PATH_RE } from "@/lib/landingPaths";
+
+const marcellus = Marcellus({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-marcellus",
+  display: "swap",
+});
+
+const sora = Sora({
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-sora",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: `${CLIENT.name} - ${CLIENT.tagline}`,
+  description: CLIENT.metaDescription,
+  icons: {
+    icon: CLIENT.faviconPath,
+    apple: CLIENT.faviconPath,
+  },
+};
+
+const DIR_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )cr-language=([^;]*)/);var l=(/${AD_LANDING_PATH_RE.source}/.test(location.pathname)||(m&&decodeURIComponent(m[1]))==='ar')?'ar':'en';document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';}catch(e){}})();`;
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${marcellus.variable} ${sora.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: DIR_SCRIPT }} />
+      </head>
+      <body suppressHydrationWarning spellCheck={false}>
+        <LanguageProvider>
+          <AlertConfirmProvider>
+            {children}
+            <GlobalBookingModal />
+          </AlertConfirmProvider>
+        </LanguageProvider>
+      </body>
+    </html>
+  );
+}

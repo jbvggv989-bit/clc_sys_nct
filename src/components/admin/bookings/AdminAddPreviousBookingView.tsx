@@ -1,0 +1,2505 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Phone,
+  User,
+  Layers,
+  Package as PackageIcon,
+  ShoppingBag,
+  Receipt,
+  CreditCard,
+  Info,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Loader2,
+  ChevronDown,
+  Clock,
+  Sparkles,
+  Stethoscope,
+  Wallet,
+  FileText,
+  Coins,
+  X,
+  Check,
+  Search,
+  Zap,
+  Lock,
+  Plus,
+  Trash2
+} from "lucide-react";
+import { adminTranslations } from "@/components/admin/translations";
+import { getAuthHeaders } from "@/lib/authHeaders";
+import { shouldAutoFillInvoice } from "@/lib/bookingMoney";
+
+interface ServiceItem {
+  id: string | number;
+  en?: string;
+  ar?: string;
+  name?: string;
+  title?: string;
+  price?: number;
+}
+
+interface ProviderItem {
+  id: string | number;
+  name: string;
+  specialty?: string;
+}
+
+interface CustomerItem {
+  id?: string | number;
+  name?: string;
+  mobile?: string;
+  phone?: string;
+  outstanding?: number;
+  wallet_balance?: number;
+}
+
+interface PackageServiceItem {
+  id?: string;
+  serviceId: number;
+  serviceName?: string;
+  serviceNameAr?: string;
+  qty: number;
+}
+
+interface PackageItem {
+  id: string | number;
+  name: string;
+  nameAr?: string | null;
+  price?: number;
+  packageType?: 'services' | 'pulses';
+  package_type?: 'services' | 'pulses';
+  totalPulses?: number;
+  total_pulses?: number;
+  items?: PackageServiceItem[];
+}
+
+interface ProductItem {
+  id: string | number;
+  name: string;
+  arabic_name?: string;
+  selling_price?: number;
+  price?: number;
+}
+
+export interface AttachedPackageItem {
+  id: string; // unique key in client state
+  source: "existing" | "catalog";
+  packageId: string;
+  customerPackageId?: string;
+  name: string;
+  nameAr?: string;
+  price: number; // catalog price for new purchase, 0 for existing
+  packageType: "pulses" | "services";
+  totalPulses: number;
+  pulsesUsed: number | string;
+  pulsesRemaining: number;
+  initialBookingPulsesUsed: number;
+  packageLiveRemaining: number;
+  servicesUsage: Record<string | number, { qtyTotal: number; qtyUsed: number; qtyRemaining: number; serviceName?: string }>;
+  items?: PackageServiceItem[];
+}
+
+interface AdminAddPreviousBookingViewProps {
+  onClose: () => void;
+  onBookingCreated?: () => void;
+  onBookingUpdated?: () => void;
+  editingBooking?: any;
+  initialBooking?: any;
+  initialCustomer?: CustomerItem | any;
+  initialPatientPhone?: string;
+  initialPatientName?: string;
+  services?: any[];
+  providers?: any[];
+  customers?: any[];
+  packages?: any[];
+  products?: any[];
+  branches?: any[];
+  activeBranchId?: string;
+  lang?: "en" | "ar";
+  t?: any;
+}
+
+interface CountryOption {
+  code: string;
+  flag: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+const COUNTRY_OPTIONS: CountryOption[] = [
+  { code: "+20", flag: "🇪🇬", nameEn: "Egypt", nameAr: "مصر" },
+  { code: "+966", flag: "🇸🇦", nameEn: "Saudi Arabia", nameAr: "المملكة العربية السعودية" },
+  { code: "+971", flag: "🇦🇪", nameEn: "UAE", nameAr: "الإمارات العربية المتحدة" },
+  { code: "+965", flag: "🇰🇼", nameEn: "Kuwait", nameAr: "الكويت" },
+  { code: "+974", flag: "🇶🇦", nameEn: "Qatar", nameAr: "قطر" },
+  { code: "+968", flag: "🇴🇲", nameEn: "Oman", nameAr: "عُمان" },
+  { code: "+973", flag: "🇧🇭", nameEn: "Bahrain", nameAr: "البحرين" },
+  { code: "+962", flag: "🇯🇴", nameEn: "Jordan", nameAr: "الأردن" },
+  { code: "+964", flag: "🇮🇶", nameEn: "Iraq", nameAr: "العراق" },
+  { code: "+961", flag: "🇱🇧", nameEn: "Lebanon", nameAr: "لبنان" },
+  { code: "+218", flag: "🇱🇾", nameEn: "Libya", nameAr: "ليبيا" },
+  { code: "+249", flag: "🇸🇩", nameEn: "Sudan", nameAr: "السودان" },
+  { code: "+963", flag: "🇸🇾", nameEn: "Syria", nameAr: "سوريا" },
+  { code: "+967", flag: "🇾🇪", nameEn: "Yemen", nameAr: "اليمن" },
+  { code: "+970", flag: "🇵🇸", nameEn: "Palestine", nameAr: "فلسطين" },
+  { code: "+216", flag: "🇹🇳", nameEn: "Tunisia", nameAr: "تونس" },
+  { code: "+212", flag: "🇲🇦", nameEn: "Morocco", nameAr: "المغرب" },
+  { code: "+213", flag: "🇩🇿", nameEn: "Algeria", nameAr: "الجزائر" },
+  { code: "+1", flag: "🇺🇸", nameEn: "USA / Canada", nameAr: "أمريكا / كندا" },
+  { code: "+44", flag: "🇬🇧", nameEn: "United Kingdom", nameAr: "المملكة المتحدة" },
+  { code: "+49", flag: "🇩🇪", nameEn: "Germany", nameAr: "ألمانيا" },
+  { code: "+33", flag: "🇫🇷", nameEn: "France", nameAr: "فرنسا" },
+  { code: "+39", flag: "🇮🇹", nameEn: "Italy", nameAr: "إيطاليا" },
+  { code: "+90", flag: "🇹🇷", nameEn: "Turkey", nameAr: "تركيا" },
+];
+
+function cleanPhone(raw: string): string {
+  let p = raw.trim();
+  if (p.startsWith("+20")) {
+    p = "0" + p.slice(3);
+  } else if (p.startsWith("0020")) {
+    p = "0" + p.slice(4);
+  } else if (p.startsWith("20") && p.length === 12) {
+    p = "0" + p.slice(2);
+  }
+  return p;
+}
+
+function parsePhoneWithCountry(raw: string): { code: string; number: string } {
+  if (!raw) return { code: "+20", number: "" };
+  const trimmed = raw.trim();
+  for (const c of COUNTRY_OPTIONS) {
+    if (trimmed.startsWith(c.code)) {
+      return { code: c.code, number: trimmed.slice(c.code.length).replace(/^0+/, "") };
+    }
+    const noPlus = c.code.replace("+", "");
+    if (trimmed.startsWith(`00${noPlus}`)) {
+      return { code: c.code, number: trimmed.slice(2 + noPlus.length).replace(/^0+/, "") };
+    }
+  }
+  return { code: "+20", number: cleanPhone(trimmed) };
+}
+
+function formatFullPhone(number: string, countryCode: string = "+20"): string {
+  const trimmed = number.trim();
+  if (!trimmed) return "";
+  if (countryCode === "+20") {
+    let p = cleanPhone(trimmed);
+    if (!p.startsWith("0") && p.length === 10) p = "0" + p;
+    return p;
+  }
+  const cleanDigits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
+  return `${countryCode}${cleanDigits}`;
+}
+
+function isValidPhone(raw: string, countryCode: string = "+20"): boolean {
+  if (!raw) return false;
+  const digits = raw.replace(/\D/g, "");
+  if (countryCode === "+20") {
+    let p = cleanPhone(raw);
+    if (!p.startsWith("0") && p.length === 10) p = "0" + p;
+    // Egyptian mobile format: 010, 011, 012, 015 followed by 8 digits
+    if (/^01[0125]\d{8}$/.test(p)) return true;
+    if (/^(\+?20)?01[0125]\d{8}$/.test(raw.trim())) return true;
+    return digits.length >= 10 && digits.length <= 12;
+  }
+  // Generic international format (6-15 digits)
+  return digits.length >= 6 && digits.length <= 15;
+}
+
+export const AdminAddPreviousBookingView: React.FC<AdminAddPreviousBookingViewProps> = ({
+  onClose,
+  onBookingCreated,
+  onBookingUpdated,
+  editingBooking,
+  initialBooking,
+  initialCustomer,
+  initialPatientPhone,
+  initialPatientName,
+  services = [],
+  providers = [],
+  customers = [],
+  packages = [],
+  products = [],
+  branches = [],
+  activeBranchId,
+  lang = "en",
+  t,
+}) => {
+  const tr = t || adminTranslations[lang].bookings.adminAddPreviousBooking;
+
+  const targetBooking = editingBooking || initialBooking;
+  const isEditMode = Boolean(targetBooking && targetBooking.id);
+
+  const initPhone = initialPatientPhone || initialCustomer?.mobile || initialCustomer?.phone || "";
+  const initName = initialPatientName || initialCustomer?.name || "";
+  const parsedInit = parsePhoneWithCountry(initPhone);
+
+  // Row 1 State: Patient Phone *, Patient Name *, Doctor (Optional)
+  const [countryCode, setCountryCode] = useState(parsedInit.code);
+  const [patientPhone, setPatientPhone] = useState(parsedInit.number);
+  const [patientName, setPatientName] = useState(initName);
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+
+  const selectedCountry = useMemo(() => {
+    return COUNTRY_OPTIONS.find((c) => c.code === countryCode) || COUNTRY_OPTIONS[0];
+  }, [countryCode]);
+
+  useEffect(() => {
+    if (!targetBooking) {
+      const nextPhone = initialPatientPhone || initialCustomer?.mobile || initialCustomer?.phone;
+      const nextName = initialPatientName || initialCustomer?.name;
+      if (nextPhone) {
+        const parsed = parsePhoneWithCountry(nextPhone);
+        setCountryCode(parsed.code);
+        setPatientPhone(parsed.number);
+      }
+      if (nextName) setPatientName(nextName);
+    }
+  }, [initialCustomer, initialPatientPhone, initialPatientName, targetBooking]);
+
+  // Row 2 State: Date *, Services (Optional), Package (Optional), Products (Optional)
+  const [bookingDate, setBookingDate] = useState("");
+  const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const serviceDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [selectedProducts, setSelectedProducts] = useState<ProductItem[]>([]);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const productDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Attached Packages State (supports multiple packages in the same session)
+  const [attachedPackages, setAttachedPackages] = useState<AttachedPackageItem[]>([]);
+
+  // Row 3 State: Invoice Value, Actual Spent, Payment Method
+  const [invoiceValue, setInvoiceValue] = useState<string>("");
+  const [actualSpent, setActualSpent] = useState<string>("");
+  const [selectedPaymentType, setSelectedPaymentType] = useState("");
+  const [hasManuallyEditedSpent, setHasManuallyEditedSpent] = useState(false);
+
+  // Row 4 State: Notes (Optional)
+  const [notes, setNotes] = useState("");
+
+  // Packages & Products Catalog State (auto-fetch if not passed as props)
+  const [pkgList, setPkgList] = useState<PackageItem[]>(packages);
+  const [prodList, setProdList] = useState<ProductItem[]>(products);
+
+  // Patient's Existing Packages State
+  const [patientExistingPackages, setPatientExistingPackages] = useState<any[]>([]);
+  const [loadingExistingPackages, setLoadingExistingPackages] = useState(false);
+
+  const initializedTargetBookingIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (packages && packages.length > 0) {
+      setPkgList(packages);
+    } else {
+      (async () => {
+        try {
+          const headers = await getAuthHeaders();
+          const res = await fetch("/api/packages", { headers });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) setPkgList(data);
+            else if (data && Array.isArray(data.packages)) setPkgList(data.packages);
+          }
+        } catch (err) {
+          console.error("Error fetching packages in previous booking:", err);
+        }
+      })();
+    }
+  }, [packages]);
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      setProdList(products);
+    } else {
+      (async () => {
+        try {
+          const headers = await getAuthHeaders();
+          const res = await fetch("/api/inventory/products", { headers });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.products)) setProdList(data.products);
+            else if (Array.isArray(data)) setProdList(data);
+          }
+        } catch (err) {
+          console.error("Error fetching inventory products in previous booking:", err);
+        }
+      })();
+    }
+  }, [products]);
+
+  // UI & Feedback State
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{
+    phone?: string;
+    name?: string;
+    date?: string;
+    general?: string;
+  }>({});
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Live match patient against customers array
+  const matchedCustomer = useMemo(() => {
+    if (patientPhone && patientPhone.trim().length >= 6) {
+      const cleanInput = cleanPhone(patientPhone);
+      const digitsInput = patientPhone.replace(/\D/g, "");
+      const fullPhone = formatFullPhone(patientPhone, countryCode);
+      const fullDigits = fullPhone.replace(/\D/g, "");
+
+      const found = customers.find(c => {
+        const rawCustMobile = c.mobile || c.phone || "";
+        if (!rawCustMobile) return false;
+        const cClean = cleanPhone(rawCustMobile);
+        const cDigits = rawCustMobile.replace(/\D/g, "");
+
+        return (
+          (cleanInput && cClean && cClean === cleanInput) ||
+          (fullDigits && cDigits && (cDigits === fullDigits || cDigits.endsWith(digitsInput) || digitsInput.endsWith(cDigits))) ||
+          (rawCustMobile.trim() === fullPhone || rawCustMobile.trim() === patientPhone.trim())
+        );
+      });
+      if (found) return found;
+    }
+    if (initialCustomer && initialCustomer.name && (initialCustomer.mobile || initialCustomer.phone)) {
+      return initialCustomer;
+    }
+    return null;
+  }, [patientPhone, countryCode, customers, initialCustomer]);
+
+  // Reactive fetch for patient's existing packages
+  useEffect(() => {
+    const fullP = formatFullPhone(patientPhone, countryCode);
+    const cleanP = cleanPhone(fullP);
+    const targetCustId = matchedCustomer?.id;
+    if ((!cleanP || cleanP.length < 6) && !targetCustId) {
+      setPatientExistingPackages([]);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingExistingPackages(true);
+
+    (async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const param = targetCustId
+          ? `customerId=${encodeURIComponent(String(targetCustId))}`
+          : `mobile=${encodeURIComponent(fullP || cleanP)}`;
+        const res = await fetch(`/api/customers/packages?${param}`, { headers });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (Array.isArray(data.packages)) {
+            setPatientExistingPackages(data.packages);
+          } else {
+            setPatientExistingPackages([]);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching patient existing packages:", err);
+      } finally {
+        if (isMounted) setLoadingExistingPackages(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [patientPhone, countryCode, matchedCustomer?.id]);
+
+  // Handle phone change & auto-populate name if patient matched
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPatientPhone(val);
+    if (errors.phone) {
+      setErrors(prev => ({ ...prev, phone: undefined }));
+    }
+
+    if (val.trim().length >= 6) {
+      const cleanVal = cleanPhone(val);
+      const digitsVal = val.replace(/\D/g, "");
+      const fullVal = formatFullPhone(val, countryCode);
+      const fullDigits = fullVal.replace(/\D/g, "");
+
+      const match = customers.find(c => {
+        const rawCustMobile = c.mobile || c.phone || "";
+        if (!rawCustMobile) return false;
+        const cClean = cleanPhone(rawCustMobile);
+        const cDigits = rawCustMobile.replace(/\D/g, "");
+        return (
+          (cleanVal && cClean && cClean === cleanVal) ||
+          (fullDigits && cDigits && (cDigits === fullDigits || cDigits.endsWith(digitsVal) || digitsVal.endsWith(cDigits))) ||
+          (rawCustMobile.trim() === fullVal || rawCustMobile.trim() === val.trim())
+        );
+      });
+      if (match && match.name && !patientName) {
+        setPatientName(match.name);
+      }
+    }
+  };
+
+  // Helper to extract service name cleanly
+  const getServiceName = (s: ServiceItem) => {
+    if (lang === "ar" && s.ar) return s.ar;
+    return s.en || s.name || s.title || `Service #${s.id}`;
+  };
+
+  // Filter services dynamically by typed query
+  const filteredServices = useMemo(() => {
+    const q = serviceSearchQuery.trim().toLowerCase();
+    if (!q) return services;
+    return services.filter((s) => {
+      const nameEn = (s.en || s.name || s.title || "").toLowerCase();
+      const nameAr = (s.ar || "").toLowerCase();
+      return nameEn.includes(q) || nameAr.includes(q);
+    });
+  }, [services, serviceSearchQuery]);
+
+  // Click outside to close service & product dropdowns
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(e.target as Node)) {
+        setIsServiceDropdownOpen(false);
+      }
+      if (productDropdownRef.current && !productDropdownRef.current.contains(e.target as Node)) {
+        setIsProductDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter products dynamically by typed query
+  const filteredProducts = useMemo(() => {
+    const q = productSearchQuery.trim().toLowerCase();
+    if (!q) return prodList;
+    return prodList.filter((pr) => {
+      const nameEn = (pr.name || "").toLowerCase();
+      const nameAr = (pr.arabic_name || "").toLowerCase();
+      return nameEn.includes(q) || nameAr.includes(q);
+    });
+  }, [prodList, productSearchQuery]);
+
+  // Helper to extract package name cleanly
+  const getPackageName = (p: PackageItem | any) => {
+    if (lang === "ar" && (p.nameAr || p.packageNameAr)) return p.nameAr || p.packageNameAr;
+    return p.name || p.packageName || `Package #${p.id || p.packageId}`;
+  };
+
+  // Helper to extract product name cleanly
+  const getProductName = (pr: ProductItem) => {
+    if (lang === "ar" && pr.arabic_name) return pr.arabic_name;
+    return pr.name || `Product #${pr.id}`;
+  };
+
+  // Recalculate invoice value when Services, Packages, or Products change
+  const recalculateInvoice = (
+    nextServices: ServiceItem[],
+    currentPkgs: AttachedPackageItem[],
+    nextProducts: ProductItem[]
+  ) => {
+    // DEC-122: editing an old booking must not replace its recorded Invoice Value / Actual Spent with catalog prices
+    if (!shouldAutoFillInvoice(isEditMode, invoiceValue)) return;
+    const srvPrice = nextServices.reduce((sum, s) => sum + Number(s.price || 0), 0);
+    const pkgsPrice = currentPkgs.reduce(
+      (sum, p) => sum + (p.source === "catalog" ? Number(p.price || 0) : 0),
+      0
+    );
+    const prodPrice = nextProducts.reduce(
+      (sum, pr) => sum + Number(pr.selling_price ?? pr.price ?? 0),
+      0
+    );
+
+    const total = srvPrice + pkgsPrice + prodPrice;
+    const totalStr = total > 0 ? String(total) : "";
+
+    setInvoiceValue(totalStr);
+    if (!hasManuallyEditedSpent) {
+      setActualSpent(totalStr);
+    }
+  };
+
+  // Handle adding a service
+  const handleAddService = (s: ServiceItem) => {
+    if (selectedServices.some((existing) => String(existing.id) === String(s.id))) return;
+    const nextList = [...selectedServices, s];
+    setSelectedServices(nextList);
+    setServiceSearchQuery("");
+    setIsServiceDropdownOpen(false);
+    recalculateInvoice(nextList, attachedPackages, selectedProducts);
+  };
+
+  // Handle removing a service
+  const handleRemoveService = (serviceId: string | number) => {
+    const nextList = selectedServices.filter((s) => String(s.id) !== String(serviceId));
+    setSelectedServices(nextList);
+    recalculateInvoice(nextList, attachedPackages, selectedProducts);
+  };
+
+  // Handle adding a product
+  const handleAddProduct = (pr: ProductItem) => {
+    if (selectedProducts.some((existing) => String(existing.id) === String(pr.id))) return;
+    const nextList = [...selectedProducts, pr];
+    setSelectedProducts(nextList);
+    setProductSearchQuery("");
+    setIsProductDropdownOpen(false);
+    recalculateInvoice(selectedServices, attachedPackages, nextList);
+  };
+
+  // Handle removing a product
+  const handleRemoveProduct = (productId: string | number) => {
+    const nextList = selectedProducts.filter((pr) => String(pr.id) !== String(productId));
+    setSelectedProducts(nextList);
+    recalculateInvoice(selectedServices, attachedPackages, nextList);
+  };
+
+  // Handle adding a package (supports both "existing:ID" and "catalog:ID")
+  const handleAddPackage = (val: string) => {
+    if (!val) return;
+
+    if (val.startsWith("existing:")) {
+      const cpId = val.replace("existing:", "");
+      const cp = patientExistingPackages.find((p) => String(p.id) === String(cpId));
+      if (!cp) return;
+
+      // Prevent attaching the same customer package twice
+      if (attachedPackages.some((p) => p.customerPackageId && String(p.customerPackageId) === String(cpId))) {
+        return;
+      }
+
+      const isPulse =
+        cp.packageType === "pulses" ||
+        cp.package_type === "pulses" ||
+        Number(cp.totalPulses || cp.includedPulses || 0) > 0;
+
+      const total = isPulse
+        ? Number(cp.totalPulses ?? cp.includedPulses ?? 0)
+        : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyTotal || it.qty || 0), 0);
+      
+      const usedBefore = isPulse
+        ? Number(cp.usedPulses ?? 0)
+        : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyUsed || 0), 0);
+
+      const liveRem = isPulse
+        ? Number(cp.pulsesRemaining ?? (total - usedBefore))
+        : Math.max(0, total - usedBefore);
+
+      const itemsUsage: Record<string | number, { qtyTotal: number; qtyUsed: number; qtyRemaining: number; serviceName?: string }> = {};
+      if (!isPulse && Array.isArray(cp.items)) {
+        cp.items.forEach((item: any) => {
+          const key = item.serviceId || item.id || 0;
+          const svcName = lang === "ar" && item.serviceNameAr ? item.serviceNameAr : (item.serviceName || `Service #${item.serviceId}`);
+          itemsUsage[key] = {
+            qtyTotal: Number(item.qtyTotal ?? item.qty_total ?? item.qty ?? 0),
+            qtyUsed: 0,
+            qtyRemaining: Number(item.qtyRemaining ?? item.qty_remaining ?? Math.max(0, Number(item.qtyTotal || 0) - Number(item.qtyUsed || 0))),
+            serviceName: svcName,
+          };
+        });
+      }
+
+      const newPkg: AttachedPackageItem = {
+        id: `existing-${cp.id}`,
+        source: "existing",
+        packageId: String(cp.packageId || cp.id),
+        customerPackageId: String(cp.id),
+        name: cp.packageName || cp.name || `Package #${cp.id}`,
+        nameAr: cp.packageNameAr || cp.nameAr,
+        price: 0, // Existing package already paid in earlier transaction
+        packageType: isPulse ? "pulses" : "services",
+        totalPulses: total,
+        pulsesUsed: 0,
+        pulsesRemaining: liveRem,
+        initialBookingPulsesUsed: 0,
+        packageLiveRemaining: liveRem,
+        servicesUsage: itemsUsage,
+        items: cp.items || []
+      };
+
+      const nextList = [...attachedPackages, newPkg];
+      setAttachedPackages(nextList);
+      recalculateInvoice(selectedServices, nextList, selectedProducts);
+    } else {
+      const pId = val.replace("catalog:", "");
+      const pkg = pkgList.find((p) => String(p.id) === String(pId));
+      if (!pkg) return;
+
+      const isPulse =
+        pkg.packageType === "pulses" ||
+        pkg.package_type === "pulses" ||
+        (pkg.totalPulses != null && pkg.totalPulses > 0) ||
+        Number((pkg as any).total_pulses) > 0;
+
+      const total = isPulse ? Number(pkg.totalPulses ?? (pkg as any).total_pulses ?? 0) : 0;
+      const pkgPrice = Number(pkg.price || 0);
+
+      const itemsUsage: Record<string | number, { qtyTotal: number; qtyUsed: number; qtyRemaining: number; serviceName?: string }> = {};
+      if (!isPulse && Array.isArray(pkg.items)) {
+        pkg.items.forEach((item: any) => {
+          const key = item.serviceId || item.id || 0;
+          const svcName = lang === "ar" && item.serviceNameAr ? item.serviceNameAr : (item.serviceName || `Service #${item.serviceId}`);
+          itemsUsage[key] = {
+            qtyTotal: item.qty,
+            qtyUsed: 0,
+            qtyRemaining: item.qty,
+            serviceName: svcName,
+          };
+        });
+      }
+
+      const newPkg: AttachedPackageItem = {
+        id: `catalog-${pkg.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        source: "catalog",
+        packageId: String(pkg.id),
+        name: pkg.name,
+        nameAr: pkg.nameAr || undefined,
+        price: pkgPrice,
+        packageType: isPulse ? "pulses" : "services",
+        totalPulses: total,
+        pulsesUsed: 0,
+        pulsesRemaining: total,
+        initialBookingPulsesUsed: 0,
+        packageLiveRemaining: total,
+        servicesUsage: itemsUsage,
+        items: pkg.items || []
+      };
+
+      const nextList = [...attachedPackages, newPkg];
+      setAttachedPackages(nextList);
+      recalculateInvoice(selectedServices, nextList, selectedProducts);
+    }
+  };
+
+  // Remove an attached package
+  const handleRemovePackage = (pkgEntryId: string) => {
+    const nextList = attachedPackages.filter((p) => p.id !== pkgEntryId);
+    setAttachedPackages(nextList);
+    recalculateInvoice(selectedServices, nextList, selectedProducts);
+  };
+
+  // Pulses input handlers per package (Pulses Used drives Pulses Left automatically)
+  const handlePackagePulsesUsedChange = (pkgEntryId: string, raw: string) => {
+    setAttachedPackages((prev) =>
+      prev.map((pkg) => {
+        if (pkg.id !== pkgEntryId) return pkg;
+
+        const maxAllowed = isEditMode
+          ? Math.max(0, pkg.initialBookingPulsesUsed + pkg.packageLiveRemaining)
+          : Math.max(0, pkg.packageLiveRemaining);
+
+        if (raw === "") {
+          const rem = isEditMode
+            ? Math.max(0, pkg.packageLiveRemaining + pkg.initialBookingPulsesUsed)
+            : pkg.packageLiveRemaining;
+          return {
+            ...pkg,
+            pulsesUsed: "",
+            pulsesRemaining: rem
+          };
+        }
+
+        const parsed = parseInt(raw, 10);
+        if (isNaN(parsed)) {
+          return {
+            ...pkg,
+            pulsesUsed: "",
+            pulsesRemaining: isEditMode
+              ? Math.max(0, pkg.packageLiveRemaining + pkg.initialBookingPulsesUsed)
+              : pkg.packageLiveRemaining
+          };
+        }
+
+        const val = Math.max(0, parsed);
+        const bounded = maxAllowed > 0 ? Math.min(maxAllowed, val) : val;
+        const finalUsed = raw.startsWith("0") && raw.length > 1 && !raw.startsWith("0.") ? String(bounded) : (val > maxAllowed ? bounded : raw);
+        const newRem = isEditMode
+          ? Math.max(0, pkg.packageLiveRemaining + (pkg.initialBookingPulsesUsed - bounded))
+          : Math.max(0, pkg.packageLiveRemaining - bounded);
+
+        return {
+          ...pkg,
+          pulsesUsed: finalUsed,
+          pulsesRemaining: newRem
+        };
+      })
+    );
+  };
+
+  const handlePackagePulsesUsedBlur = (pkgEntryId: string) => {
+    setAttachedPackages((prev) =>
+      prev.map((pkg) => {
+        if (pkg.id !== pkgEntryId) return pkg;
+
+        const maxAllowed = isEditMode
+          ? Math.max(0, pkg.initialBookingPulsesUsed + pkg.packageLiveRemaining)
+          : Math.max(0, pkg.packageLiveRemaining);
+
+        if (pkg.pulsesUsed === "" || isNaN(Number(pkg.pulsesUsed))) {
+          const rem = isEditMode
+            ? Math.max(0, pkg.packageLiveRemaining + pkg.initialBookingPulsesUsed)
+            : pkg.packageLiveRemaining;
+          return { ...pkg, pulsesUsed: 0, pulsesRemaining: rem };
+        }
+
+        const num = Math.max(0, Number(pkg.pulsesUsed));
+        const bounded = maxAllowed > 0 ? Math.min(maxAllowed, num) : num;
+        const newRem = isEditMode
+          ? Math.max(0, pkg.packageLiveRemaining + (pkg.initialBookingPulsesUsed - bounded))
+          : Math.max(0, pkg.packageLiveRemaining - bounded);
+
+        return { ...pkg, pulsesUsed: bounded, pulsesRemaining: newRem };
+      })
+    );
+  };
+
+  const handlePackagePulsesPreset = (pkgEntryId: string, ratio: number) => {
+    setAttachedPackages((prev) =>
+      prev.map((pkg) => {
+        if (pkg.id !== pkgEntryId) return pkg;
+
+        const maxAllowed = isEditMode
+          ? Math.max(0, pkg.initialBookingPulsesUsed + pkg.packageLiveRemaining)
+          : Math.max(0, pkg.packageLiveRemaining);
+
+        const u = Math.round(maxAllowed * ratio);
+        const newRem = isEditMode
+          ? Math.max(0, pkg.packageLiveRemaining + (pkg.initialBookingPulsesUsed - u))
+          : Math.max(0, pkg.packageLiveRemaining - u);
+
+        return {
+          ...pkg,
+          pulsesUsed: u,
+          pulsesRemaining: newRem
+        };
+      })
+    );
+  };
+
+  const handleServiceUsageChange = (pkgEntryId: string, serviceKey: string | number, usedVal: number) => {
+    setAttachedPackages((prev) =>
+      prev.map((pkg) => {
+        if (pkg.id !== pkgEntryId) return pkg;
+        const curUsage = pkg.servicesUsage[serviceKey] || { qtyTotal: 1, qtyUsed: 0, qtyRemaining: 1 };
+        const boundedUsed = Math.max(0, Math.min(curUsage.qtyTotal, usedVal));
+        return {
+          ...pkg,
+          servicesUsage: {
+            ...pkg.servicesUsage,
+            [serviceKey]: {
+              ...curUsage,
+              qtyUsed: boundedUsed,
+              qtyRemaining: Math.max(0, curUsage.qtyTotal - boundedUsed)
+            }
+          }
+        };
+      })
+    );
+  };
+
+  // Pre-fill state when editing an existing historical booking
+  useEffect(() => {
+    if (!targetBooking) {
+      initializedTargetBookingIdRef.current = null;
+      return;
+    }
+
+    const currentBookingId = String(targetBooking.id || targetBooking._id || 'initial');
+    if (initializedTargetBookingIdRef.current === currentBookingId) {
+      return;
+    }
+
+    initializedTargetBookingIdRef.current = currentBookingId;
+
+    const rawNotes = String(targetBooking.notes || targetBooking.reception_notes || "");
+    const cleanNotes = rawNotes
+      .replace(/\[Historical Booking\]\s*Added manually for historical records\./gi, "")
+      .replace(/Services?:\s*[^\.\n]+\./gi, "")
+      .replace(/Package:\s*[^\.\n]+\./gi, "")
+      .replace(/\[Package Usage\]:\s*[^\.\n]+(?:\.|$)/gi, "")
+      .replace(/Products?:\s*[^\.\n]+\./gi, "")
+      .replace(/\[Invoice Total\]:\s*\d+(?:\.\d+)?\s*EGP\./gi, "")
+      .replace(/Actual Spent:\s*\d+(?:\.\d+)?\s*EGP\./gi, "")
+      .replace(/Payment Method:\s*[^\.\n]+\./gi, "")
+      .trim();
+
+    const invTotalMatch = rawNotes.match(/\[Invoice Total\]:\s*(\d+(?:\.\d+)?)/i);
+    const spentMatch = rawNotes.match(/Actual Spent:\s*(\d+(?:\.\d+)?)/i);
+    const payMethodMatch = rawNotes.match(/Payment Method:\s*([^\.\n]+)/i);
+
+    const dId = String(targetBooking.provider_id || targetBooking.doctorId || targetBooking.doctor_id || "");
+    const pPhone = targetBooking.phone || targetBooking.customer_phone || targetBooking.patientPhone || "";
+    const pName = targetBooking.name || targetBooking.customer_name || targetBooking.patientName || "";
+    const bDate = (targetBooking.date || "").slice(0, 10);
+    const invVal = targetBooking.price != null
+      ? String(targetBooking.price)
+      : (invTotalMatch ? invTotalMatch[1] : (targetBooking.amount_paid != null ? String(Number(targetBooking.amount_paid) + Number(targetBooking.amount_left || 0)) : ""));
+    const actSpent = targetBooking.amount_paid != null
+      ? String(targetBooking.amount_paid)
+      : (spentMatch ? spentMatch[1] : (targetBooking.amountPaid != null ? String(targetBooking.amountPaid) : ""));
+    const payType = targetBooking.payment_type || targetBooking.payment_method || (payMethodMatch ? payMethodMatch[1].trim() : "");
+
+    if (pPhone) {
+      const parsed = parsePhoneWithCountry(pPhone);
+      setCountryCode(parsed.code);
+      setPatientPhone(parsed.number);
+    }
+    if (pName) setPatientName(pName);
+    if (bDate) setBookingDate(bDate);
+    if (dId) setSelectedDoctorId(dId);
+    if (invVal !== undefined && invVal !== null && invVal !== "") setInvoiceValue(String(invVal));
+    if (actSpent !== undefined && actSpent !== null && actSpent !== "") setActualSpent(String(actSpent));
+    if (payType) setSelectedPaymentType(payType);
+    if (cleanNotes) setNotes(cleanNotes);
+
+    // Multi-service extraction in edit mode
+    const rawSvcIds: any[] = Array.isArray(targetBooking.service_ids)
+      ? targetBooking.service_ids
+      : Array.isArray(targetBooking.serviceIds)
+      ? targetBooking.serviceIds
+      : (targetBooking.service_id || targetBooking.serviceId)
+      ? [targetBooking.service_id || targetBooking.serviceId]
+      : [];
+
+    const matchedInitialSvcs: ServiceItem[] = [];
+    if (rawSvcIds.length > 0 && services.length > 0) {
+      rawSvcIds.forEach((id: any) => {
+        const found = services.find((s) => String(s.id) === String(id));
+        if (found && !matchedInitialSvcs.some((m) => String(m.id) === String(found.id))) {
+          matchedInitialSvcs.push(found);
+        }
+      });
+    } else if (services.length > 0) {
+      const svcsMatch = rawNotes.match(/Services?:\s*([^\.\n]+)/i);
+      if (svcsMatch) {
+        const names = svcsMatch[1].split(",").map((n: string) => n.trim().toLowerCase());
+        services.forEach((s) => {
+          const nEn = (s.en || s.name || s.title || "").toLowerCase();
+          const nAr = (s.ar || "").toLowerCase();
+          if (names.some((name: string) => name && (nEn === name || nAr === name || nEn.includes(name) || nAr.includes(name)))) {
+            if (!matchedInitialSvcs.some((m) => String(m.id) === String(s.id))) {
+              matchedInitialSvcs.push(s);
+            }
+          }
+        });
+      }
+    }
+
+    if (matchedInitialSvcs.length > 0) {
+      setSelectedServices(matchedInitialSvcs);
+    }
+
+    // Multi-product extraction in edit mode
+    const rawProdIds: any[] = Array.isArray(targetBooking.product_ids)
+      ? targetBooking.product_ids
+      : Array.isArray(targetBooking.productIds)
+      ? targetBooking.productIds
+      : Array.isArray(targetBooking.products)
+      ? targetBooking.products.map((p: any) => p.id || p.product_id)
+      : (targetBooking.product_id || targetBooking.productId)
+      ? [targetBooking.product_id || targetBooking.productId]
+      : [];
+
+    const matchedInitialProds: ProductItem[] = [];
+    if (rawProdIds.length > 0 && prodList.length > 0) {
+      rawProdIds.forEach((id: any) => {
+        const found = prodList.find((pr) => String(pr.id) === String(id));
+        if (found && !matchedInitialProds.some((m) => String(m.id) === String(found.id))) {
+          matchedInitialProds.push(found);
+        }
+      });
+    } else if (prodList.length > 0) {
+      const prodMatch = rawNotes.match(/Products?:\s*([^\.\n]+)/i);
+      if (prodMatch) {
+        const names = prodMatch[1].split(",").map((n: string) => n.trim().toLowerCase());
+        prodList.forEach((pr) => {
+          const nEn = (pr.name || "").toLowerCase();
+          const nAr = (pr.arabic_name || "").toLowerCase();
+          if (names.some((name: string) => name && (nEn === name || nAr === name || nEn.includes(name) || nAr.includes(name)))) {
+            if (!matchedInitialProds.some((m) => String(m.id) === String(pr.id))) {
+              matchedInitialProds.push(pr);
+            }
+          }
+        });
+      }
+    }
+
+    if (matchedInitialProds.length > 0) {
+      setSelectedProducts(matchedInitialProds);
+    }
+
+    // Multi-package extraction — Brief 37 / RISK-138. Preferred source:
+    // reservation_products rows carrying real package_id / customer_package_id
+    // (exposed on attachedProducts by GET /api/reservations). No notes parsing
+    // involved — a package renamed in the catalog still resolves by id and shows
+    // its CURRENT name. The notes-regex block below stays as the fallback only
+    // for bookings whose lines predate the id columns.
+    const parsedPkgs: AttachedPackageItem[] = [];
+    const linkedPkgLines: any[] = Array.isArray((targetBooking as any).attachedProducts)
+      ? (targetBooking as any).attachedProducts.filter((ap: any) => ap?.packageId || ap?.customerPackageId)
+      : [];
+
+    if (linkedPkgLines.length > 0) {
+      linkedPkgLines.forEach((line, idx) => {
+        const linePackageId = line.packageId ? String(line.packageId) : "";
+        const lineCpId = line.customerPackageId ? String(line.customerPackageId) : undefined;
+        const foundPkg = pkgList.find((p) => String(p.id) === linePackageId);
+        const foundCp = patientExistingPackages.find(
+          (cp) => String(cp.id) === lineCpId || String(cp.packageId || "") === linePackageId
+        );
+        // description is stored as "Package: <name>" — strip the prefix when the
+        // catalog can't supply the (possibly renamed) current name.
+        const storedName = String(line.name || "").replace(/^Package:\s*/i, "").trim();
+        const isPulse = Boolean(foundPkg?.packageType === "pulses" || Number(foundPkg?.totalPulses || foundCp?.totalPulses || 0) > 0);
+        const total = Number(foundPkg?.totalPulses ?? foundCp?.totalPulses ?? 0);
+        // Pulse usage counts: from the live patient package when one is linked,
+        // otherwise a single-package booking may still read its [Package Usage]
+        // marker from notes (the only place historical usage counts exist).
+        const usageMatch =
+          !foundCp && linkedPkgLines.length === 1
+            ? rawNotes.match(/\[Package Usage\]:\s*([\d,]+)\s*(?:\/\s*([\d,]+))?\s*pulses used(?:\s*\(([\d,]+)\s*pulses remaining\))?/i)
+            : null;
+        const u = foundCp
+          ? Number(foundCp.usedPulses ?? 0)
+          : usageMatch && usageMatch[1]
+          ? (parseInt(usageMatch[1].replace(/,/g, ""), 10) || 0)
+          : 0;
+        const r = foundCp
+          ? Number(foundCp.pulsesRemaining ?? Math.max(0, total - u))
+          : usageMatch && usageMatch[3]
+          ? (parseInt(usageMatch[3].replace(/,/g, ""), 10) || 0)
+          : Math.max(0, total - u);
+
+        parsedPkgs.push({
+          id: `edit-pkg-${idx}-${Date.now()}`,
+          source: foundCp ? "existing" : "catalog",
+          packageId: linePackageId || String(foundCp?.packageId || ""),
+          customerPackageId: foundCp ? String(foundCp.id) : lineCpId,
+          name: foundPkg?.name || foundCp?.packageName || storedName || `Package #${idx + 1}`,
+          nameAr: foundPkg?.nameAr || foundCp?.packageNameAr,
+          price: foundCp ? 0 : Number(line.unitPrice ?? foundPkg?.price ?? 0),
+          packageType: isPulse ? "pulses" : "services",
+          totalPulses: total,
+          pulsesUsed: u,
+          pulsesRemaining: r,
+          initialBookingPulsesUsed: u,
+          packageLiveRemaining: r,
+          servicesUsage: {},
+          items: foundPkg?.items || foundCp?.items || []
+        });
+      });
+    } else {
+    const packageBlocks = rawNotes.split(/Package:\s*/i).slice(1);
+
+    if (packageBlocks.length > 0) {
+      packageBlocks.forEach((block, idx) => {
+        const namePart = block.split(/\.|\n/)[0]?.trim();
+        const pulseUsageMatch = block.match(/\[Package Usage\]:\s*([\d,]+)\s*(?:\/\s*([\d,]+))?\s*pulses used(?:\s*\(([\d,]+)\s*pulses remaining\))?/i);
+        
+        const foundPkg = pkgList.find((p) => p.name === namePart || p.nameAr === namePart);
+        const foundCp = patientExistingPackages.find((cp) => (cp.packageName === namePart || cp.name === namePart || cp.packageNameAr === namePart));
+
+        const isPulse = Boolean(pulseUsageMatch || foundPkg?.packageType === "pulses" || foundPkg?.totalPulses || foundCp?.totalPulses);
+        const total = pulseUsageMatch && pulseUsageMatch[2]
+          ? (parseInt(pulseUsageMatch[2].replace(/,/g, ""), 10) || 0)
+          : Number(foundPkg?.totalPulses ?? foundCp?.totalPulses ?? 0);
+        const u = pulseUsageMatch && pulseUsageMatch[1]
+          ? (parseInt(pulseUsageMatch[1].replace(/,/g, ""), 10) || 0)
+          : 0;
+        const r = pulseUsageMatch && pulseUsageMatch[3]
+          ? (parseInt(pulseUsageMatch[3].replace(/,/g, ""), 10) || 0)
+          : Math.max(0, total - u);
+
+        parsedPkgs.push({
+          id: `edit-pkg-${idx}-${Date.now()}`,
+          source: foundCp ? "existing" : "catalog",
+          // Empty, never a fabricated id like `pkg-${idx}` — that is not a real uuid, and sending
+          // it on save made PATCH /api/reservations/previous crash with a raw Postgres
+          // "invalid input syntax for type uuid" error instead of a clean message. An unmatched
+          // name (package renamed/deleted since this booking was recorded) is filtered out of the
+          // save payload below; the empty id is what that filter checks for.
+          packageId: String(foundCp?.packageId || foundPkg?.id || ""),
+          customerPackageId: foundCp ? String(foundCp.id) : undefined,
+          name: namePart || `Package #${idx + 1}`,
+          nameAr: foundPkg?.nameAr || foundCp?.packageNameAr,
+          price: foundCp ? 0 : Number(foundPkg?.price || 0),
+          packageType: isPulse ? "pulses" : "services",
+          totalPulses: total,
+          pulsesUsed: u,
+          pulsesRemaining: r,
+          initialBookingPulsesUsed: u,
+          packageLiveRemaining: r,
+          servicesUsage: {},
+          items: foundPkg?.items || foundCp?.items || []
+        });
+      });
+    } else if (targetBooking.package_id || targetBooking.packageId) {
+      const pId = String(targetBooking.package_id || targetBooking.packageId);
+      const foundPkg = pkgList.find((p) => String(p.id) === pId);
+      const isPulse = foundPkg?.packageType === "pulses" || Number(foundPkg?.totalPulses || 0) > 0;
+      const total = Number(foundPkg?.totalPulses || 0);
+      const u = Number((targetBooking as any).package_pulses_used ?? 0);
+      const r = Number((targetBooking as any).package_pulses_remaining ?? Math.max(0, total - u));
+
+      parsedPkgs.push({
+        id: `edit-pkg-0-${Date.now()}`,
+        source: "catalog",
+        packageId: pId,
+        name: foundPkg?.name || `Package #${pId}`,
+        nameAr: foundPkg?.nameAr || undefined,
+        price: Number(foundPkg?.price || 0),
+        packageType: isPulse ? "pulses" : "services",
+        totalPulses: total,
+        pulsesUsed: u,
+        pulsesRemaining: r,
+        initialBookingPulsesUsed: u,
+        packageLiveRemaining: r,
+        servicesUsage: {},
+        items: foundPkg?.items || []
+      });
+    }
+    }
+
+    if (parsedPkgs.length > 0) {
+      setAttachedPackages(parsedPkgs);
+    }
+  }, [targetBooking, services, pkgList, prodList, patientExistingPackages, lang]);
+
+  // Sync live package remaining when patient's existing packages load
+  useEffect(() => {
+    if (patientExistingPackages.length === 0) return;
+    setAttachedPackages((prev) =>
+      prev.map((pkg) => {
+        if (pkg.source !== "existing" && !pkg.customerPackageId) return pkg;
+        const matchedCp = patientExistingPackages.find(
+          (cp) => String(cp.id) === String(pkg.customerPackageId) ||
+                  String(cp.packageId || cp.id) === String(pkg.packageId)
+        );
+        if (matchedCp) {
+          const total = Number(matchedCp.totalPulses ?? matchedCp.includedPulses ?? pkg.totalPulses);
+          const liveRem = Number(matchedCp.pulsesRemaining ?? matchedCp.remainingPulses ?? Math.max(0, total - Number(matchedCp.usedPulses ?? 0)));
+          const curUsed = typeof pkg.pulsesUsed === "number" ? pkg.pulsesUsed : (parseInt(String(pkg.pulsesUsed), 10) || 0);
+          const newRem = isEditMode
+            ? Math.max(0, liveRem + (pkg.initialBookingPulsesUsed - curUsed))
+            : Math.max(0, liveRem - curUsed);
+          return {
+            ...pkg,
+            totalPulses: total,
+            packageLiveRemaining: liveRem,
+            pulsesRemaining: newRem
+          };
+        }
+        return pkg;
+      })
+    );
+  }, [patientExistingPackages, isEditMode]);
+
+  // Form Submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving) return;
+
+    const newErrors: typeof errors = {};
+
+    // Validate Phone (Required)
+    const trimmedPhone = patientPhone.trim();
+    if (!trimmedPhone) {
+      newErrors.phone = tr.requiredField;
+    } else if (!isValidPhone(trimmedPhone, countryCode)) {
+      newErrors.phone = tr.invalidPhone;
+    }
+
+    // Validate Name (Required)
+    const trimmedName = patientName.trim();
+    if (!trimmedName) {
+      newErrors.name = tr.requiredField;
+    }
+
+    // Validate Date (Required)
+    if (!bookingDate) {
+      newErrors.date = tr.requiredField;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+    setSaving(true);
+    setSuccessMsg(null);
+
+    try {
+      const selectedDoc = providers.find((p) => String(p.id) === String(selectedDoctorId));
+
+      const selectedServiceIds = selectedServices.map((s) => Number(s.id)).filter((n) => !isNaN(n) && n > 0);
+      const primaryService = selectedServices[0] || null;
+      const allServiceNames = selectedServices.map((s) => getServiceName(s)).join(", ");
+
+      const selectedProductIds = selectedProducts.map((p) => p.id);
+      const primaryProduct = selectedProducts[0] || null;
+      const allProductNames = selectedProducts.map((p) => getProductName(p)).join(", ");
+
+      const parsedInvoiceVal = invoiceValue !== "" ? parseFloat(invoiceValue) : 0;
+      const parsedSpentVal = actualSpent !== "" ? parseFloat(actualSpent) : 0;
+
+      // A package parsed from an older booking's notes that could not be matched to any catalog
+      // or patient package (name changed/deleted since) has no real id — drop it here rather than
+      // sending a value the server would reject as an invalid package id.
+      const validAttachedPackages = attachedPackages.filter((p) => p.customerPackageId || p.packageId);
+      const firstPkg = validAttachedPackages[0];
+      const fullFormattedPhone = formatFullPhone(trimmedPhone, countryCode);
+
+      const payload: Record<string, any> = {
+        patientPhone: fullFormattedPhone,
+        patientName: trimmedName,
+        date: bookingDate,
+        doctorId: selectedDoctorId || null,
+        doctorName: selectedDoc?.name || null,
+        serviceId: primaryService ? Number(primaryService.id) : null,
+        serviceIds: selectedServiceIds,
+        services: selectedServices.map((s) => ({
+          id: Number(s.id),
+          name: getServiceName(s),
+          price: Number(s.price || 0)
+        })),
+        serviceName: allServiceNames || null,
+        productId: primaryProduct ? primaryProduct.id : null,
+        productName: allProductNames || null,
+        productIds: selectedProductIds,
+        products: selectedProducts.map((p) => ({
+          id: p.id,
+          name: getProductName(p),
+          price: Number(p.selling_price ?? p.price ?? 0)
+        })),
+        packageId: firstPkg?.packageId || null,
+        packageName: firstPkg?.name || null,
+        customerPackageId: firstPkg?.customerPackageId || null,
+        existingCustomerPackageId: firstPkg?.customerPackageId || null,
+        packagePulsesTotal: firstPkg?.packageType === "pulses" ? firstPkg.totalPulses : null,
+        packagePulsesUsed: firstPkg?.packageType === "pulses" ? (Number(firstPkg.pulsesUsed) || 0) : null,
+        packagePulsesRemaining: firstPkg?.packageType === "pulses" ? (Number(firstPkg.pulsesRemaining) || 0) : null,
+        packages: validAttachedPackages.map((pkg) => ({
+          packageId: pkg.packageId,
+          packageName: pkg.name,
+          customerPackageId: pkg.customerPackageId || null,
+          source: pkg.source,
+          price: pkg.price,
+          packageType: pkg.packageType,
+          totalPulses: pkg.totalPulses,
+          pulsesUsed: Number(pkg.pulsesUsed) || 0,
+          pulsesRemaining: Number(pkg.pulsesRemaining) || 0,
+          itemsUsage: pkg.packageType === "services" && pkg.items
+            ? pkg.items.map((it: any) => {
+                const key = it.serviceId || it.id || 0;
+                const usage = pkg.servicesUsage[key] || { qtyTotal: it.qty, qtyUsed: 0, qtyRemaining: it.qty };
+                return {
+                  serviceId: it.serviceId,
+                  serviceName: usage.serviceName || it.serviceName,
+                  qtyTotal: usage.qtyTotal,
+                  qtyUsed: usage.qtyUsed,
+                  qtyRemaining: usage.qtyRemaining
+                };
+              })
+            : null
+        })),
+        invoiceValue: isNaN(parsedInvoiceVal) ? 0 : parsedInvoiceVal,
+        actualSpent: isNaN(parsedSpentVal) ? 0 : parsedSpentVal,
+        paymentType: selectedPaymentType || null,
+        notes: notes.trim() || null,
+        branchId: activeBranchId || null
+      };
+
+      if (isEditMode) {
+        payload.id = targetBooking.id;
+      }
+
+      // POST / PATCH /api/reservations/previous is staff-gated
+      const res = await fetch("/api/reservations/previous", {
+        method: isEditMode ? "PATCH" : "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.field === "patientPhone") {
+          setErrors({ phone: data.error || tr.invalidPhone });
+        } else {
+          setErrors({ general: data.error || tr.errorMessage });
+        }
+        setSaving(false);
+        return;
+      }
+
+      setSuccessMsg(isEditMode ? (tr.updateSuccessMessage || "Previous booking updated successfully!") : tr.successMessage);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("revera-booking-change"));
+        window.dispatchEvent(new CustomEvent("revera-prescription-change"));
+      }
+      setTimeout(() => {
+        if (isEditMode && onBookingUpdated) {
+          onBookingUpdated();
+        } else if (onBookingCreated) {
+          onBookingCreated();
+        } else {
+          onClose();
+        }
+      }, 750);
+    } catch (err: any) {
+      console.error("Error saving previous booking:", err);
+      setErrors({ general: tr.errorMessage });
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div dir={lang === "ar" ? "rtl" : "ltr"} className="w-full max-w-5xl mx-auto space-y-6 pb-16 animate-fadeIn">
+      {/* ── BACK BUTTON ── */}
+      <div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--cr-primary)] hover:text-[#283221] transition cursor-pointer"
+        >
+          <ArrowLeft size={14} className={lang === "ar" ? "rotate-180" : ""} />
+          <span>{tr.backToBookings || "BACK TO ONBOARDING"}</span>
+        </button>
+      </div>
+
+      {/* ── HEADER WITH ICON ── */}
+      <div className="flex items-center gap-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8EFE5] text-[#344E41] shadow-2xs">
+          <CalendarIcon size={28} className="text-[#384E34]" />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
+            {isEditMode ? (tr.editTitle || "Edit Previous Booking") : tr.title}
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--color-brand-secondary)] mt-0.5 font-medium">
+            {isEditMode ? (tr.editSubtitle || "Update historical booking details and financial records.") : tr.subtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* ── SUCCESS BANNER ── */}
+      {successMsg && (
+        <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-semibold text-emerald-800 shadow-xs">
+          <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* ── GENERAL ERROR BANNER ── */}
+      {errors.general && (
+        <div className="flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-sm font-semibold text-rose-800 shadow-xs">
+          <AlertCircle size={20} className="text-rose-600 shrink-0" />
+          <span>{errors.general}</span>
+        </div>
+      )}
+
+      {/* ── FORM CARD ── */}
+      <form onSubmit={handleSubmit} className="rounded-3xl border border-gray-200/80 bg-white p-4 sm:p-8 shadow-xs space-y-6">
+        
+        {/* ── ROW 1: 3 FIELDS (PATIENT PHONE *, PATIENT NAME *, DOCTOR OPTIONAL) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* FIELD 1: PATIENT PHONE (REQUIRED) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="patientPhone" className="text-xs sm:text-sm font-bold text-[#111827] flex items-center gap-1">
+                {tr.patientPhoneLabel} <span className="text-red-500">*</span>
+                {isEditMode && <Lock size={12} className="text-[#6B7280]" />}
+              </label>
+              {matchedCustomer && (
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <CheckCircle2 size={12} /> {tr.existingPatientFound} {matchedCustomer.name}
+                </span>
+              )}
+            </div>
+            <div
+              className={`flex items-center rounded-xl border overflow-hidden transition shadow-2xs ${
+                isEditMode
+                  ? "border-gray-200 bg-[#F7F7F6]"
+                  : errors.phone
+                  ? "border-rose-400 bg-white focus-within:border-rose-500 focus-within:ring-2 focus-within:ring-rose-200"
+                  : "border-gray-200 bg-white focus-within:border-[var(--cr-primary)] focus-within:ring-2 focus-within:ring-[var(--cr-primary)]/10"
+              }`}
+            >
+              {/* Compact Country Code Dropdown with overlay trigger */}
+              <div className={`relative flex items-center justify-center bg-[#F9FAF8] border-e border-gray-200 px-3 py-3 shrink-0 transition ${isEditMode ? "cursor-not-allowed" : "hover:bg-[#F0F4EE] cursor-pointer"}`}>
+                <div className="flex items-center gap-1.5 pointer-events-none text-xs sm:text-sm font-bold text-[#111827]">
+                  <span className="text-base leading-none select-none">{selectedCountry.flag}</span>
+                  <span className="font-mono text-xs sm:text-sm">{countryCode}</span>
+                  {!isEditMode && <ChevronDown size={13} className="text-[var(--color-brand-secondary)]" />}
+                </div>
+                {!isEditMode && (
+                  <select
+                    value={countryCode}
+                    onChange={(e) => {
+                      setCountryCode(e.target.value);
+                      if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
+                    }}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer text-sm"
+                    title={lang === "ar" ? "اختر الدولة" : "Select Country"}
+                  >
+                    {COUNTRY_OPTIONS.map((c) => (
+                      <option key={c.code} value={c.code} className="text-[#111827] py-1">
+                        {c.flag} {c.code} ({lang === "ar" ? c.nameAr : c.nameEn})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Phone Input */}
+              <div className="relative flex-1 flex items-center min-w-0">
+                <input
+                  id="patientPhone"
+                  type="tel"
+                  value={patientPhone}
+                  onChange={handlePhoneChange}
+                  readOnly={isEditMode}
+                  disabled={isEditMode}
+                  placeholder={countryCode === "+20" ? (tr.patientPhonePlaceholder || "01X XXXX XXXX") : "XXXXXXXXX"}
+                  title={isEditMode ? tr.patientPhoneLockedHint : tr.patientPhoneTooltip}
+                  className={`w-full bg-transparent py-3 px-3.5 text-xs sm:text-sm font-medium outline-none placeholder:text-[#9CA3AF] ${isEditMode ? "text-gray-700 cursor-not-allowed" : "text-[#111827]"}`}
+                />
+                {patientPhone && !isEditMode ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPatientPhone("");
+                      if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
+                    }}
+                    className="pe-3 text-[var(--color-brand-secondary)] hover:text-[#111827] transition cursor-pointer"
+                  >
+                    <X size={15} />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {errors.phone ? (
+              <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                <AlertCircle size={13} /> {errors.phone}
+              </p>
+            ) : (
+              <p className="text-[11px] text-[#6B7280] font-normal leading-normal">
+                {isEditMode ? tr.patientPhoneLockedHint : tr.patientPhoneHelp}
+              </p>
+            )}
+          </div>
+
+          {/* FIELD 2: PATIENT NAME (REQUIRED) */}
+          <div className="space-y-1.5">
+            <label htmlFor="patientName" className="text-xs sm:text-sm font-bold text-[#111827] flex items-center gap-1">
+              {tr.patientNameLabel} <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <User size={17} />
+              </div>
+              <input
+                id="patientName"
+                type="text"
+                value={patientName}
+                onChange={(e) => {
+                  setPatientName(e.target.value);
+                  if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+                }}
+                placeholder={tr.patientNamePlaceholder}
+                className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 rtl:pl-4 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#9CA3AF] ${
+                  errors.name
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+                    : "border-gray-200 focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+                }`}
+              />
+            </div>
+            {errors.name && (
+              <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                <AlertCircle size={13} /> {errors.name}
+              </p>
+            )}
+          </div>
+
+          {/* FIELD 3: DOCTOR (OPTIONAL) */}
+          <div className="space-y-1.5">
+            <label htmlFor="doctorSelect" className="text-xs sm:text-sm font-bold text-[#111827]">
+              {tr.doctorOptional || tr.doctorLabel}
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <Stethoscope size={17} />
+              </div>
+              <select
+                id="doctorSelect"
+                value={selectedDoctorId}
+                onChange={(e) => setSelectedDoctorId(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 rtl:pl-10 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10 cursor-pointer"
+              >
+                <option value="">{tr.selectDoctorPlaceholder}</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.specialty ? `— ${p.specialty}` : ""}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#6B7280] z-10">
+                <ChevronDown size={17} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PATIENT'S EXISTING PACKAGES DISCOVERY BANNER ── */}
+        {patientExistingPackages.length > 0 && (
+          <div className="rounded-2xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/90 via-[#F4F9F2] to-white p-4.5 shadow-2xs space-y-3 animate-fadeIn">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-xs">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-emerald-950 flex items-center gap-2">
+                    {tr.patientExistingPackagesTitle || "Patient's Existing Packages"}
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      {patientExistingPackages.length} {lang === "ar" ? "باقات مسجلة" : "found"}
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-emerald-800 font-medium">
+                    {tr.patientExistingPackagesSubtitle || "This patient already has packages in the system. Select one to record session consumption against it, or select a catalog package."}
+                  </p>
+                </div>
+              </div>
+              {loadingExistingPackages && (
+                <Loader2 size={15} className="animate-spin text-emerald-600" />
+              )}
+            </div>
+
+            {/* List of existing packages */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+              {patientExistingPackages.map((cp: any) => {
+                const isSelected = attachedPackages.some(
+                  (p) => p.customerPackageId && String(p.customerPackageId) === String(cp.id)
+                );
+                const isPulses = cp.packageType === "pulses" || cp.package_type === "pulses" || Number(cp.totalPulses || cp.includedPulses || 0) > 0;
+                const total = isPulses
+                  ? Number(cp.totalPulses ?? cp.includedPulses ?? 0)
+                  : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyTotal ?? it.qty_total ?? it.qty ?? 0), 0);
+                const used = isPulses
+                  ? Number(cp.usedPulses ?? 0)
+                  : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyUsed ?? it.qty_used ?? 0), 0);
+                const rem = isPulses
+                  ? Number(cp.pulsesRemaining ?? cp.remainingPulses ?? Math.max(0, total - used))
+                  : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyRemaining ?? it.qty_remaining ?? Math.max(0, Number(it.qtyTotal || 0) - Number(it.qtyUsed || 0))), 0);
+
+                const isFullyUsed = cp.status === "fully_used" || rem <= 0;
+
+                return (
+                  <div
+                    key={cp.id}
+                    className={`rounded-xl border p-3 flex flex-col justify-between gap-2.5 transition ${
+                      isSelected
+                        ? "bg-[#E8EFE5] border-[var(--cr-primary)] ring-2 ring-[var(--cr-primary)]/20 shadow-xs"
+                        : "bg-white border-gray-200/90 hover:border-emerald-300"
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-bold text-gray-900 truncate">
+                          {lang === "ar" && (cp.packageNameAr || cp.nameAr) ? (cp.packageNameAr || cp.nameAr) : (cp.packageName || cp.name || `Package #${cp.id}`)}
+                        </span>
+                        {isFullyUsed ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200 shrink-0">
+                            {tr.noRemainingQuota || "Fully Consumed"}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                            {lang === "ar" ? "نشطة" : "Active"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] text-gray-600 font-medium">
+                        {isPulses ? (
+                          <span>
+                            {used.toLocaleString()} / {total.toLocaleString()} {lang === "ar" ? "نبضة مستهلكة" : "pulses used"} (
+                            <strong className={rem > 0 ? "text-emerald-700 font-bold" : "text-gray-500 font-bold"}>
+                              {rem.toLocaleString()} {lang === "ar" ? "متبقية" : "left"}
+                            </strong>)
+                          </span>
+                        ) : (
+                          <span>
+                            {used} / {total} {lang === "ar" ? "جلسة مستهلكة" : "sessions used"} (
+                            <strong className={rem > 0 ? "text-emerald-700 font-bold" : "text-gray-500 font-bold"}>
+                              {rem} {lang === "ar" ? "متبقية" : "left"}
+                            </strong>)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          const target = attachedPackages.find(
+                            (p) => p.customerPackageId && String(p.customerPackageId) === String(cp.id)
+                          );
+                          if (target) handleRemovePackage(target.id);
+                        } else {
+                          handleAddPackage(`existing:${cp.id}`);
+                        }
+                      }}
+                      className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isSelected
+                          ? "bg-[var(--cr-primary)] text-white shadow-xs"
+                          : "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check size={13} /> {lang === "ar" ? "محددة للاستهلاك" : "Selected"}
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={13} /> {tr.useThisPackageBtn || "Use This Package"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── ROW 2: 4 FIELDS (DATE *, SERVICE, PACKAGE, PRODUCTS) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* FIELD 4: DATE (REQUIRED) */}
+          <div className="space-y-1.5">
+            <label htmlFor="bookingDate" className="text-xs sm:text-sm font-bold text-[#111827] flex items-center gap-1">
+              {tr.dateLabel} <span className="text-red-500">*</span>
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <CalendarIcon size={17} />
+              </div>
+              <input
+                id="bookingDate"
+                type="date"
+                value={bookingDate}
+                onChange={(e) => {
+                  setBookingDate(e.target.value);
+                  if (errors.date) setErrors(prev => ({ ...prev, date: undefined }));
+                }}
+                title={tr.dateTooltip}
+                placeholder={tr.datePlaceholder}
+                className={`w-full rounded-xl border bg-white py-3 pl-10 pr-3.5 rtl:pl-3.5 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#9CA3AF] cursor-pointer ${
+                  errors.date
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+                    : "border-gray-200 focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+                }`}
+              />
+            </div>
+            {errors.date && (
+              <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                <AlertCircle size={13} /> {errors.date}
+              </p>
+            )}
+          </div>
+
+          {/* FIELD 5: SERVICES (OPTIONAL - MULTI-SERVICE SUPPORT) */}
+          <div className="space-y-1.5 relative" ref={serviceDropdownRef}>
+            <div className="flex items-center justify-between">
+              <label htmlFor="serviceSearchInput" className="text-xs sm:text-sm font-bold text-[#111827]">
+                {tr.servicesOptional || tr.serviceOptional || (lang === "ar" ? "الخدمات (اختياري)" : "Services (Optional)")}
+              </label>
+              {selectedServices.length > 0 && (
+                <span className="text-[10px] font-bold text-[#344E41] bg-[#E8EFE5] px-2 py-0.5 rounded-full">
+                  {selectedServices.length} {lang === "ar" ? "خدمات مضافة" : "selected"}
+                </span>
+              )}
+            </div>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <Layers size={17} />
+              </div>
+              <input
+                id="serviceSearchInput"
+                type="text"
+                autoComplete="off"
+                value={serviceSearchQuery}
+                onChange={(e) => {
+                  setServiceSearchQuery(e.target.value);
+                  setIsServiceDropdownOpen(true);
+                }}
+                onFocus={() => setIsServiceDropdownOpen(true)}
+                placeholder={
+                  selectedServices.length > 0
+                    ? (lang === "ar" ? "+ إضافة خدمة أخرى..." : "+ Add another service...")
+                    : (tr.searchServicePlaceholder || tr.selectServicePlaceholder || "Search service...")
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 rtl:pl-10 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+              />
+              {serviceSearchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceSearchQuery("");
+                    setIsServiceDropdownOpen(false);
+                  }}
+                  className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#9CA3AF] hover:text-[var(--cr-primary)] transition cursor-pointer z-10"
+                  title="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsServiceDropdownOpen((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#6B7280] hover:text-[var(--cr-primary)] transition cursor-pointer z-10"
+                >
+                  <ChevronDown size={17} className={`transition-transform duration-200 ${isServiceDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+              )}
+
+              {/* Dropdown Results */}
+              {isServiceDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl z-50 py-1 divide-y divide-gray-50">
+                  {filteredServices.length > 0 ? (
+                    filteredServices.map((s) => {
+                      const isSelected = selectedServices.some((sel) => String(sel.id) === String(s.id));
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              handleRemoveService(s.id);
+                            } else {
+                              handleAddService(s);
+                            }
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm text-start font-medium transition cursor-pointer ${
+                            isSelected
+                              ? "bg-[#E8EFE5] text-[#344E41] font-bold"
+                              : "text-[#111827] hover:bg-[#F4F7F2] hover:text-[#344E41]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="truncate">{getServiceName(s)}</span>
+                            {Number(s.price || 0) > 0 && (
+                              <span className="text-[11px] text-gray-500 font-semibold shrink-0">
+                                ({Number(s.price).toLocaleString()} EGP)
+                              </span>
+                            )}
+                          </div>
+                          {isSelected ? (
+                            <Check size={16} className="text-[var(--cr-primary)] shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
+                          ) : (
+                            <Plus size={15} className="text-gray-400 shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3.5 py-3 text-xs sm:text-sm text-center text-gray-500 font-medium">
+                      {tr.noServicesFound || "No services found"}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Services Badges */}
+            {selectedServices.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {selectedServices.map((s) => (
+                  <span
+                    key={s.id}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#E8EFE5] text-[#344E41] text-xs font-semibold border border-[#344E41]/20 shadow-2xs"
+                  >
+                    <span className="truncate max-w-[150px]">{getServiceName(s)}</span>
+                    {Number(s.price || 0) > 0 && (
+                      <span className="text-[10px] text-emerald-800 font-bold">
+                        {Number(s.price).toLocaleString()} EGP
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveService(s.id)}
+                      className="text-[#344E41]/70 hover:text-red-600 transition cursor-pointer p-0.5"
+                      title="Remove service"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* FIELD 6: PACKAGE (OPTIONAL - MULTI-PACKAGE SUPPORT) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="packageSelect" className="text-xs sm:text-sm font-bold text-[#111827]">
+                {tr.packageOptional || tr.packageLabel || (lang === "ar" ? "الباقات (اختياري)" : "Packages (Optional)")}
+              </label>
+              {attachedPackages.length > 0 && (
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  {attachedPackages.length} {lang === "ar" ? "باقات مضافة" : "attached"}
+                </span>
+              )}
+            </div>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <PackageIcon size={17} />
+              </div>
+              <select
+                id="packageSelect"
+                value=""
+                onChange={(e) => {
+                  handleAddPackage(e.target.value);
+                  e.target.value = "";
+                }}
+                className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 rtl:pl-10 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10 cursor-pointer"
+              >
+                <option value="">
+                  {attachedPackages.length > 0
+                    ? (lang === "ar" ? "+ إضافة باقة أخرى للجلسة..." : "+ Add another package...")
+                    : (tr.selectPackagePlaceholder || (lang === "ar" ? "اختر باقة..." : "Select a package..."))}
+                </option>
+                
+                {patientExistingPackages.filter(cp => !attachedPackages.some(ap => ap.customerPackageId && String(ap.customerPackageId) === String(cp.id))).length > 0 && (
+                  <optgroup label={`📌 ${tr.patientExistingPackagesGroup || "Patient's Existing Packages"}`}>
+                    {patientExistingPackages
+                      .filter(cp => !attachedPackages.some(ap => ap.customerPackageId && String(ap.customerPackageId) === String(cp.id)))
+                      .map((cp: any) => {
+                        const isPulses = cp.packageType === "pulses" || cp.package_type === "pulses" || Number(cp.totalPulses || cp.includedPulses || 0) > 0;
+                        const total = isPulses ? Number(cp.totalPulses ?? cp.includedPulses ?? 0) : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyTotal || it.qty || 0), 0);
+                        const used = isPulses ? Number(cp.usedPulses ?? 0) : (cp.items || []).reduce((sum: number, it: any) => sum + Number(it.qtyUsed || 0), 0);
+                        const rem = isPulses ? Number(cp.pulsesRemaining ?? (total - used)) : (total - used);
+                        const name = lang === "ar" && (cp.packageNameAr || cp.nameAr) ? (cp.packageNameAr || cp.nameAr) : (cp.packageName || cp.name || `Package #${cp.id}`);
+                        return (
+                          <option key={`existing-${cp.id}`} value={`existing:${cp.id}`}>
+                            ⭐ [Existing] {name} ({rem.toLocaleString()} {isPulses ? (lang === "ar" ? "نبضة متبقية" : "pulses left") : (lang === "ar" ? "جلسات متبقية" : "sessions left")})
+                          </option>
+                        );
+                      })}
+                  </optgroup>
+                )}
+
+                <optgroup label={`🏷️ ${tr.catalogPackagesGroup || "Catalog Packages (New Purchase)"}`}>
+                  {pkgList.map((p) => (
+                    <option key={`catalog-${p.id}`} value={`catalog:${p.id}`}>
+                      {getPackageName(p)} ({p.price ? `${p.price} EGP` : (lang === "ar" ? "مجاني" : "Free")})
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#6B7280] z-10">
+                <ChevronDown size={17} />
+              </div>
+            </div>
+          </div>
+
+          {/* FIELD 7: PRODUCTS (OPTIONAL - MULTI-PRODUCT SUPPORT) */}
+          <div className="space-y-1.5 relative" ref={productDropdownRef}>
+            <div className="flex items-center justify-between">
+              <label htmlFor="productSearchInput" className="text-xs sm:text-sm font-bold text-[#111827]">
+                {tr.productsOptional || tr.productsLabel || (lang === "ar" ? "المنتجات (اختياري)" : "Products (Optional)")}
+              </label>
+              {selectedProducts.length > 0 && (
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
+                  {selectedProducts.length} {lang === "ar" ? "منتجات مضافة" : "selected"}
+                </span>
+              )}
+            </div>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <ShoppingBag size={17} />
+              </div>
+              <input
+                id="productSearchInput"
+                type="text"
+                autoComplete="off"
+                value={productSearchQuery}
+                onChange={(e) => {
+                  setProductSearchQuery(e.target.value);
+                  setIsProductDropdownOpen(true);
+                }}
+                onFocus={() => setIsProductDropdownOpen(true)}
+                placeholder={
+                  selectedProducts.length > 0
+                    ? (lang === "ar" ? "+ إضافة منتج آخر..." : "+ Add another product...")
+                    : (tr.selectProductPlaceholder || (lang === "ar" ? "بحث عن منتج..." : "Search product..."))
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 rtl:pl-10 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+              />
+              {productSearchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductSearchQuery("");
+                    setIsProductDropdownOpen(false);
+                  }}
+                  className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#9CA3AF] hover:text-[var(--cr-primary)] transition cursor-pointer z-10"
+                  title="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsProductDropdownOpen((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#6B7280] hover:text-[var(--cr-primary)] transition cursor-pointer z-10"
+                >
+                  <ChevronDown size={17} className={`transition-transform duration-200 ${isProductDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+              )}
+
+              {/* Dropdown Results */}
+              {isProductDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl z-50 py-1 divide-y divide-gray-50">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((pr) => {
+                      const isSelected = selectedProducts.some((sel) => String(sel.id) === String(pr.id));
+                      const price = Number(pr.selling_price ?? pr.price ?? 0);
+                      return (
+                        <button
+                          key={pr.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              handleRemoveProduct(pr.id);
+                            } else {
+                              handleAddProduct(pr);
+                            }
+                          }}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 text-xs sm:text-sm text-start font-medium transition cursor-pointer ${
+                            isSelected
+                              ? "bg-emerald-50 text-emerald-900 font-bold"
+                              : "text-[#111827] hover:bg-[#F4F7F2] hover:text-[#344E41]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="truncate">{getProductName(pr)}</span>
+                            {price > 0 && (
+                              <span className="text-[11px] text-gray-500 font-semibold shrink-0">
+                                ({price.toLocaleString()} EGP)
+                              </span>
+                            )}
+                          </div>
+                          {isSelected ? (
+                            <Check size={16} className="text-emerald-700 shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
+                          ) : (
+                            <Plus size={15} className="text-gray-400 shrink-0 ml-2 rtl:ml-0 rtl:mr-2" />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3.5 py-3 text-xs sm:text-sm text-center text-gray-500 font-medium">
+                      {tr.noProductsFound || (lang === "ar" ? "لم يتم العثور على منتجات" : "No products found")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Products Badges */}
+            {selectedProducts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {selectedProducts.map((pr) => {
+                  const price = Number(pr.selling_price ?? pr.price ?? 0);
+                  return (
+                    <span
+                      key={pr.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 text-xs font-semibold border border-emerald-200 shadow-2xs"
+                    >
+                      <span className="truncate max-w-[150px]">{getProductName(pr)}</span>
+                      {price > 0 && (
+                        <span className="text-[10px] text-emerald-700 font-bold">
+                          {price.toLocaleString()} EGP
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveProduct(pr.id)}
+                        className="text-emerald-800/70 hover:text-red-600 transition cursor-pointer p-0.5"
+                        title="Remove product"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── ATTACHED PACKAGES BREAKDOWN CARDS (MULTI-PACKAGE SUPPORT) ── */}
+        {attachedPackages.length > 0 && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm sm:text-base font-bold text-[#1F2937] flex items-center gap-2">
+                <PackageIcon size={18} className="text-[var(--cr-primary)]" />
+                {lang === "ar" ? "الباقات المستخدمة في هذه الجلسة" : "Packages Used in This Session"}
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]">
+                  {attachedPackages.length}
+                </span>
+              </h3>
+            </div>
+
+            {attachedPackages.map((pkg) => {
+              const isPulse = pkg.packageType === "pulses";
+              const numUsedPulses = typeof pkg.pulsesUsed === "number" ? pkg.pulsesUsed : (parseInt(String(pkg.pulsesUsed), 10) || 0);
+              const numRemPulses = Number(pkg.pulsesRemaining) || 0;
+              const maxPulsesAllowed = isEditMode
+                ? Math.max(0, pkg.initialBookingPulsesUsed + pkg.packageLiveRemaining)
+                : Math.max(0, pkg.packageLiveRemaining);
+
+              return (
+                <div
+                  key={pkg.id}
+                  className="rounded-2xl border border-[var(--cr-primary)]/20 bg-gradient-to-br from-[#F4F7F2] via-white to-[#EBF3E7] p-4 sm:p-5 shadow-xs space-y-4 transition-all"
+                >
+                  {!pkg.packageId && !pkg.customerPackageId && (
+                    <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                      <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                      <span>
+                        {lang === "ar"
+                          ? "الباقة دي كانت مسجلة في الحجز القديم لكن مش موجودة في الكتالوج دلوقتي (اتغير اسمها أو اتحذفت). مش هتتحفظ مع التعديل ده — شيلها لو مش محتاجها، أو اختار الباقة الصح من القائمة."
+                          : "This package was recorded on the original booking but no longer matches a catalog or patient package (renamed or deleted). It will not be saved with this edit — remove it, or re-select the correct package below."}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cr-primary)]/10 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-[var(--cr-primary)] text-white shadow-xs">
+                        {isPulse ? <Zap size={18} className="text-amber-300" /> : <PackageIcon size={18} />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm sm:text-base font-bold text-[#1F2937]">
+                            {lang === "ar" && pkg.nameAr ? pkg.nameAr : pkg.name}
+                          </h4>
+                          {pkg.source === "existing" ? (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ⭐ {tr.linkedExistingPackageBadge || (lang === "ar" ? "باقة سابقة للعميل" : "Existing Package")} (0 EGP)
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
+                              🏷️ {lang === "ar" ? "شراء باقة جديدة" : "New Purchase"} ({pkg.price} EGP)
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">
+                          {isPulse
+                            ? (lang === "ar" ? `الرصيد الكلي: ${pkg.totalPulses.toLocaleString()} نبضة · الرصيد الفعلي المتاح: ${pkg.packageLiveRemaining.toLocaleString()} نبضة` : `Total quota: ${pkg.totalPulses.toLocaleString()} pulses · Available: ${pkg.packageLiveRemaining.toLocaleString()} pulses`)
+                            : (tr.packageUsageSubtitle || "Specify sessions previously consumed from this package.")}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status Badge & Remove Button */}
+                    <div className="flex items-center gap-2">
+                      {isPulse ? (
+                        numRemPulses <= 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <CheckCircle2 size={13} /> {tr.fullyUsedBadge || (lang === "ar" ? "مستهلكة بالكامل (0 متبقي)" : "Fully Consumed (0 Left)")}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <Sparkles size={13} className="text-emerald-600" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
+                          </span>
+                        )
+                      ) : (
+                        Object.values(pkg.servicesUsage).length > 0 &&
+                        Object.values(pkg.servicesUsage).every((it) => it.qtyRemaining <= 0) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <CheckCircle2 size={13} /> {tr.fullyUsedBadge || (lang === "ar" ? "مستهلكة بالكامل (0 متبقي)" : "Fully Consumed (0 Left)")}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <Sparkles size={13} className="text-emerald-600" /> {tr.activeRemainingBadge || (lang === "ar" ? "رصيد نشط متبقي" : "Active Quota Left")}
+                          </span>
+                        )
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePackage(pkg.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        title={lang === "ar" ? "إزالة هذه الباقة" : "Remove this package"}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* BREAKDOWN TYPE 1: PULSES PACKAGE */}
+                  {isPulse ? (
+                    <div className="space-y-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {/* Total Pulses */}
+                        <div className="p-3.5 bg-white rounded-xl border border-gray-200/80 shadow-2xs flex flex-col justify-between">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-gray-500">{tr.pulsesTotalLabel || "Total Pulses Quota"}</span>
+                            {isEditMode ? (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                {lang === "ar" ? "تعديل حجز" : "Editing"}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-baseline gap-1 mt-2">
+                            <span className="text-xl font-bold text-[#111827]">{pkg.totalPulses.toLocaleString()}</span>
+                            <span className="text-xs text-gray-400 font-medium">{lang === "ar" ? "نبضة" : "pulses"}</span>
+                          </div>
+                        </div>
+
+                        {/* Pulses Used (Input) */}
+                        <div className="p-3.5 bg-white rounded-xl border border-amber-200 shadow-2xs space-y-1.5 focus-within:border-amber-500 focus-within:ring-2 focus-within:ring-amber-500/10 transition">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor={`pulsesUsedInput-${pkg.id}`} className="text-xs font-bold text-amber-900 block">
+                              {tr.pulsesUsedLabel || "Pulses Used"}
+                            </label>
+                            {maxPulsesAllowed > 0 && (
+                              <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70">
+                                {lang === "ar" ? `الحد الأقصى: ${maxPulsesAllowed.toLocaleString()}` : `Max: ${maxPulsesAllowed.toLocaleString()}`}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id={`pulsesUsedInput-${pkg.id}`}
+                              type="number"
+                              min="0"
+                              max={maxPulsesAllowed > 0 ? maxPulsesAllowed : undefined}
+                              value={pkg.pulsesUsed}
+                              onChange={(e) => handlePackagePulsesUsedChange(pkg.id, e.target.value)}
+                              onBlur={() => handlePackagePulsesUsedBlur(pkg.id)}
+                              className="w-full text-base font-bold text-amber-950 bg-amber-50/50 border border-amber-200 rounded-lg px-2.5 py-1.5 outline-none focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Pulses Remaining (Read-Only Input) */}
+                        <div className="p-3.5 bg-gray-50/80 rounded-xl border border-emerald-200 shadow-2xs space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor={`pulsesRemainingInput-${pkg.id}`} className="text-xs font-bold text-emerald-900 block">
+                              {tr.pulsesRemainingLabel || "Pulses Left (Remaining)"}
+                            </label>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                              <Lock size={10} />
+                              {lang === "ar" ? "محسوب تلقائياً" : "Auto-calculated"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id={`pulsesRemainingInput-${pkg.id}`}
+                              type="number"
+                              readOnly
+                              tabIndex={-1}
+                              value={pkg.pulsesRemaining}
+                              className="w-full text-base font-bold text-emerald-950 bg-emerald-50/40 border border-emerald-200/80 rounded-lg px-2.5 py-1.5 outline-none cursor-not-allowed select-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pulses Presets & Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-gray-500 font-medium mr-1 rtl:mr-0 rtl:ml-1">
+                              {lang === "ar" ? "تحديد سريع:" : "Quick presets:"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handlePackagePulsesPreset(pkg.id, 0)}
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                                numUsedPulses === 0
+                                  ? "bg-[var(--cr-primary)] text-white border-[var(--cr-primary)]"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              {tr.noneUsedBtn || "0 Used (Full)"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePackagePulsesPreset(pkg.id, 0.25)}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                            >
+                              25%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePackagePulsesPreset(pkg.id, 0.5)}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                            >
+                              50%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePackagePulsesPreset(pkg.id, 0.75)}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                            >
+                              75%
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePackagePulsesPreset(pkg.id, 1)}
+                              className={`px-2.5 py-1 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                                numUsedPulses === maxPulsesAllowed && maxPulsesAllowed > 0
+                                  ? "bg-amber-600 text-white border-amber-600"
+                                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              {tr.allUsedBtn || "All Used"}
+                            </button>
+                          </div>
+
+                          <div className="text-xs font-medium text-gray-500">
+                            {pkg.totalPulses > 0 ? (
+                              <span>
+                                {Math.round((numUsedPulses / pkg.totalPulses) * 100)}% {lang === "ar" ? "مستهلك" : "used"} · {Math.round((numRemPulses / pkg.totalPulses) * 100)}% {lang === "ar" ? "متبقي" : "remaining"}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        {pkg.totalPulses > 0 && (
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden flex">
+                            <div
+                              className="bg-amber-500 h-2.5 transition-all duration-300"
+                              style={{ width: `${Math.min(100, (numUsedPulses / pkg.totalPulses) * 100)}%` }}
+                              title={`Used: ${numUsedPulses}`}
+                            />
+                            <div
+                              className="bg-emerald-500 h-2.5 transition-all duration-300"
+                              style={{ width: `${Math.min(100, (numRemPulses / pkg.totalPulses) * 100)}%` }}
+                              title={`Remaining: ${numRemPulses}`}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* BREAKDOWN TYPE 2: SERVICES-BASED PACKAGE */
+                    <div className="space-y-3 pt-1">
+                      {pkg.items && pkg.items.length > 0 ? (
+                        <div className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-200/80 overflow-hidden shadow-2xs">
+                          {pkg.items.map((item: any) => {
+                            const key = item.serviceId || item.id || 0;
+                            const usage = pkg.servicesUsage[key] || {
+                              qtyTotal: item.qty,
+                              qtyUsed: 0,
+                              qtyRemaining: item.qty,
+                              serviceName: lang === "ar" && item.serviceNameAr ? item.serviceNameAr : (item.serviceName || `Service #${item.serviceId}`),
+                            };
+
+                            return (
+                              <div key={key} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="space-y-1">
+                                  <span className="text-sm font-bold text-[#111827] block">
+                                    {usage.serviceName}
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs px-2 py-0.5 rounded-md bg-gray-100 font-semibold text-gray-700">
+                                      {usage.qtyTotal} {tr.sessionsTotalLabel || "Total Sessions"}
+                                    </span>
+                                    {usage.qtyRemaining <= 0 ? (
+                                      <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 font-semibold text-amber-800">
+                                        {tr.fullyUsedBadge || "0 Left"}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-100 font-semibold text-emerald-800">
+                                        {usage.qtyRemaining} {lang === "ar" ? "متبقية" : "left"}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Steppers & Inputs */}
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {/* Used Input */}
+                                  <div className="flex items-center gap-1.5 bg-amber-50/70 border border-amber-200 rounded-lg p-1">
+                                    <span className="text-xs font-bold text-amber-900 px-1.5">
+                                      {tr.sessionsUsedLabel || "Used"}:
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleServiceUsageChange(pkg.id, key, Math.max(0, usage.qtyUsed - 1))}
+                                      className="w-6 h-6 rounded bg-white text-amber-900 font-bold hover:bg-amber-100 transition flex items-center justify-center text-xs shadow-2xs cursor-pointer"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="w-6 text-center text-sm font-bold text-amber-950">
+                                      {usage.qtyUsed}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleServiceUsageChange(pkg.id, key, Math.min(usage.qtyTotal, usage.qtyUsed + 1))}
+                                      className="w-6 h-6 rounded bg-white text-amber-900 font-bold hover:bg-amber-100 transition flex items-center justify-center text-xs shadow-2xs cursor-pointer"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+
+                                  {/* Remaining Indicator */}
+                                  <div className="flex items-center gap-1.5 bg-emerald-50/70 border border-emerald-200 rounded-lg p-1">
+                                    <span className="text-xs font-bold text-emerald-900 px-1.5">
+                                      {tr.sessionsRemainingLabel || "Left"}:
+                                    </span>
+                                    <span className="w-6 text-center text-sm font-bold text-emerald-950">
+                                      {usage.qtyRemaining}
+                                    </span>
+                                  </div>
+
+                                  {/* Quick Toggle Buttons */}
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleServiceUsageChange(pkg.id, key, 0)}
+                                      className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                                    >
+                                      {tr.noneUsedBtn || "0 Used"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleServiceUsageChange(pkg.id, key, usage.qtyTotal)}
+                                      className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                                    >
+                                      {tr.allUsedBtn || "All Used"}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-white rounded-xl border border-gray-200 text-xs text-gray-500 font-medium text-center">
+                          {lang === "ar" ? "باقة بدون بنود خدمات مسبقة." : "Package has no preset service items configured."}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── ROW 3: 3 FIELDS (INVOICE VALUE, ACTUAL SPENT, PAYMENT METHOD) ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* FIELD 8: INVOICE VALUE (EDITABLE, AUTO-CALCULATED) */}
+          <div className="space-y-1.5">
+            <label htmlFor="invoiceValue" className="text-xs sm:text-sm font-bold text-[#111827]">
+              {tr.invoiceValueLabel || "Invoice Value (EGP)"}
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <Receipt size={17} />
+              </div>
+              <input
+                id="invoiceValue"
+                type="number"
+                min="0"
+                step="any"
+                value={invoiceValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInvoiceValue(val);
+                  if (!hasManuallyEditedSpent) {
+                    setActualSpent(val);
+                  }
+                }}
+                placeholder={tr.invoiceValuePlaceholder || "0.00"}
+                title={tr.invoiceValueTooltip}
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 rtl:pl-4 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+              />
+            </div>
+          </div>
+
+          {/* FIELD 9: ACTUAL SPENT (AMOUNT PAID) */}
+          <div className="space-y-1.5">
+            <label htmlFor="actualSpent" className="text-xs sm:text-sm font-bold text-[#111827]">
+              {tr.actualSpentLabel || "Actual Spent (EGP)"}
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <Wallet size={17} />
+              </div>
+              <input
+                id="actualSpent"
+                type="number"
+                min="0"
+                step="any"
+                value={actualSpent}
+                onChange={(e) => {
+                  setActualSpent(e.target.value);
+                  setHasManuallyEditedSpent(true);
+                }}
+                placeholder={tr.actualSpentPlaceholder || "0.00"}
+                title={tr.actualSpentTooltip}
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 rtl:pl-4 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10"
+              />
+            </div>
+          </div>
+
+          {/* FIELD 10: PAYMENT METHOD (OPTIONAL) */}
+          <div className="space-y-1.5">
+            <label htmlFor="paymentTypeSelect" className="text-xs sm:text-sm font-bold text-[#111827]">
+              {tr.paymentTypeOptional || tr.paymentTypeLabel}
+            </label>
+            <div className="relative flex items-center">
+              <div className="pointer-events-none absolute inset-y-0 left-0 rtl:left-auto rtl:right-0 flex items-center pl-3.5 rtl:pl-0 rtl:pr-3.5 text-[var(--color-brand-secondary)] z-10">
+                <CreditCard size={17} />
+              </div>
+              <select
+                id="paymentTypeSelect"
+                value={selectedPaymentType}
+                onChange={(e) => setSelectedPaymentType(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 rtl:pl-10 rtl:pr-10 text-sm font-medium text-[#111827] outline-none transition focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10 cursor-pointer"
+              >
+                <option value="">{tr.selectPaymentTypePlaceholder}</option>
+                {Object.entries(tr.paymentTypes || {}).map(([key, label]: [string, any]) => (
+                  <option key={key} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3.5 rtl:pr-0 rtl:pl-3.5 text-[#6B7280] z-10">
+                <ChevronDown size={17} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── ROW 4: NOTES (FULL WIDTH) ── */}
+        <div className="space-y-1.5">
+          <label htmlFor="bookingNotes" className="text-xs sm:text-sm font-bold text-[#111827] flex items-center gap-1.5">
+            <FileText size={15} className="text-[var(--color-brand-secondary)]" />
+            <span>{tr.notesLabel || "Notes (Optional)"}</span>
+          </label>
+          <div className="relative flex items-start">
+            <textarea
+              id="bookingNotes"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={tr.notesPlaceholder || "Enter any notes or remarks regarding this historical booking..."}
+              className="w-full rounded-xl border border-gray-200 bg-white p-3 text-sm font-medium text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[var(--cr-primary)] focus:ring-2 focus:ring-[var(--cr-primary)]/10 resize-y"
+            />
+          </div>
+        </div>
+
+        {/* ── DYNAMIC FINANCIAL LEDGER IMPACT PREVIEW ── */}
+        {(() => {
+          const numInvoice = parseFloat(invoiceValue) || 0;
+          const numSpent = parseFloat(actualSpent) || 0;
+          const diff = numInvoice - numSpent;
+
+          return (
+            <div className="rounded-2xl border border-gray-200/80 bg-[#F9FBF8] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+              <div className="flex items-center gap-2 font-semibold text-[#374151]">
+                <Coins size={16} className="text-[var(--cr-primary)] shrink-0" />
+                <span>{tr.ledgerImpact || "Financial Ledger Preview:"}</span>
+                <span className="text-[#6B7280] font-normal">
+                  (Invoice: {numInvoice.toLocaleString()} EGP | Spent: {numSpent.toLocaleString()} EGP)
+                </span>
+              </div>
+              <div>
+                {diff > 0 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 border border-rose-200 px-3 py-1 font-bold text-rose-700">
+                    <span>+{diff.toLocaleString()} EGP</span>
+                    <span className="font-medium text-[11px] text-rose-600">({tr.ledgerDebt || "Added to Outstanding Debt"})</span>
+                  </span>
+                ) : diff < 0 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 font-bold text-emerald-700">
+                    <span>+{Math.abs(diff).toLocaleString()} EGP</span>
+                    <span className="font-medium text-[11px] text-emerald-600">({tr.ledgerCredit || "Settles Debt & Credits Wallet"})</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1 font-bold text-emerald-700">
+                    <CheckCircle2 size={13} />
+                    <span>{tr.ledgerExact || "Fully Settled (0 EGP Debt — Paid)"}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── SAGE CALLOUT BANNER ── */}
+        <div className="rounded-2xl border border-[#D5DFD1] bg-[#F3F7F1] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#384E34] text-[#384E34] font-bold">
+              <Info size={16} />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-[var(--cr-dark)]">
+                {tr.bannerTitle}
+              </p>
+              <p className="text-[11px] sm:text-xs text-[var(--color-brand-secondary)] mt-0.5">
+                {tr.bannerSubtitle}
+              </p>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 border border-[#E3ECE0] text-[var(--color-brand-secondary)] shrink-0">
+            <CalendarIcon size={18} className="text-[#384E34]" />
+            <Clock size={14} className="text-[#6B7280]" />
+          </div>
+        </div>
+
+        {/* ── ACTION BUTTONS ── */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-xl border border-gray-200 bg-white px-6 py-2.5 text-sm font-semibold text-[#374151] shadow-2xs hover:bg-gray-50 transition cursor-pointer disabled:opacity-60"
+          >
+            {tr.cancelBtn}
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#2D3F2A] px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1E2D1C] active:scale-98 transition cursor-pointer disabled:opacity-60"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>{isEditMode ? (tr.updatingBtn || "Updating...") : tr.savingBtn}</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>{isEditMode ? (tr.updateBookingBtn || "Update Booking") : tr.submitBtn}</span>
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default AdminAddPreviousBookingView;
+
+

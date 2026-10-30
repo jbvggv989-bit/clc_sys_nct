@@ -1,0 +1,320 @@
+/**
+ * The main bookings calendar/table and the pending-approvals queue. This component reads and
+ * WRITES `reservations` directly via the browser-side Supabase client (`@/lib/supabaseClient`,
+ * anon key) instead of going through `PATCH /api/reservations` like every other approve/reject path
+ * documented in ai_docs/TEST_COVERAGE_INVENTORY.md module 1 — see the batch report re: RISKS.md
+ * RISK-019 drift. The `paymentStatus` derivation below is a regression guard for RISK-039
+ * ("AdminBookingsView Fabricates Payment Status... (RESOLVED)") — the comment at
+ * AdminBookingsView.tsx:231-234 explicitly warns against reintroducing the fabrication this test
+ * pins against.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createSupabaseFake } from '../../helpers/supabaseFake';
+import { createFetchFake } from '../../helpers/fetchFake';
+
+const fake = createSupabaseFake();
+const fetchFake = createFetchFake();
+const tablesRead: string[] = [];
+
+// The view also opens a realtime channel (`supabase.channel(...).on(...).on(...).subscribe()`) so
+// follow-up reminders update without a reload. Realtime is not what these tests cover, so the
+// channel is an inert chainable stub — but it must exist, or the mount effect throws and every
+// render in this file fails.
+vi.mock('@/lib/supabaseClient', () => {
+  const channel: any = { on: () => channel, subscribe: () => channel };
+  return {
+    supabase: {
+      from: (table: string) => {
+        tablesRead.push(table);
+        return fake.client.from(table);
+      },
+      channel: () => channel,
+      removeChannel: () => undefined,
+    },
+  };
+});
+
+import { AdminBookingsView } from '@/components/admin/bookings/AdminBookingsView';
+
+beforeEach(() => {
+  tablesRead.length = 0;
+  fetchFake.reset();
+  fake.reset();
+  fake.seed('reservations', []);
+  fake.seed('providers', []);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function reservation(overrides: Record<string, any>) {
+  return {
+    id: 'r1',
+    customer_name: 'Mona Ali',
+    status: 'confirmed',
+    ...overrides,
+  };
+}
+
+describe('payment status derivation (RISK-039 regression guard)', () => {
+  it('shows "—" (unknown) rather than "Paid" when amountPaid was never recorded', async () => {
+    render(<AdminBookingsView allReservations={[reservation({ id: 'r1', customer_name: 'No Data Patient' })]} />);
+    await screen.findByText('No Data Patient');
+    const row = screen.getByText('No Data Patient').closest('tr') as HTMLElement;
+    expect(row.textContent).toContain('—');
+  });
+
+  it('shows "Unpaid" when amountPaid is zero', async () => {
+    render(
+      <AdminBookingsView
+        allReservations={[reservation({ id: 'r1', customer_name: 'Unpaid Patient', amountPaid: 0, amountLeft: 500 })]}
+      />
+    );
+    await screen.findByText('Unpaid Patient');
+    expect(screen.getByText('Unpaid')).toBeInTheDocument();
+  });
+
+  it('shows "—" (unknown), not "Paid", when amountPaid is recorded but amountLeft was never recorded', async () => {
+    render(
+      <AdminBookingsView allReservations={[reservation({ id: 'r1', customer_name: 'Partial Data Patient', amountPaid: 300 })]} />
+    );
+    await screen.findByText('Partial Data Patient');
+    const row = screen.getByText('Partial Data Patient').closest('tr') as HTMLElement;
+    expect(row.textContent).toContain('—');
+  });
+
+  it('shows "Partially Paid" when a balance remains', async () => {
+    render(
+      <AdminBookingsView
+        allReservations={[reservation({ id: 'r1', customer_name: 'Partial Payer', amountPaid: 300, amountLeft: 200 })]}
+      />
+    );
+    await screen.findByText('Partial Payer');
+    expect(screen.getByText('Partially Paid')).toBeInTheDocument();
+  });
+
+  it('shows "Paid" only when both amountPaid is positive and amountLeft is zero', async () => {
+    render(
+      <AdminBookingsView
+        allReservations={[reservation({ id: 'r1', customer_name: 'Full Payer', amountPaid: 500, amountLeft: 0 })]}
+      />
+    );
+    await screen.findByText('Full Payer');
+    expect(screen.getByText('Paid')).toBeInTheDocument();
+  });
+});
+
+describe('doctor name resolution', () => {
+  it('uses the raw doctor name on the reservation when present', async () => {
+    render(
+      <AdminBookingsView allReservations={[reservation({ id: 'r1', customer_name: 'Patient X', doctor_name: 'Dr. Omar' })]} />
+    );
+    await screen.findByText('Patient X');
+    expect(screen.getByText('Dr. Omar')).toBeInTheDocument();
+  });
+
+  it('falls back to looking up the provider by id when no doctor name is present on the reservation', async () => {
+    render(
+      <AdminBookingsView
+        allReservations={[reservation({ id: 'r1', customer_name: 'Patient Y', provider_id: 'prov-1' })]}
+        providers={[{ id: 'prov-1', name: 'Dr. Hana' }]}
+      />
+    );
+    await screen.findByText('Patient Y');
+    expect(screen.getByText('Dr. Hana')).toBeInTheDocument();
+  });
+
+  it('shows "—" when no doctor name and no matching provider can be found', async () => {
+    render(<AdminBookingsView allReservations={[reservation({ id: 'r1', customer_name: 'Patient Z', provider_id: 'ghost' })]} />);
+    await screen.findByText('Patient Z');
+    const row = screen.getByText('Patient Z').closest('tr') as HTMLElement;
+    expect(row.textContent).toContain('—');
+  });
+});
+
+describe('pending approvals — approve/reject', () => {
+  // RISK-125: Approve only asks the parent to open the approve dialog. The row must stay listed (cancelling
+  // the dialog would otherwise leave a still-pending request hidden) and nothing is written from the browser;
+  // the parent saves through the API and the list changes when it refetches.
+  it('approve hands the booking to onApproveBooking, keeps the row listed and does not write to Supabase', async () => {
+    fake.seed('reservations', [{ id: 'req-1', status: 'pending' }]);
+    const onApproveBooking = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AdminBookingsView
+        requests={[{ id: 'req-1', patientName: 'Pending Patient' }]}
+        onApproveBooking={onApproveBooking}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Pending/ }));
+    await screen.findByText('Pending Patient');
+    await user.click(screen.getByTitle('Approve'));
+
+    await waitFor(() => expect(onApproveBooking).toHaveBeenCalledWith(expect.objectContaining({ id: 'req-1' })));
+    expect(screen.getByText('Pending Patient')).toBeInTheDocument();
+    expect(fake.rows('reservations').find((r) => r.id === 'req-1')?.status).toBe('pending');
+  });
+
+  it('approve removes the row once the parent no longer lists the request (the approval was saved)', async () => {
+    const onApproveBooking = vi.fn();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <AdminBookingsView
+        requests={[{ id: 'req-5', patientName: 'Approved Later Patient' }]}
+        onApproveBooking={onApproveBooking}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Pending/ }));
+    await screen.findByText('Approved Later Patient');
+    await user.click(screen.getByTitle('Approve'));
+    expect(screen.getByText('Approved Later Patient')).toBeInTheDocument();
+
+    rerender(<AdminBookingsView requests={[]} onApproveBooking={onApproveBooking} />);
+    await waitFor(() => expect(screen.queryByText('Approved Later Patient')).not.toBeInTheDocument());
+  });
+
+  // RISK-122: the browser-side write to `reservations` is blocked by RLS and failed silently, so a reject
+  // looked saved but was lost on reload. Saving is now the parent's job (PATCH /api/reservations); the view
+  // hides the row only after the parent reports success.
+  it('reject hands the booking to onRejectBooking and does not write to Supabase from the browser', async () => {
+    fake.seed('reservations', [{ id: 'req-2', status: 'pending' }]);
+    const onRejectBooking = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(
+      <AdminBookingsView
+        requests={[{ id: 'req-2', patientName: 'Another Pending Patient' }]}
+        onRejectBooking={onRejectBooking}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Pending/ }));
+    await screen.findByText('Another Pending Patient');
+    await user.click(screen.getByTitle('Reject'));
+
+    await waitFor(() => expect(onRejectBooking).toHaveBeenCalledWith(expect.objectContaining({ id: 'req-2' })));
+    expect(fake.rows('reservations').find((r) => r.id === 'req-2')?.status).toBe('pending');
+  });
+
+  it('reject removes the row from the pending list once the parent confirms it was saved', async () => {
+    const onRejectBooking = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(
+      <AdminBookingsView
+        requests={[{ id: 'req-3', patientName: 'Saved Reject Patient' }]}
+        onRejectBooking={onRejectBooking}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Pending/ }));
+    await screen.findByText('Saved Reject Patient');
+    await user.click(screen.getByTitle('Reject'));
+
+    await waitFor(() => expect(screen.queryByText('Saved Reject Patient')).not.toBeInTheDocument());
+  });
+
+  it('reject keeps the row in the pending list when the parent reports the rejection was not saved', async () => {
+    const onRejectBooking = vi.fn().mockResolvedValue(false);
+    const user = userEvent.setup();
+    render(
+      <AdminBookingsView
+        requests={[{ id: 'req-4', patientName: 'Failed Reject Patient' }]}
+        onRejectBooking={onRejectBooking}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Pending/ }));
+    await screen.findByText('Failed Reject Patient');
+    await user.click(screen.getByTitle('Reject'));
+
+    await waitFor(() => expect(onRejectBooking).toHaveBeenCalled());
+    expect(screen.getByText('Failed Reject Patient')).toBeInTheDocument();
+  });
+});
+
+// The screen used to read reservations and providers straight from Supabase with the browser key every 3 s
+// (blocked by RLS: empty on the dev database) next to the prescriptions call. Follow-up reminders now come
+// only from /api/prescriptions: every 15 s, one request at a time, and not while the tab is hidden.
+describe('follow-up reminders poll', () => {
+  const prescriptionCalls = () => fetchFake.calls.filter((c) => c.method === 'GET' && c.path === '/api/prescriptions').length;
+  const setVisibility = (state: 'visible' | 'hidden') =>
+    Object.defineProperty(document, 'visibilityState', { value: state, configurable: true });
+  const advance = async (ms: number) => {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', fetchFake.fetch);
+    setVisibility('visible');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    setVisibility('visible');
+  });
+
+  it('never reads reservations, providers or prescriptions from Supabase with the browser key', async () => {
+    fetchFake.on('GET', '/api/prescriptions', () => ({ status: 200, body: [] }));
+    render(<AdminBookingsView allReservations={[]} />);
+    await advance(0);
+    await advance(30000);
+
+    expect(tablesRead).not.toContain('reservations');
+    expect(tablesRead).not.toContain('providers');
+    expect(tablesRead).not.toContain('prescriptions');
+    expect(prescriptionCalls()).toBeGreaterThan(0);
+  });
+
+  it('asks the prescriptions API once on load, then every 15 s (not every 3 s)', async () => {
+    fetchFake.on('GET', '/api/prescriptions', () => ({ status: 200, body: [] }));
+    render(<AdminBookingsView allReservations={[]} />);
+    await advance(0);
+    expect(prescriptionCalls()).toBe(1);
+
+    await advance(9000);
+    expect(prescriptionCalls()).toBe(1);
+
+    await advance(6000);
+    expect(prescriptionCalls()).toBe(2);
+  });
+
+  it('does not start a new request while the previous one is still running', async () => {
+    let release: () => void = () => {};
+    fetchFake.on('GET', '/api/prescriptions', () => new Promise((resolve) => { release = () => resolve({ status: 200, body: [] }); }));
+    render(<AdminBookingsView allReservations={[]} />);
+    await advance(0);
+    await advance(60000);
+    expect(prescriptionCalls()).toBe(1);
+
+    release();
+    await advance(0);
+    await advance(15000);
+    expect(prescriptionCalls()).toBe(2);
+  });
+
+  it('does not poll while the tab is hidden and refreshes as soon as it is visible again', async () => {
+    fetchFake.on('GET', '/api/prescriptions', () => ({ status: 200, body: [] }));
+    render(<AdminBookingsView allReservations={[]} />);
+    await advance(0);
+    expect(prescriptionCalls()).toBe(1);
+
+    setVisibility('hidden');
+    await advance(60000);
+    expect(prescriptionCalls()).toBe(1);
+
+    setVisibility('visible');
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await advance(0);
+    expect(prescriptionCalls()).toBe(2);
+  });
+});

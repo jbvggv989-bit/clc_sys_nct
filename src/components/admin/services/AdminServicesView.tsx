@@ -1,0 +1,1545 @@
+"use client";
+
+import { useMemo } from "react";
+import {
+  Upload,
+  Plus,
+  Search,
+  Filter,
+  ArrowUpDown,
+  ChevronDown,
+  GripVertical,
+  Layers,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Sparkles,
+} from "lucide-react";
+import { ServiceItem, getDurationLabel } from "@/lib/services";
+import {
+  LocalCategory,
+  saveDynamicCategories,
+  setServiceToggle,
+} from "@/lib/serviceStore";
+import { compressImage } from "@/lib/image";
+import ServiceRecipeEditor from "@/components/admin/services/ServiceRecipeEditor";
+import ServiceDeviceEditor from "@/components/admin/services/ServiceDeviceEditor";
+import { checkIsLaserService } from "@/components/admin/bookings/BookingDetailsModal";
+import { adminTranslations } from "@/components/admin/translations";
+import type { Branch } from "@/types";
+
+interface AdminServicesViewProps {
+  // State
+  branches: Branch[];
+  localServices: ServiceItem[];
+  setLocalServices: React.Dispatch<React.SetStateAction<ServiceItem[]>>;
+  localCategories: LocalCategory[];
+  setLocalCategories: React.Dispatch<React.SetStateAction<LocalCategory[]>>;
+  expandedCategories: Record<string, boolean>;
+  setExpandedCategories: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  showAddCategoryModal: boolean;
+  setShowAddCategoryModal: React.Dispatch<React.SetStateAction<boolean>>;
+  showAddServiceModal: boolean;
+  setShowAddServiceModal: React.Dispatch<React.SetStateAction<boolean>>;
+  addServiceTargetCategory: string;
+  setAddServiceTargetCategory: React.Dispatch<React.SetStateAction<string>>;
+  newCategoryNameEn: string;
+  setNewCategoryNameEn: React.Dispatch<React.SetStateAction<string>>;
+  newCategoryNameAr: string;
+  setNewCategoryNameAr: React.Dispatch<React.SetStateAction<string>>;
+  newServiceNameEn: string;
+  setNewServiceNameEn: React.Dispatch<React.SetStateAction<string>>;
+  newServiceNameAr: string;
+  setNewServiceNameAr: React.Dispatch<React.SetStateAction<string>>;
+  newServicePrice: string;
+  setNewServicePrice: React.Dispatch<React.SetStateAction<string>>;
+  deleteCategoryTarget: LocalCategory | null;
+  setDeleteCategoryTarget: React.Dispatch<React.SetStateAction<LocalCategory | null>>;
+  editingService: ServiceItem | null;
+  setEditingService: React.Dispatch<React.SetStateAction<ServiceItem | null>>;
+  deleteServiceTarget: ServiceItem | null;
+  setDeleteServiceTarget: React.Dispatch<React.SetStateAction<ServiceItem | null>>;
+  serviceNameEn: string;
+  setServiceNameEn: React.Dispatch<React.SetStateAction<string>>;
+  serviceNameAr: string;
+  setServiceNameAr: React.Dispatch<React.SetStateAction<string>>;
+  serviceCategory: string;
+  setServiceCategory: React.Dispatch<React.SetStateAction<string>>;
+  serviceDuration: string;
+  setServiceDuration: React.Dispatch<React.SetStateAction<string>>;
+  serviceDurationMinutes: number;
+  setServiceDurationMinutes: React.Dispatch<React.SetStateAction<number>>;
+  serviceUnitType: string;
+  setServiceUnitType: React.Dispatch<React.SetStateAction<string>>;
+  serviceDescEn: string;
+  setServiceDescEn: React.Dispatch<React.SetStateAction<string>>;
+  serviceDescAr: string;
+  setServiceDescAr: React.Dispatch<React.SetStateAction<string>>;
+  serviceSortOrder: number;
+  setServiceSortOrder: React.Dispatch<React.SetStateAction<number>>;
+  serviceIsShared: boolean;
+  setServiceIsShared: React.Dispatch<React.SetStateAction<boolean>>;
+  serviceIsLaser: boolean;
+  setServiceIsLaser: React.Dispatch<React.SetStateAction<boolean>>;
+  serviceEnableReminder: boolean;
+  serviceShowOnWebsite: boolean;
+  setServiceShowOnWebsite: (v: boolean) => void;
+  setServiceEnableReminder: React.Dispatch<React.SetStateAction<boolean>>;
+  serviceImageUrl: string;
+  setServiceImageUrl: React.Dispatch<React.SetStateAction<string>>;
+  servicePrice: number;
+  setServicePrice: React.Dispatch<React.SetStateAction<number>>;
+  serviceBranchPricing: Required<ServiceItem>['branchPricing'];
+  setServiceBranchPricing: React.Dispatch<React.SetStateAction<Required<ServiceItem>['branchPricing']>>;
+  draggedServiceId: number | null;
+  setDraggedServiceId: React.Dispatch<React.SetStateAction<number | null>>;
+  dragOverServiceId: number | null;
+  setDragOverServiceId: React.Dispatch<React.SetStateAction<number | null>>;
+  rowDraggable: Record<number, boolean>;
+  setRowDraggable: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  draggedCatKey: string | null;
+  setDraggedCatKey: React.Dispatch<React.SetStateAction<string | null>>;
+  dragOverCatKey: string | null;
+  setDragOverCatKey: React.Dispatch<React.SetStateAction<string | null>>;
+  catDraggable: Record<string, boolean>;
+  setCatDraggable: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  serviceSearch: string;
+  setServiceSearch: React.Dispatch<React.SetStateAction<string>>;
+  serviceSortBy: "custom" | "name_asc" | "name_desc" | "price_asc" | "price_desc" | "newest";
+  setServiceSortBy: React.Dispatch<React.SetStateAction<"custom" | "name_asc" | "name_desc" | "price_asc" | "price_desc" | "newest">>;
+  showServiceFilterPanel: boolean;
+  setShowServiceFilterPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  serviceFilterStatus: "All" | "Active" | "Inactive";
+  setServiceFilterStatus: React.Dispatch<React.SetStateAction<"All" | "Active" | "Inactive">>;
+  serviceToggles: Record<number, { visible: boolean; active: boolean }>;
+  setServiceToggles: React.Dispatch<React.SetStateAction<Record<number, { visible: boolean; active: boolean }>>>;
+  activeServiceRowMenuId: string | number | null;
+  setActiveServiceRowMenuId: React.Dispatch<React.SetStateAction<string | number | null>>;
+  // Computed
+  filteredServices: ServiceItem[];
+  groupedServices: Record<string, ServiceItem[]>;
+  // Handlers
+  handleEditService: (svc: ServiceItem) => void;
+  handleReorderServices: (draggedId: number, targetId: number) => Promise<void>;
+  handleReorderCategories: (draggedKey: string, targetKey: string) => void;
+  toggleCategoryExpand: (cat: string) => void;
+  removeCategory: (catKey: string) => Promise<void>;
+  toggleService: (id: number, field: "visible" | "active") => void;
+  // Shared/page-level
+  syncServicesToApi: (services: ServiceItem[]) => Promise<ServiceItem[] | null>;
+  loadServicesFromApi: () => Promise<void>;
+  deleteServiceFromApi: (id: number) => Promise<boolean>;
+  syncCategoriesToApi?: (categories: LocalCategory[]) => Promise<LocalCategory[] | null>;
+  loadCategoriesFromApi?: () => Promise<LocalCategory[] | null>;
+  deleteCategoryFromApi?: (key: string) => Promise<boolean>;
+  authenticatedJsonHeaders: { "Content-Type": string; Authorization: string };
+  hasPermission: (perm: string) => boolean;
+  lang: "en" | "ar";
+  t: typeof adminTranslations["en"]["services"];
+}
+
+export default function AdminServicesView(props: AdminServicesViewProps) {
+  const {
+    branches,
+    localServices, setLocalServices,
+    localCategories, setLocalCategories,
+    expandedCategories, setExpandedCategories,
+    showAddCategoryModal, setShowAddCategoryModal,
+    showAddServiceModal, setShowAddServiceModal,
+    addServiceTargetCategory, setAddServiceTargetCategory,
+    newCategoryNameEn, setNewCategoryNameEn,
+    newCategoryNameAr, setNewCategoryNameAr,
+    newServiceNameEn, setNewServiceNameEn,
+    newServiceNameAr, setNewServiceNameAr,
+    newServicePrice, setNewServicePrice,
+    deleteCategoryTarget, setDeleteCategoryTarget,
+    editingService, setEditingService,
+    deleteServiceTarget, setDeleteServiceTarget,
+    serviceNameEn, setServiceNameEn,
+    serviceNameAr, setServiceNameAr,
+    serviceCategory, setServiceCategory,
+    serviceDuration, setServiceDuration,
+    serviceDurationMinutes, setServiceDurationMinutes,
+    serviceUnitType, setServiceUnitType,
+    serviceDescEn, setServiceDescEn,
+    serviceDescAr, setServiceDescAr,
+    serviceSortOrder, setServiceSortOrder,
+    serviceIsShared, setServiceIsShared,
+    serviceIsLaser, setServiceIsLaser,
+    serviceEnableReminder, setServiceEnableReminder,
+    serviceShowOnWebsite, setServiceShowOnWebsite,
+    serviceImageUrl, setServiceImageUrl,
+    servicePrice, setServicePrice,
+    serviceBranchPricing, setServiceBranchPricing,
+    draggedServiceId, setDraggedServiceId,
+    dragOverServiceId, setDragOverServiceId,
+    rowDraggable, setRowDraggable,
+    draggedCatKey, setDraggedCatKey,
+    dragOverCatKey, setDragOverCatKey,
+    catDraggable, setCatDraggable,
+    serviceSearch, setServiceSearch,
+    serviceSortBy, setServiceSortBy,
+    showServiceFilterPanel, setShowServiceFilterPanel,
+    serviceFilterStatus, setServiceFilterStatus,
+    serviceToggles, setServiceToggles,
+    activeServiceRowMenuId, setActiveServiceRowMenuId,
+    filteredServices, groupedServices,
+    handleEditService, handleReorderServices, handleReorderCategories,
+    toggleCategoryExpand, removeCategory, toggleService,
+    syncServicesToApi, loadServicesFromApi, deleteServiceFromApi,
+    syncCategoriesToApi, loadCategoriesFromApi, deleteCategoryFromApi,
+    authenticatedJsonHeaders, hasPermission,
+    lang, t,
+  } = props;
+
+  return (
+    <div dir={lang === "ar" ? "rtl" : "ltr"}>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-2xl font-semibold text-[var(--cr-dark)]">{t.heading}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="inline-flex items-center gap-2 rounded-lg border border-[var(--cr-primary)]/30 bg-white px-4 py-2 text-sm font-medium text-[var(--cr-primary)] shadow-sm transition hover:bg-[var(--cr-primary)]/5">
+            <Upload size={14} /> {t.importBtn}
+          </button>
+          <button
+            onClick={() => setShowAddCategoryModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer"
+          >
+            <Plus size={14} /> {t.addCategoryBtn}
+          </button>
+        </div>
+      </div>
+
+      {/* Controls Bar: Search, Sort, Filter, and Expand/Collapse */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <div className="relative max-w-xs flex-1 min-w-[220px] flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--color-brand-secondary)]" />
+              <input
+                value={serviceSearch}
+                onChange={(e) => { setServiceSearch(e.target.value); }}
+                placeholder={t.searchPlaceholder}
+                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white py-2 ps-9 pe-4 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 shadow-2xs"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowServiceFilterPanel(prev => !prev)}
+              title={t.filterTitle}
+              className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition cursor-pointer shadow-2xs ${
+                showServiceFilterPanel || serviceFilterStatus !== "All"
+                  ? "border-[var(--cr-accent)] bg-[#EDE4C8] text-[var(--cr-primary)]"
+                  : "border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[var(--color-brand-light)]"
+              }`}
+            >
+              <Filter size={15} />
+              {serviceFilterStatus !== "All" && (
+                <span className="absolute -top-1 -end-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--cr-primary)] text-[9px] font-bold text-white">!</span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={14} className="text-[var(--color-brand-secondary)]" />
+            <select
+              value={serviceSortBy}
+              onChange={(e) => setServiceSortBy(e.target.value as any)}
+              className="rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)] shadow-2xs cursor-pointer"
+            >
+              <option value="custom">{t.sortDefault}</option>
+              <option value="name_asc">{t.sortNameAsc}</option>
+              <option value="name_desc">{t.sortNameDesc}</option>
+              <option value="price_asc">{t.sortPriceAsc}</option>
+              <option value="price_desc">{t.sortPriceDesc}</option>
+              <option value="newest">{t.sortNewest}</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const allExpanded = localCategories.every(c => expandedCategories[c.key] ?? true);
+            const newStates = Object.fromEntries(localCategories.map(c => [c.key, !allExpanded]));
+            setExpandedCategories(newStates);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#F9F9F7] transition shadow-2xs"
+        >
+          {localCategories.every(c => expandedCategories[c.key] ?? true) ? t.collapseAll : t.expandAll}
+        </button>
+      </div>
+
+      {/* Dynamic Services Filter Panel */}
+      {showServiceFilterPanel && (
+        <div className="mb-5 grid grid-cols-1 gap-4 rounded-2xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4 md:grid-cols-3 items-end shadow-sm animate-fadeIn">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.statusFilterLabel}</label>
+            <select
+              value={serviceFilterStatus}
+              onChange={(e) => setServiceFilterStatus(e.target.value as any)}
+              className="w-full rounded-xl border border-[#E6E9EB] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+            >
+              <option value="All">{t.allStatuses}</option>
+              <option value="Active">{t.activeOnly}</option>
+              <option value="Inactive">{t.inactiveOnly}</option>
+            </select>
+          </div>
+          <div className="md:col-span-2 flex justify-end">
+            <button
+              onClick={() => {
+                setServiceFilterStatus("All");
+                setServiceSearch("");
+              }}
+              className="px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-xs font-bold text-red-600 hover:bg-red-100 transition cursor-pointer"
+            >
+              {t.clearFilters}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Category Accordions */}
+      <div className="flex flex-col gap-4">
+        {(() => {
+          const isRTL = lang === "ar";
+
+          const getServicePrice = (s: ServiceItem): number => {
+            if (typeof s.price === "number" && !isNaN(s.price)) return s.price;
+            if (Array.isArray(s.branchPricing) && s.branchPricing.length > 0) {
+              const defaultBp = s.branchPricing.find((bp: any) => bp.isDefault) || s.branchPricing[0];
+              if (defaultBp && typeof defaultBp.price === "number" && !isNaN(defaultBp.price)) return defaultBp.price;
+            }
+            return 0;
+          };
+
+          // A branch's own delete only removes it from `branches` — nothing prunes the matching
+          // entry out of every service's `branchPricing[]` (it's a denormalized JSON array keyed
+          // by branch name, not id). Without this filter, a deleted or deactivated branch's price
+          // row stays visible here forever.
+          const activeBranchNames = new Set(
+            (branches || [])
+              .filter((b) => b.status === "active")
+              .flatMap((b) => [b.name_en, b.name_ar])
+              .filter((n): n is string => Boolean(n))
+              .map((n) => n.toLowerCase())
+          );
+          const getActiveBranchPricing = (s: ServiceItem) =>
+            Array.isArray(s.branchPricing)
+              ? s.branchPricing.filter((bp: any) => bp && bp.name && activeBranchNames.has(String(bp.name).toLowerCase()))
+              : [];
+
+          const getServiceName = (s: ServiceItem): string => {
+            if (isRTL) {
+              return (s.ar || s.en || (s as any).name_ar || (s as any).name_en || (s as any).name || "").trim();
+            }
+            return (s.en || s.ar || (s as any).name_en || (s as any).name_ar || (s as any).name || "").trim();
+          };
+
+          const getServiceTimestamp = (s: ServiceItem): number => {
+            const raw = (s as any).rawCreatedAt || (s as any).created_at;
+            if (raw) {
+              const t = new Date(String(raw)).getTime();
+              if (!isNaN(t) && t > 0) return t;
+            }
+            if (s.createdAt) {
+              const t = new Date(String(s.createdAt)).getTime();
+              if (!isNaN(t) && t > 0) return t;
+            }
+            return Number(s.id) || 0;
+          };
+
+          const allCategoryKeys = new Set(localCategories.map(c => c.key));
+          const extraCategories: LocalCategory[] = Object.keys(groupedServices)
+            .filter(catKey => !allCategoryKeys.has(catKey))
+            .map((catKey, idx) => ({
+              key: catKey,
+              en: catKey.charAt(0).toUpperCase() + catKey.slice(1).replace(/_/g, " "),
+              ar: catKey.charAt(0).toUpperCase() + catKey.slice(1).replace(/_/g, " "),
+              sortOrder: localCategories.length + idx,
+            }));
+          const completeCategories = [...localCategories, ...extraCategories];
+
+          const sortedCategories = completeCategories.sort((catA, catB) => {
+            if (serviceSortBy === "custom") return 0;
+            const servicesA = (groupedServices[catA.key] ?? []).map(getServicePrice);
+            const servicesB = (groupedServices[catB.key] ?? []).map(getServicePrice);
+
+            if (serviceSortBy === "name_asc") {
+              const nameA = (isRTL ? (catA.ar || catA.en || catA.key) : (catA.en || catA.ar || catA.key)).trim();
+              const nameB = (isRTL ? (catB.ar || catB.en || catB.key) : (catB.en || catB.ar || catB.key)).trim();
+              return nameA.localeCompare(nameB, isRTL ? "ar" : "en", { sensitivity: "base" });
+            }
+            if (serviceSortBy === "name_desc") {
+              const nameA = (isRTL ? (catA.ar || catA.en || catA.key) : (catA.en || catA.ar || catA.key)).trim();
+              const nameB = (isRTL ? (catB.ar || catB.en || catB.key) : (catB.en || catB.ar || catB.key)).trim();
+              return nameB.localeCompare(nameA, isRTL ? "ar" : "en", { sensitivity: "base" });
+            }
+            if (serviceSortBy === "price_asc") {
+              const minA = servicesA.length > 0 ? Math.min(...servicesA) : Infinity;
+              const minB = servicesB.length > 0 ? Math.min(...servicesB) : Infinity;
+              return minA - minB;
+            }
+            if (serviceSortBy === "price_desc") {
+              const maxA = servicesA.length > 0 ? Math.max(...servicesA) : -Infinity;
+              const maxB = servicesB.length > 0 ? Math.max(...servicesB) : -Infinity;
+              return maxB - maxA;
+            }
+            if (serviceSortBy === "newest") {
+              const timesA = (groupedServices[catA.key] ?? []).map(getServiceTimestamp);
+              const timesB = (groupedServices[catB.key] ?? []).map(getServiceTimestamp);
+              const latestA = timesA.length > 0 ? Math.max(...timesA) : 0;
+              const latestB = timesB.length > 0 ? Math.max(...timesB) : 0;
+              return latestB - latestA;
+            }
+            return 0;
+          });
+
+          if (sortedCategories.length === 0) {
+            return (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-[#F9F9F7] py-16 px-4 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] mb-3">
+                  <Layers size={22} />
+                </div>
+                <h4 className="text-base font-bold text-[var(--cr-dark)] mb-1">
+                  {lang === "ar" ? "لا توجد أقسام مسجلة" : "No Categories Created Yet"}
+                </h4>
+                <p className="text-xs text-[var(--color-brand-secondary)] max-w-sm mb-4">
+                  {lang === "ar"
+                    ? "ابدأ بإضافة قسم جديد للخدمات لتنظيم خدمات العيادة والأسعار."
+                    : "Get started by adding a service category to organize your clinic's services and pricing."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCategoryModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer"
+                >
+                  <Plus size={14} /> {t.addCategoryBtn}
+                </button>
+              </div>
+            );
+          }
+
+          return sortedCategories.map((cat) => {
+            const catServicesRaw = (groupedServices[cat.key] ?? []).filter((svc) => {
+              const toggles = serviceToggles[svc.id] ?? { visible: true, active: true };
+              if (!toggles.visible) return false;
+              if (serviceFilterStatus === "Active" && !toggles.active) return false;
+              if (serviceFilterStatus === "Inactive" && toggles.active) return false;
+              return true;
+            });
+            const catServices = [...catServicesRaw].sort((a, b) => {
+              if (serviceSortBy === "name_asc") {
+                return getServiceName(a).localeCompare(getServiceName(b), isRTL ? "ar" : "en", { sensitivity: "base" });
+              }
+              if (serviceSortBy === "name_desc") {
+                return getServiceName(b).localeCompare(getServiceName(a), isRTL ? "ar" : "en", { sensitivity: "base" });
+              }
+              if (serviceSortBy === "price_asc") {
+                return getServicePrice(a) - getServicePrice(b);
+              }
+              if (serviceSortBy === "price_desc") {
+                return getServicePrice(b) - getServicePrice(a);
+              }
+              if (serviceSortBy === "newest") {
+                return getServiceTimestamp(b) - getServiceTimestamp(a);
+              }
+              return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+            });
+            const isExpanded = expandedCategories[cat.key] ?? true;
+            const hasMatch = catServices.length > 0;
+            if (serviceSearch.trim() && !hasMatch) return null;
+
+          return (
+            <div
+              key={cat.key}
+              draggable={!!catDraggable[cat.key]}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", cat.key);
+                setDraggedCatKey(cat.key);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverCatKey(cat.key);
+              }}
+              onDragEnd={() => {
+                setDraggedCatKey(null);
+                setDragOverCatKey(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedCatKey !== null && draggedCatKey !== cat.key) {
+                  handleReorderCategories(draggedCatKey, cat.key);
+                }
+                setDraggedCatKey(null);
+                setDragOverCatKey(null);
+              }}
+              className={`overflow-hidden rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm transition-all ${
+                draggedCatKey === cat.key ? "opacity-30 bg-[var(--color-brand-sand)]" : ""
+              } ${
+                dragOverCatKey === cat.key ? "border-t-2 border-t-[var(--cr-accent)]" : ""
+              }`}
+            >
+              {/* Category header row */}
+              <div
+                onClick={() => toggleCategoryExpand(cat.key)}
+                className="flex w-full cursor-pointer flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4 transition hover:bg-[#F9F9F7]"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Category Drag Handle */}
+                  <div
+                    onMouseEnter={() => setCatDraggable(prev => ({ ...prev, [cat.key]: true }))}
+                    onMouseLeave={() => setCatDraggable(prev => ({ ...prev, [cat.key]: false }))}
+                    onClick={(e) => e.stopPropagation()}
+                    className="hidden sm:inline-flex cursor-grab active:cursor-grabbing h-7 w-7 shrink-0 items-center justify-center rounded border border-[var(--cr-primary)]/10 bg-white text-[var(--color-brand-secondary)]/60 hover:bg-[var(--color-brand-sand)] hover:text-[var(--cr-primary)] transition"
+                    title={t.dragReorderCategory}
+                  >
+                    <GripVertical size={14} />
+                  </div>
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand-tint)]">
+                    <Layers size={16} className="text-[var(--cr-primary)]" />
+                  </div>
+                  <div className="text-start min-w-0 flex-1">
+                    <p className="font-semibold text-sm sm:text-base text-[var(--cr-dark)] truncate">{cat.en}</p>
+                  </div>
+                  <span className="ms-1 shrink-0 inline-flex items-center rounded-full bg-[var(--cr-primary)]/8 px-2 py-0.5 text-[11px] sm:text-xs font-semibold text-[var(--cr-primary)]">
+                    {catServices.length} {catServices.length !== 1 ? t.serviceCountSuffixPlural : t.serviceCountSuffix}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-2 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteCategoryTarget(cat);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 cursor-pointer"
+                  >
+                    {t.removeBtn}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAddServiceTargetCategory(cat.key);
+                      setServiceCategory(cat.key);
+                      setServiceNameEn("");
+                      setServiceNameAr("");
+                      setServiceDuration(getDurationLabel(60));
+                      setServiceDurationMinutes(60);
+                      setServiceUnitType("both");
+                      setServiceDescEn("");
+                      setServiceDescAr("");
+                      setServiceSortOrder(0);
+                      setServiceIsShared(true);
+                      setServiceIsLaser(
+                        cat.key.toLowerCase().includes("laser") ||
+                        (cat.en ? cat.en.toLowerCase().includes("laser") : false) ||
+                        (cat.ar ? cat.ar.includes("ليزر") : false)
+                      );
+                      setServiceEnableReminder(true);
+                      setServiceShowOnWebsite(true);
+                      setServiceImageUrl("");
+                      setServicePrice(0);
+                      {
+                        const defaultBranch = branches.find((b) => b.status === "active") || branches[0];
+                        setServiceBranchPricing([
+                          { name: (defaultBranch?.name_en || defaultBranch?.name_ar || "Zayed"), price: 0, visible: true, status: true, isDefault: true },
+                        ]);
+                      }
+                      setEditingService(null);
+                      setShowAddServiceModal(true);
+                    }}
+                    className={`${hasPermission("services.create") ? "inline-flex" : "hidden"} items-center gap-1 rounded-xl bg-[var(--cr-primary)] px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] cursor-pointer`}
+                  >
+                    <Plus size={12} /> {t.addServiceBtn}
+                  </button>
+                  <span className="text-[var(--color-brand-secondary)] transition-transform duration-200 p-1" style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                    <ChevronDown size={16} />
+                  </span>
+                </div>
+              </div>
+
+              {/* Services sub-table & Mobile Cards */}
+              {isExpanded && (
+                <div className="border-t border-[var(--cr-primary)]/8">
+                  {catServices.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-brand-tint)]">
+                        <Layers size={20} className="text-[var(--color-brand-secondary)]" />
+                      </div>
+                      <p className="text-sm font-medium text-[var(--cr-dark)]">{t.noServicesYet}</p>
+                      <p className="text-xs text-[var(--color-brand-secondary)]">{t.noServicesHint}</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
+                        <table className="w-full min-w-[860px] text-sm">
+                          <thead>
+                            <tr className="bg-[#F9F9F7]">
+                              <th className="w-10 px-3 py-2.5"></th>
+                              <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colId}</th>
+                              <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colName}</th>
+                              <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colCreatedAt}</th>
+                              <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colBranchPrice}</th>
+                              <th className="px-5 py-2.5 text-start text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colBranches}</th>
+                              <th className="px-5 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colSortOrder}</th>
+                              <th className="px-5 py-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">{t.colStatus}</th>
+                              <th className="px-3 py-2.5"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--cr-primary)]/6">
+                            {catServices.map((svc) => {
+                              const toggles = serviceToggles[svc.id] ?? { visible: true, active: true };
+                              const isInactive = !toggles.active;
+                              const rowFaded = isInactive;
+                              return (
+                                <tr
+                                  key={svc.id}
+                                  draggable={!!rowDraggable[svc.id]}
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.setData("text/plain", svc.id.toString());
+                                    setDraggedServiceId(svc.id);
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setDragOverServiceId(svc.id);
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedServiceId(null);
+                                    setDragOverServiceId(null);
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    if (draggedServiceId !== null && draggedServiceId !== svc.id) {
+                                      handleReorderServices(draggedServiceId, svc.id);
+                                    }
+                                    setDraggedServiceId(null);
+                                    setDragOverServiceId(null);
+                                  }}
+                                  className={`transition ${
+                                    draggedServiceId === svc.id ? "opacity-30 bg-[var(--color-brand-sand)]" : ""
+                                  } ${
+                                    dragOverServiceId === svc.id ? "border-t-2 border-t-[var(--cr-accent)]" : ""
+                                  } ${
+                                    rowFaded ? "opacity-50 bg-[#F9F9F7]" : "hover:bg-[#F9F9F7]"
+                                  }`}
+                                >
+                                  {/* Drag Handle */}
+                                  <td className="px-3 py-3 text-center">
+                                    <div
+                                      onMouseEnter={() => setRowDraggable(prev => ({ ...prev, [svc.id]: true }))}
+                                      onMouseLeave={() => setRowDraggable(prev => ({ ...prev, [svc.id]: false }))}
+                                      className="cursor-grab active:cursor-grabbing inline-flex h-7 w-7 items-center justify-center rounded border border-[var(--cr-primary)]/10 bg-white text-[var(--color-brand-secondary)]/60 hover:bg-[var(--color-brand-sand)] hover:text-[var(--cr-primary)] transition"
+                                      title={t.dragReorder}
+                                    >
+                                      <GripVertical size={14} />
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3 font-mono text-xs text-[var(--color-brand-secondary)]">{svc.id}</td>
+                                  <td className="px-5 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <p className={`font-semibold ${ rowFaded ? "line-through text-[var(--color-brand-secondary)]" : "text-[var(--cr-dark)]" }`}>{svc.en}</p>
+                                      {svc.showOnWebsite === false && (
+                                        <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200 shadow-2xs">{t.notOnWebsiteBadge}</span>
+                                      )}
+                                      {(svc.islaser || svc.is_laser || checkIsLaserService(svc)) && (
+                                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                                          <Sparkles size={11} className="text-emerald-600" />
+                                          <span>Laser</span>
+                                        </span>
+                                      )}
+                                      {isInactive && (
+                                        <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">{t.statusInactive}</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3 text-[var(--color-brand-secondary)]">
+                                    {svc.createdAt ? (
+                                      <>
+                                        <span className="block text-sm font-medium text-[var(--cr-dark)]">
+                                          {svc.createdAt.split(" ").slice(0, 2).join(" ")}
+                                        </span>
+                                        <span className="text-xs">
+                                          {svc.createdAt.split(" ").slice(2).join(" ")}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="block text-sm font-medium text-[var(--cr-dark)]">30 Apr</span>
+                                        <span className="text-xs">2:01 pm</span>
+                                      </>
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <span className="font-medium text-[var(--cr-accent)]">EGP {svc.price ?? 0}</span>
+                                  </td>
+                                  <td className="px-5 py-3 text-xs text-[var(--color-brand-secondary)] max-w-[200px] truncate">
+                                    {(() => {
+                                      const activeBp = getActiveBranchPricing(svc);
+                                      if (activeBp.length > 0) {
+                                        return activeBp.map((bp) => (
+                                          <div key={bp.name} className="flex items-center gap-1.5 mb-0.5 text-[11px]">
+                                            <span className="font-medium text-[var(--cr-dark)]">{bp.name}:</span>
+                                            <span className="text-[var(--cr-accent)]">EGP {bp.price}</span>
+                                            {bp.isDefault && <span className="text-[8px] bg-[var(--cr-primary)]/10 text-[var(--cr-primary)] px-1 rounded font-bold">Def</span>}
+                                          </div>
+                                        ));
+                                      }
+                                      const activeBranches = branches.filter((b) => b.status === "active");
+                                      const fallbackBranchName = activeBranches.length === 1 ? (activeBranches[0].name_en || activeBranches[0].name_ar) : null;
+                                      return (
+                                        <div className="flex items-center gap-1.5 text-[11px]">
+                                          {fallbackBranchName && <span className="font-medium text-[var(--cr-dark)]">{fallbackBranchName}:</span>}
+                                          <span className="text-[var(--cr-accent)]">EGP {svc.price ?? 0}</span>
+                                        </div>
+                                      );
+                                    })()}
+                                  </td>
+                                  <td className="px-5 py-3 text-center">
+                                    <span className="font-medium text-[var(--cr-dark)]">{svc.sortOrder ?? 0}</span>
+                                  </td>
+                                  {/* Status Badge */}
+                                  <td className="px-5 py-3 text-center">
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                                      toggles.active
+                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                                        : "bg-gray-100 text-gray-500 border border-gray-200"
+                                    }`}>
+                                      {toggles.active ? t.statusActive : t.statusInactive}
+                                    </span>
+                                  </td>
+                                  {/* 3 Dots Actions Menu */}
+                                  <td className="px-3 py-3 text-center">
+                                    {(() => {
+                                      const canEdit = hasPermission("services.action_edit");
+                                      const canToggle = hasPermission("services.action_toggle_status");
+                                      const canDelete = hasPermission("services.action_delete");
+                                      if (!canEdit && !canToggle && !canDelete) return null;
+
+                                      return (
+                                        <div className="relative inline-block text-start">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setActiveServiceRowMenuId(prev => prev === svc.id ? null : svc.id);
+                                            }}
+                                            className={`inline-flex h-7 w-7 items-center justify-center rounded-full border transition cursor-pointer dropdown-action-menu ${
+                                              activeServiceRowMenuId === svc.id
+                                                ? "border-[var(--cr-primary)] bg-[var(--cr-primary)] text-white"
+                                                : "border-[var(--cr-primary)]/15 bg-white text-[var(--color-brand-secondary)] hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)]"
+                                            }`}
+                                            title={t.actionsTitle}
+                                          >
+                                            <MoreVertical size={13} />
+                                          </button>
+
+                                          {activeServiceRowMenuId === svc.id && (
+                                            <div className="absolute end-0 top-8 z-50 w-44 rounded-xl bg-white p-1 shadow-xl border border-[var(--cr-primary)]/15 text-xs text-start dropdown-action-menu">
+                                              {canEdit && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveServiceRowMenuId(null);
+                                                    handleEditService(svc);
+                                                  }}
+                                                  className="w-full text-start px-3 py-2 rounded-lg hover:bg-[var(--color-brand-light)] font-semibold text-[var(--cr-dark)] flex items-center gap-2 transition cursor-pointer"
+                                                >
+                                                  <Pencil size={13} className="text-[var(--color-brand-secondary)]" />
+                                                  <span>{t.editService}</span>
+                                                </button>
+                                              )}
+
+                                              {canToggle && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleService(svc.id, "active");
+                                                  }}
+                                                  className="w-full text-start px-3 py-2 rounded-lg hover:bg-[var(--color-brand-light)] font-semibold text-[var(--cr-dark)] flex items-center justify-between transition cursor-pointer"
+                                                >
+                                                  <div className="flex items-center gap-2">
+                                                    <span className={`h-2 w-2 rounded-full ${toggles.active ? "bg-emerald-500" : "bg-gray-300"}`} />
+                                                    <span>{toggles.active ? t.deactivate : t.activate}</span>
+                                                  </div>
+                                                  <span className="text-[10px] font-bold text-[var(--color-brand-secondary)] bg-[var(--color-brand-sand)] px-1.5 py-0.5 rounded">
+                                                    {toggles.active ? t.statusActive : t.statusOff}
+                                                  </span>
+                                                </button>
+                                              )}
+
+                                              {canDelete && (
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveServiceRowMenuId(null);
+                                                    setDeleteServiceTarget(svc);
+                                                  }}
+                                                  className="w-full text-start px-3 py-2 rounded-lg hover:bg-red-50 font-semibold text-red-600 flex items-center gap-2 transition cursor-pointer"
+                                                >
+                                                  <Trash2 size={13} className="text-red-600" />
+                                                  <span>{t.deleteService}</span>
+                                                </button>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile Adaptive Cards */}
+                      <div className="block md:hidden divide-y divide-[var(--cr-primary)]/10 p-3.5 space-y-3.5 bg-[#FAFBF9]">
+                        {catServices.map((svc) => {
+                          const toggles = serviceToggles[svc.id] ?? { visible: true, active: true };
+                          const isInactive = !toggles.active;
+                          const activeBp = getActiveBranchPricing(svc);
+                          const canEdit = hasPermission("services.action_edit");
+                          const canToggle = hasPermission("services.action_toggle_status");
+                          const canDelete = hasPermission("services.action_delete");
+
+                          return (
+                            <div
+                              key={svc.id}
+                              className={`rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 shadow-xs transition ${
+                                isInactive ? "opacity-60 bg-gray-50/70" : ""
+                              }`}
+                            >
+                              {/* Top Bar: ID, Name, Laser & Status */}
+                              <div className="flex items-start justify-between gap-2 mb-2.5">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="font-mono text-[10px] font-bold text-[var(--color-brand-secondary)] bg-[var(--color-brand-sand)] px-2 py-0.5 rounded-md border border-[var(--cr-primary)]/10">
+                                      #{svc.id}
+                                    </span>
+                                    {(svc.islaser || svc.is_laser || checkIsLaserService(svc)) && (
+                                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200 shadow-2xs">
+                                        <Sparkles size={10} className="text-emerald-600" />
+                                        <span>Laser</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h4 className={`text-sm font-bold truncate ${isInactive ? "line-through text-[var(--color-brand-secondary)]" : "text-[var(--cr-dark)]"}`}>
+                                    {svc.en}
+                                  </h4>
+                                  {svc.showOnWebsite === false && (
+                                    <span className="mt-1 inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">{t.notOnWebsiteBadge}</span>
+                                  )}
+                                </div>
+                                <span
+                                  className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                    toggles.active
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-gray-100 text-gray-500 border border-gray-200"
+                                  }`}
+                                >
+                                  {toggles.active ? t.statusActive : t.statusInactive}
+                                </span>
+                              </div>
+
+                              {/* Price & Branch Pricing Details */}
+                              <div className="rounded-xl bg-[#F8F9F6] p-2.5 mb-3 border border-[var(--cr-primary)]/8 text-xs space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-semibold text-[var(--color-brand-secondary)]">{t.colBranchPrice}:</span>
+                                  <span className="font-bold text-[var(--cr-accent)] text-sm">EGP {svc.price ?? 0}</span>
+                                </div>
+                                {activeBp.length > 0 && (
+                                  <div className="pt-1.5 border-t border-[var(--cr-primary)]/6 flex flex-wrap gap-1.5">
+                                    {activeBp.map((bp) => (
+                                      <span key={bp.name} className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-[10px] font-medium text-[var(--cr-dark)] border border-[var(--cr-primary)]/10">
+                                        <span>{bp.name}:</span>
+                                        <span className="font-bold text-[var(--cr-accent)]">EGP {bp.price}</span>
+                                        {bp.isDefault && <span className="bg-[var(--cr-primary)]/10 text-[var(--cr-primary)] px-1 rounded text-[8px] font-bold">Def</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Action Buttons Row */}
+                              {(canEdit || canToggle || canDelete) && (
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--cr-primary)]/8">
+                                  {canToggle && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleService(svc.id, "active");
+                                      }}
+                                      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold border transition cursor-pointer ${
+                                        toggles.active
+                                          ? "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                                          : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                      }`}
+                                    >
+                                      <span className={`h-2 w-2 rounded-full ${toggles.active ? "bg-emerald-500" : "bg-gray-300"}`} />
+                                      <span>{toggles.active ? t.deactivate : t.activate}</span>
+                                    </button>
+                                  )}
+                                  {canEdit && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditService(svc);
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[var(--color-brand-light)] transition cursor-pointer"
+                                    >
+                                      <Pencil size={12} />
+                                      <span>{t.editService}</span>
+                                    </button>
+                                  )}
+                                  {canDelete && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteServiceTarget(svc);
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition cursor-pointer"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        });
+      })()}
+      </div>
+
+      {/* Summary bar */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--cr-primary)]/8 bg-white px-4 py-3 text-sm text-[var(--color-brand-secondary)] shadow-sm">
+        <span>{t.summaryTotal(filteredServices.length, localCategories.length)}</span>
+        <button
+          onClick={() => setExpandedCategories(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])))}
+          className="text-xs font-medium text-[var(--cr-primary)] underline-offset-2 hover:underline"
+        >
+          {t.expandAll}
+        </button>
+      </div>
+
+      {/* ── DELETE CATEGORY CONFIRMATION MODAL ── */}
+      {deleteCategoryTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[var(--cr-primary)]/10 animate-fadeIn">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-[var(--cr-dark)]">{t.deleteCategoryTitle}</h3>
+            </div>
+            
+            <p className="text-sm text-[var(--color-brand-secondary)] leading-relaxed mb-6">
+              {t.deleteCategoryConfirm(deleteCategoryTarget.en)}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/8 pt-4">
+              <button
+                onClick={() => setDeleteCategoryTarget(null)}
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+              >
+                {t.cancelBtn}
+              </button>
+              <button
+                onClick={() => {
+                  removeCategory(deleteCategoryTarget.key);
+                  setDeleteCategoryTarget(null);
+                }}
+                className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                {t.yesDeleteBtn}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ── DELETE SERVICE CONFIRMATION MODAL ── */}
+      {deleteServiceTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-[var(--cr-primary)]/10 animate-fadeIn">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <Trash2 size={20} />
+              </div>
+              <h3 className="text-lg font-bold text-[var(--cr-dark)]">{t.deleteServiceTitle}</h3>
+            </div>
+            
+            <p className="text-sm text-[var(--color-brand-secondary)] leading-relaxed mb-6">
+              {t.deleteServiceConfirm(deleteServiceTarget.en)}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/8 pt-4">
+              <button
+                onClick={() => {
+                  setDeleteServiceTarget(null);
+                  setShowAddServiceModal(true);
+                }}
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+              >
+                {t.cancelBtn}
+              </button>
+              <button
+                onClick={async () => {
+                  setDeleteServiceTarget(null);
+                  const ok = await deleteServiceFromApi(deleteServiceTarget.id);
+                  if (ok) {
+                    await loadServicesFromApi();
+                  }
+                }}
+                className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                {t.yesDeleteBtn}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── ADD CATEGORY MODAL ── */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-[var(--cr-dark)]">{t.addNewCategoryTitle}</h3>
+                <p className="text-sm text-[var(--color-brand-secondary)]">{t.addNewCategorySubtitle}</p>
+              </div>
+              <button
+                onClick={() => setShowAddCategoryModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F9F9F7]"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">{t.categoryNameEnLabel || "Category Name (English)"}</label>
+                <input
+                  value={newCategoryNameEn}
+                  onChange={(e) => setNewCategoryNameEn(e.target.value)}
+                  placeholder={t.categoryNameEnPlaceholder || "e.g. Dermatology & Aesthetic"}
+                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">{(t as any).categoryNameArLabel || "Category Name (Arabic)"}</label>
+                <input
+                  value={newCategoryNameAr}
+                  onChange={(e) => setNewCategoryNameAr(e.target.value)}
+                  placeholder={(t as any).categoryNameArPlaceholder || "e.g. الجلدية والتجميل"}
+                  className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                  dir="rtl"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => {
+                  setNewCategoryNameEn("");
+                  setNewCategoryNameAr("");
+                  setShowAddCategoryModal(false);
+                }}
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+              >
+                {t.cancelBtn}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newCategoryNameEn.trim()) return;
+                  const key = newCategoryNameEn.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+                  const arName = newCategoryNameAr.trim() || newCategoryNameEn.trim();
+                  const newCat = { key, en: newCategoryNameEn.trim(), ar: arName, sortOrder: localCategories.length };
+                  const updated = [...localCategories, newCat];
+                  setLocalCategories(updated);
+                  saveDynamicCategories(updated);
+                  if (syncCategoriesToApi) {
+                    await syncCategoriesToApi(updated);
+                  }
+                  setExpandedCategories(prev => ({ ...prev, [key]: true }));
+                  setNewCategoryNameEn("");
+                  setNewCategoryNameAr("");
+                  setShowAddCategoryModal(false);
+                }}
+                className="rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26]"
+              >
+                {t.createCategoryBtn}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REDESIGNED ADD/EDIT SERVICE MODAL ── */}
+      {showAddServiceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl my-8 border border-[var(--cr-primary)]/10 animate-fadeIn flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 px-6 py-4">
+              <h3 className="text-lg font-bold text-[var(--cr-dark)]">
+                {editingService ? t.editServiceTitle : t.addServiceTitle}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddServiceModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:bg-[var(--color-brand-light)] hover:text-[var(--cr-dark)]"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Service Image Section */}
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-sm font-semibold text-[var(--color-brand-secondary)] mb-2">{t.serviceImageLabel}</span>
+                <label className="relative flex h-28 w-28 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] transition hover:bg-[var(--color-brand-sand)] overflow-hidden group">
+                  {serviceImageUrl ? (
+                    <>
+                      <img src={serviceImageUrl} alt="Service preview" className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[10px] text-white font-medium text-center px-1">{t.changeImage}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-[var(--color-brand-secondary)]/60">
+                      <svg className="mb-1 h-8 w-8 text-[var(--color-brand-secondary)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const compressed = await compressImage(file, 1000, 1000, 0.75);
+                          setServiceImageUrl(compressed);
+                        } catch (err) {
+                          console.error("Failed to compress service image, using original:", err);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setServiceImageUrl(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }
+                    }}
+                  />
+                </label>
+                <span className="text-[11px] text-[var(--color-brand-secondary)]/75 mt-2">{t.clickToUpload}</span>
+              </div>
+
+              {/* 2-Column fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Service Category */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.serviceCategoryLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={serviceCategory}
+                    onChange={(e) => {
+                      const newCatKey = e.target.value;
+                      setServiceCategory(newCatKey);
+                      if (!editingService) {
+                        const catObj = localCategories.find(c => c.key === newCatKey);
+                        const isLaserCat = newCatKey.toLowerCase().includes("laser") ||
+                          Boolean(catObj?.en?.toLowerCase().includes("laser")) ||
+                          Boolean(catObj?.ar?.includes("ليزر"));
+                        setServiceIsLaser(isLaserCat);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  >
+                    <option value="" disabled>{t.selectCategory}</option>
+                    {localCategories.map(cat => (
+                      <option key={cat.key} value={cat.key}>{cat.en}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Duration (minutes) — the single source of truth; the label below is derived from it */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.durationMinutesLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={serviceDurationMinutes}
+                    onChange={(e) => {
+                      const minutes = Number(e.target.value) || 0;
+                      setServiceDurationMinutes(minutes);
+                      setServiceDuration(getDurationLabel(minutes));
+                    }}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  />
+                </div>
+
+                {/* Duration — read-only label derived from the minutes value above, never edited independently */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.durationLabel}
+                  </label>
+                  <div className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[#F1F1ED] px-4 py-2.5 text-sm text-[var(--color-brand-secondary)] font-medium">
+                    {getDurationLabel(serviceDurationMinutes)}
+                  </div>
+                </div>
+
+                {/* Session Type */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.sessionTypeLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={serviceUnitType}
+                    onChange={(e) => setServiceUnitType(e.target.value)}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  >
+                    <option value="in_clinic">{t.sessionInClinic}</option>
+                    <option value="online">{t.sessionOnline}</option>
+                    <option value="both">{t.sessionBoth}</option>
+                  </select>
+                </div>
+
+                {/* Service Name EN */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.serviceNameEnLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceNameEn}
+                    onChange={(e) => setServiceNameEn(e.target.value)}
+                    placeholder={t.serviceNameEnPlaceholder}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  />
+                </div>
+
+                {/* Service Name AR */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.serviceNameArLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={serviceNameAr}
+                    onChange={(e) => setServiceNameAr(e.target.value)}
+                    placeholder={t.serviceNameArPlaceholder}
+                    dir="rtl"
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  />
+                </div>
+
+                {/* English Description */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.englishDescLabel}</label>
+                  <textarea
+                    value={serviceDescEn}
+                    onChange={(e) => setServiceDescEn(e.target.value)}
+                    rows={3}
+                    placeholder={t.englishDescPlaceholder}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium resize-none"
+                  />
+                </div>
+
+                {/* Arabic Description */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.arabicDescLabel}</label>
+                  <textarea
+                    value={serviceDescAr}
+                    onChange={(e) => setServiceDescAr(e.target.value)}
+                    rows={3}
+                    placeholder={t.arabicDescPlaceholder}
+                    dir="rtl"
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium resize-none"
+                  />
+                </div>
+
+                {/* Sort Order */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.sortOrderLabel}</label>
+                  <input
+                    type="number"
+                    value={serviceSortOrder}
+                    onChange={(e) => setServiceSortOrder(Number(e.target.value) || 0)}
+                    className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 text-[var(--cr-dark)] font-medium"
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-[var(--color-brand-secondary)]">
+                    {t.priceLabel} <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex rounded-lg border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] overflow-hidden text-sm">
+                    <span className="bg-[var(--color-brand-sand)] border-e border-[var(--cr-primary)]/15 px-3.5 py-2.5 text-[var(--color-brand-secondary)] font-semibold">EGP</span>
+                    <input
+                      type="number"
+                      value={servicePrice}
+                      onChange={(e) => setServicePrice(Number(e.target.value) || 0)}
+                      placeholder="0"
+                      className="w-full px-4 py-2.5 outline-none bg-transparent text-[var(--cr-dark)] font-medium"
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-4 pt-2">
+                {/* Laser Service Toggle */}
+                <div className="flex items-start justify-between gap-4 p-3.5 rounded-xl border border-emerald-500/25 bg-emerald-50/50 shadow-2xs">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-600 text-white mt-0.5 shadow-xs">
+                      <Sparkles size={16} />
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-[var(--cr-dark)]">{t.isLaserLabel || "Laser Service (Requires Device & Pulse Billing)"}</span>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-bold text-emerald-800 border border-emerald-300/60">Laser</span>
+                      </div>
+                      <span className="text-xs text-[var(--color-brand-secondary)] mt-0.5">
+                        {t.isLaserDesc || "Marks this procedure as a laser treatment requiring equipment device connection, pulse counting, and 3 reception payment options (Pay by Service, Pay per Pulse, Pay with Pulses Package)."}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setServiceIsLaser(!serviceIsLaser)}
+                    className="relative h-6 w-11 flex-shrink-0 rounded-full focus:outline-none transition-colors duration-300 cursor-pointer"
+                    style={{ backgroundColor: serviceIsLaser ? "#059669" : "#E2E8F0" }}
+                  >
+                    <span
+                      className="absolute top-[4px] h-4 w-4 rounded-full bg-white shadow-md transition-all duration-300"
+                      style={{ left: serviceIsLaser ? "24px" : "4px" }}
+                    />
+                  </button>
+                </div>
+
+                {/* Is Shared Toggle */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-[var(--cr-dark)]">{t.isSharedLabel}</span>
+                    <span className="text-xs text-[var(--color-brand-secondary)] mt-0.5">{t.isSharedDesc}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setServiceIsShared(!serviceIsShared)}
+                    className="relative h-6 w-11 flex-shrink-0 rounded-full focus:outline-none transition-colors duration-300"
+                    style={{ backgroundColor: serviceIsShared ? "var(--cr-primary)" : "#E2E8F0" }}
+                  >
+                    <span
+                      className="absolute top-[4px] h-4 w-4 rounded-full bg-white shadow-md transition-all duration-300"
+                      style={{ left: serviceIsShared ? "24px" : "4px" }}
+                    />
+                  </button>
+                </div>
+
+                {/* Show on website Toggle (DEC-111) */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-[var(--cr-dark)]">{t.showOnWebsiteLabel}</span>
+                    <span className="text-xs text-[var(--color-brand-secondary)] mt-0.5">{t.showOnWebsiteDesc}</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={serviceShowOnWebsite}
+                    aria-label={t.showOnWebsiteLabel}
+                    onClick={() => setServiceShowOnWebsite(!serviceShowOnWebsite)}
+                    className="relative h-6 w-11 flex-shrink-0 rounded-full focus:outline-none transition-colors duration-300 cursor-pointer"
+                    style={{ backgroundColor: serviceShowOnWebsite ? "var(--cr-primary)" : "#E2E8F0" }}
+                  >
+                    <span
+                      className="absolute top-[4px] h-4 w-4 rounded-full bg-white shadow-md transition-all duration-300"
+                      style={{ left: serviceShowOnWebsite ? "24px" : "4px" }}
+                    />
+                  </button>
+                </div>
+
+                {/* Enable Booking Reminder Toggle */}
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-sm font-semibold text-[var(--cr-dark)]">{t.enableReminderLabel}</span>
+                  <button
+                    type="button"
+                    onClick={() => setServiceEnableReminder(!serviceEnableReminder)}
+                    className="relative h-6 w-11 flex-shrink-0 rounded-full focus:outline-none transition-colors duration-300"
+                    style={{ backgroundColor: serviceEnableReminder ? "var(--cr-primary)" : "#E2E8F0" }}
+                  >
+                    <span
+                      className="absolute top-[4px] h-4 w-4 rounded-full bg-white shadow-md transition-all duration-300"
+                      style={{ left: serviceEnableReminder ? "24px" : "4px" }}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {editingService && (
+                <>
+                  <ServiceRecipeEditor serviceId={editingService.id} authHeaders={authenticatedJsonHeaders} />
+                  <ServiceDeviceEditor serviceId={editingService.id} authHeaders={authenticatedJsonHeaders} />
+                </>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-[var(--cr-primary)]/10 px-6 py-4 flex items-center justify-between gap-3 bg-[var(--color-brand-light)] rounded-b-2xl">
+              <div>
+                {editingService && hasPermission("services.delete") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteServiceTarget(editingService);
+                      setShowAddServiceModal(false);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 cursor-pointer"
+                  >
+                    <Trash2 size={14} />
+                    <span>{t.deleteService}</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddServiceModal(false)}
+                  className="rounded-lg border border-[var(--cr-primary)]/15 px-5 py-2 text-sm font-semibold text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-sand)]"
+                >
+                  {t.cancelBtn}
+                </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!serviceNameEn.trim()) {
+                    alert(lang === "ar" ? "يرجى إدخال اسم الخدمة" : "Please enter a service name.");
+                    return;
+                  }
+                  if (!serviceCategory) {
+                    alert(lang === "ar" ? "يرجى اختيار القسم" : "Please select a category.");
+                    return;
+                  }
+                  if (serviceDurationMinutes <= 0 || serviceDurationMinutes > 1440) {
+                    alert(t.durationAlert);
+                    return;
+                  }
+
+                  const previousIds = new Set(localServices.map(s => s.id));
+
+                  let updatedServices: ServiceItem[];
+                  if (editingService) {
+                    // Edit mode
+                    updatedServices = localServices.map(s => {
+                      if (s.id === editingService.id) {
+                        return {
+                          ...s,
+                          en: serviceNameEn.trim(),
+                          ar: serviceNameAr.trim() || serviceNameEn.trim(),
+                          cat: serviceCategory,
+                          unit: serviceUnitType.toLowerCase(),
+                          price: servicePrice,
+                          duration: serviceDuration,
+                          duration_minutes: serviceDurationMinutes,
+                          descriptionEn: serviceDescEn.trim(),
+                          descriptionAr: serviceDescAr.trim(),
+                          sortOrder: serviceSortOrder,
+                          isShared: serviceIsShared,
+                          islaser: serviceIsLaser,
+                          is_laser: serviceIsLaser,
+                          enableReminder: serviceEnableReminder,
+                          showOnWebsite: serviceShowOnWebsite,
+                          img: serviceImageUrl,
+                          branchPricing: serviceBranchPricing.map(bp => ({ ...bp, price: servicePrice })),
+                          visible: editingService.visible !== undefined ? editingService.visible : (serviceToggles[editingService.id]?.visible ?? true),
+                          active: editingService.active !== undefined ? editingService.active : (serviceToggles[editingService.id]?.active ?? true),
+                        };
+                      }
+                      return s;
+                    });
+                  } else {
+                    // Add mode — let the database assign the id
+                    const defaultBranch = serviceBranchPricing.find(b => b.isDefault);
+                    const newService: ServiceItem = {
+                      id: 0, // placeholder, removed by the API mapper
+                      en: serviceNameEn.trim(),
+                      ar: serviceNameAr.trim() || serviceNameEn.trim(),
+                      cat: serviceCategory,
+                      unit: serviceUnitType.toLowerCase(),
+                      price: servicePrice,
+                      duration: serviceDuration || getDurationLabel(serviceDurationMinutes),
+                      duration_minutes: serviceDurationMinutes,
+                      descriptionEn: serviceDescEn.trim(),
+                      descriptionAr: serviceDescAr.trim(),
+                      sortOrder: serviceSortOrder,
+                      isShared: serviceIsShared,
+                      islaser: serviceIsLaser,
+                      is_laser: serviceIsLaser,
+                      enableReminder: serviceEnableReminder,
+                      showOnWebsite: serviceShowOnWebsite,
+                      img: serviceImageUrl,
+                      branchPricing: serviceBranchPricing.map(bp => ({ ...bp, price: servicePrice })),
+                      visible: defaultBranch ? defaultBranch.visible : true,
+                      active: defaultBranch ? defaultBranch.status : true,
+                      createdAt: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }),
+                    };
+                    updatedServices = [...localServices, newService];
+                    setExpandedCategories(prev => ({ ...prev, [serviceCategory]: true }));
+                  }
+
+                  const synced = await syncServicesToApi(updatedServices);
+                  if (synced) {
+                    await loadServicesFromApi();
+                    if (loadCategoriesFromApi) {
+                      await loadCategoriesFromApi();
+                    }
+                    setShowAddServiceModal(false);
+                  } else {
+                    alert(lang === "ar" ? "فشل حفظ الخدمة. يرجى التأكد من صلاحيات الحساب والمحاولة مرة أخرى." : "Failed to save service. Please check your permissions and try again.");
+                  }
+                }}
+                className="rounded-lg bg-[var(--cr-primary)] px-6 py-2 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] cursor-pointer"
+              >
+                {t.saveBtn}
+              </button>
+            </div>
+          </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

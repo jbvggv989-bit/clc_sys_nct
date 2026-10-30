@@ -1,0 +1,1958 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import Image from "next/image";
+import { Menu, CalendarDays, Stethoscope, Users, BarChart3, User, Play } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { DoctorAccountViewProps, DoctorTab, DoctorPatient, UsedProduct } from "./doctor/types";
+import { doctorTranslations } from "./doctor/translations";
+import { adminTranslations } from "./translations";
+import { CLIENT } from "@/config/client";
+import { pollDataEqual } from "@/lib/pollEqual";
+import { parseBookingNotes, getAuthHeaders } from "./doctor/utils";
+import DoctorSidebar from "./doctor/DoctorSidebar";
+import DoctorScheduleTab from "./doctor/tabs/DoctorScheduleTab";
+import DoctorOngoingSessionTab, { AdditionalServiceItem } from "./doctor/tabs/DoctorOngoingSessionTab";
+import DoctorPatientsTab from "./doctor/tabs/DoctorPatientsTab";
+import DoctorAnalyticsTab from "./doctor/tabs/DoctorAnalyticsTab";
+import DoctorSettingsTab from "./doctor/tabs/DoctorSettingsTab";
+import DoctorProfileTab from "./doctor/tabs/DoctorProfileTab";
+import UserProfileView, { UserProfileViewTranslations } from "./UserProfileView";
+import { useAlertConfirm } from "@/contexts/AlertConfirmContext";
+import DoctorSessionDrawer from "./doctor/modals/DoctorSessionDrawer";
+import DoctorPatientHistoryDrawer from "./doctor/modals/DoctorPatientHistoryDrawer";
+import { checkIsLaserService } from "@/components/admin/bookings/BookingDetailsModal";
+import { resolveLaserPulseRate } from "@/lib/laserRate";
+import { extractPulsePackageQuota } from "@/lib/laserDeficit";
+
+// How often the doctor's reservation list is re-read while the tab is visible (RISK-136).
+const DOCTOR_POLL_MS = 15000;
+
+// Local Date Helper to avoid UTC conversion shifts
+const getLocalDateString = (d: Date = new Date()): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+function DoctorAccountView({
+  doctorDbId,
+  doctorName = "Doctor",
+  doctorEmail = "doctor@revera.com",
+  doctorBranch = "Main Branch",
+  branches = [],
+  onLogout,
+  onSwitchToAdmin
+}: DoctorAccountViewProps) {
+  const [lang, setLang] = useState<"en" | "ar">("en");
+  const t = doctorTranslations[lang];
+  const { showConfirm } = useAlertConfirm();
+  // Signing out also records the attendance check-out, so it is never a one-click action.
+  const confirmSignOut = async () => {
+    if (await showConfirm(t.signOutConfirmMessage, t.signOutConfirmTitle)) onLogout();
+  };
+  const [activeTab, setActiveTab] = useState<DoctorTab>("schedule");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [scheduleViewMode, setScheduleViewMode] = useState<"calendar" | "list">("calendar");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
+  // Helper to exclude rejected and cancelled bookings from doctor view
+  const filterValidDoctorBookings = (list: any[]) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter((r: any) => {
+      const st = String(r?.status || "").toLowerCase().trim();
+      return st !== "rejected" && st !== "cancelled" && st !== "canceled";
+    });
+  };
+
+  // Starts empty, never from the shell's clinic-wide list: that list holds every doctor's bookings, and
+  // filtering it needs the provider record, which is only known after the first lookups. Seeding from it
+  // showed other doctors' patients for a few seconds before the doctor's own fetch replaced them.
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [selectedPatientHistory, setSelectedPatientHistory] = useState<DoctorPatient | null>(null);
+  const [branchList, setBranchList] = useState<any[]>(branches || []);
+
+  useEffect(() => {
+    if (branches && branches.length > 0) {
+      setBranchList(branches);
+    } else {
+      fetch("/api/branches")
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setBranchList(data);
+          else if (data && Array.isArray(data.branches)) setBranchList(data.branches);
+        })
+        .catch(() => {});
+    }
+  }, [branches]);
+
+  const [providerRecord, setProviderRecord] = useState<any>(null);
+  const [providerBranches, setProviderBranches] = useState<string[]>([]);
+
+  // The signed-in doctor's provider record comes from the API (it is matched to their account on the server:
+  // same id, phone, national id, then name). The browser used to read providers and employee_accounts directly
+  // with the public key, which row-level security blocks, so this was always empty (RISK-128).
+  useEffect(() => {
+    let alive = true;
+    async function loadProviderDetails() {
+      try {
+        const headers = await getAuthHeaders();
+        const profileRes = await fetch("/api/profile", { headers, cache: "no-store" });
+        if (!profileRes.ok || !alive) return;
+        const profile = await profileRes.json();
+        const data = profile?.provider;
+        if (!data || !alive) return;
+
+        setProviderRecord(data);
+
+        // Extract multi-branch assignments from provider record
+        let bIds: string[] = [];
+        if (data.working_days_hours && typeof data.working_days_hours === "object" && Array.isArray(data.working_days_hours.branch_ids)) {
+          bIds = data.working_days_hours.branch_ids;
+        } else if (Array.isArray(data.branch_ids)) {
+          bIds = data.branch_ids;
+        } else if (data.branch_id) {
+          bIds = [data.branch_id];
+        }
+
+        let branchRows: any[] = [];
+        try {
+          const branchRes = await fetch("/api/branches", { cache: "no-store" });
+          const rawBranches = branchRes.ok ? await branchRes.json() : [];
+          branchRows = Array.isArray(rawBranches) ? rawBranches : Array.isArray(rawBranches?.branches) ? rawBranches.branches : [];
+        } catch {
+          branchRows = [];
+        }
+        const allClinicNames = branchRows.map((b: any) => b.name_en || b.name).filter(Boolean);
+
+        let names: string[] = [];
+        if (bIds.length > 0) {
+          names = bIds.map((id: any) => {
+            const match = branchRows.find((b: any) => String(b.id) === String(id) || String(b.name_en).toLowerCase() === String(id).toLowerCase());
+            if (match) return match.name_en || match.name;
+            const lower = String(id).toLowerCase().trim();
+            if (lower === "home") return null;
+            if (lower === "main") return "Main Branch";
+            return String(id);
+          }).filter(Boolean) as string[];
+        }
+
+        if (names.length === 0) {
+          names = allClinicNames.length > 0 ? allClinicNames : ["Main Branch"];
+        }
+        if (alive) setProviderBranches(names);
+      } catch (e) {
+        console.error("Error loading doctor database provider record:", e);
+      }
+    }
+    loadProviderDetails();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const resolvedBranchName = useMemo(() => {
+    if (!doctorBranch) return "Main Branch";
+    const match = branchList.find(
+      (b) => b.id === doctorBranch || b.name_en === doctorBranch
+    );
+    if (match) return match.name_en || match.name || "Main Branch";
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      doctorBranch.trim()
+    );
+    if (isUuid) {
+      if (branchList.length > 0) {
+        return branchList[0].name_en || branchList[0].name || "Main Branch";
+      }
+      return "Main Branch";
+    }
+    return doctorBranch;
+  }, [doctorBranch, branchList]);
+
+  // Derived Doctor Patients List from Reservations
+  const doctorPatientsList = useMemo(() => {
+    const patientMap = new Map<string, DoctorPatient>();
+
+    reservations.forEach((r) => {
+      const key = r.customer_id || r.customer_phone || r.phone || r.name || r.id;
+      if (!key) return;
+
+      const pName = r.name || r.customer_name || r.patient_name || "Patient";
+      const pPhone = r.phone || r.customer_phone || "N/A";
+      const pEmail = r.email || r.customer_email || "";
+      const serviceName = r.service_name || r.service || (Array.isArray(r.services) ? r.services.join(", ") : "Clinical Session");
+      const visitDate = r.date || "";
+
+      if (!patientMap.has(key)) {
+        patientMap.set(key, {
+          id: String(key),
+          name: pName,
+          phone: pPhone,
+          email: pEmail,
+          totalVisits: 1,
+          lastVisitDate: visitDate,
+          recentServices: [serviceName],
+          bookings: [r]
+        });
+      } else {
+        const existing = patientMap.get(key)!;
+        existing.totalVisits += 1;
+        if (visitDate && visitDate > (existing.lastVisitDate || "")) {
+          existing.lastVisitDate = visitDate;
+        }
+        if (!existing.recentServices.includes(serviceName)) {
+          existing.recentServices.push(serviceName);
+        }
+        existing.bookings.push(r);
+      }
+    });
+
+    return Array.from(patientMap.values());
+  }, [reservations]);
+
+  // Filtered Patients List for Search
+  const filteredPatientsList = useMemo(() => {
+    if (!patientSearchQuery.trim()) return doctorPatientsList;
+    const q = patientSearchQuery.toLowerCase();
+    return doctorPatientsList.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.phone.toLowerCase().includes(q) ||
+        p.email.toLowerCase().includes(q) ||
+        p.recentServices.some((s) => s.toLowerCase().includes(q))
+    );
+  }, [doctorPatientsList, patientSearchQuery]);
+
+  // Analytics Metrics Computation
+  const analyticsData = useMemo(() => {
+    const totalBookings = reservations.length;
+    let totalRevenue = 0;
+    let completedCount = 0;
+    let confirmedCount = 0;
+    let pendingCount = 0;
+    let cancelledCount = 0;
+    const serviceDataMap: Record<string, { count: number; revenue: number }> = {};
+    const monthlyDataMap: Record<string, { count: number; revenue: number }> = {};
+
+    reservations.forEach((r) => {
+      const price = Number(r.price || r.total_price || r.amount || 0);
+      totalRevenue += price;
+
+      const st = String(r.status || "confirmed").toLowerCase();
+      if (st === "completed" || st === "done") completedCount++;
+      else if (st === "confirmed" || st === "arrived" || st === "started") confirmedCount++;
+      else if (st === "pending") pendingCount++;
+      else if (st === "cancelled" || st === "canceled") cancelledCount++;
+
+      const serviceName = r.service_name || r.service || "Clinical Consultation";
+      if (!serviceDataMap[serviceName]) serviceDataMap[serviceName] = { count: 0, revenue: 0 };
+      serviceDataMap[serviceName].count += 1;
+      serviceDataMap[serviceName].revenue += price;
+
+      const monthKey = (r.date || "").slice(0, 7);
+      if (monthKey) {
+        if (!monthlyDataMap[monthKey]) monthlyDataMap[monthKey] = { count: 0, revenue: 0 };
+        monthlyDataMap[monthKey].count += 1;
+        monthlyDataMap[monthKey].revenue += price;
+      }
+    });
+
+    const avgSessionValue = completedCount > 0 ? Math.round(totalRevenue / completedCount) : 0;
+    const completionRate = totalBookings > 0 ? Math.round((completedCount / totalBookings) * 100) : 0;
+
+    const topServices = Object.entries(serviceDataMap)
+      .map(([name, data]) => ({ name, count: data.count, revenue: data.revenue }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const monthlyTrend = Object.entries(monthlyDataMap)
+      .map(([month, data]) => ({ month, revenue: data.revenue, count: data.count }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    return {
+      totalRevenue,
+      completedCount,
+      confirmedCount,
+      pendingCount,
+      cancelledCount,
+      totalBookings,
+      avgSessionValue,
+      completionRate,
+      topServices,
+      monthlyTrend
+    };
+  }, [reservations]);
+
+  // Date Selector State for Schedule (Using local date strings to prevent day shifts)
+  const todayStr = useMemo(() => getLocalDateString(new Date()), []);
+
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return getLocalDateString(d);
+  }, []);
+
+  const tomorrowStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return getLocalDateString(d);
+  }, []);
+
+  const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
+
+  // Active Session State (Ongoing Tab)
+  const [activeSessionBooking, setActiveSessionBooking] = useState<any | null>(null);
+  const [clinicalNote, setClinicalNote] = useState("");
+  const [medicalRecord, setMedicalRecord] = useState<any | null>(null);
+  const [medicalRecordLoading, setMedicalRecordLoading] = useState(false);
+  const [resolvedCustomerId, setResolvedCustomerId] = useState<string | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+
+  // Catalog State (Services, Inventory Products & Devices)
+  const [servicesList, setServicesList] = useState<any[]>([]);
+  const [productsList, setProductsList] = useState<any[]>([]);
+  const [devicesList, setDevicesList] = useState<any[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedProductQty, setSelectedProductQty] = useState<number>(1);
+  const [usedProducts, setUsedProducts] = useState<UsedProduct[]>([]);
+  const [additionalServices, setAdditionalServices] = useState<AdditionalServiceItem[]>([]);
+
+  // Extra Device Pulses State
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
+  const [extraPulsesCount, setExtraPulsesCount] = useState<number>(0);
+  const [pricePerPulse, setPricePerPulse] = useState<number>(0);
+
+  // Medical Record Form State
+  const [showMedicalForm, setShowMedicalForm] = useState(false);
+  const [formSkinType, setFormSkinType] = useState("Normal");
+  const [formAllergies, setFormAllergies] = useState("");
+  const [formMedicationDetails, setFormMedicationDetails] = useState("");
+  const [formMedicalConditionsDetails, setFormMedicalConditionsDetails] = useState("");
+  const [formPreviousTreatmentsDetails, setFormPreviousTreatmentsDetails] = useState("");
+  const [savingMedicalRecord, setSavingMedicalRecord] = useState(false);
+
+  // In-Page Session Modal State (Schedule Tab)
+  const [scheduleModalBooking, setScheduleModalBooking] = useState<any | null>(null);
+
+
+  // Password Update State
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Fetch inventory products, devices & services catalog on mount
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const [prodRes, devRes, srvRes] = await Promise.all([
+          fetch("/api/inventory/products", { headers }),
+          fetch("/api/inventory/devices", { headers }),
+          fetch("/api/services", { headers, cache: "no-store" })
+        ]);
+        if (prodRes.ok) {
+          const pData = await prodRes.json();
+          setProductsList(Array.isArray(pData) ? pData : pData.products || []);
+        }
+        if (devRes.ok) {
+          const dData = await devRes.json();
+          setDevicesList(Array.isArray(dData) ? dData : dData.devices || []);
+        }
+        if (srvRes.ok) {
+          const sData = await srvRes.json();
+          setServicesList(Array.isArray(sData) ? sData : sData.services || []);
+        }
+      } catch (err) {
+        console.error("Error loading doctor catalog:", err);
+      }
+    };
+    fetchInventory();
+  }, []);
+
+  // Normalize strings for matching (stripping honorifics, titles, and extra whitespace)
+  const normalizeDocStr = (str?: string | null): string => {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/^(dr\.?|د\.?|دكتور\s+|د\/\s*)\s*/i, "")
+      .replace(/@.*/, "")
+      .replace(/[._-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  // Robust, strict doctor match helper
+  const isDoctorMatch = (r: any) => {
+    if (!r) return false;
+    const rDocName = String(r.doctorName || r.doctor_name || "").trim();
+    const rProvId = String(r.providerId || r.provider_id || r.doctorId || r.doctor_id || "").trim();
+
+    // 1. Gather all known IDs for this doctor
+    const myProvIds = [
+      providerRecord?.id,
+      providerRecord?.provider_id,
+      doctorDbId,
+    ].filter(Boolean).map(String);
+
+    // If reservation has a provider ID:
+    if (rProvId) {
+      if (myProvIds.includes(rProvId)) return true;
+      // If provider record exists and reservation points to a different provider, it does NOT match
+      if (providerRecord?.id && rProvId !== String(providerRecord.id)) {
+        return false;
+      }
+    }
+
+    // 2. Normalize Doctor Account Names & Tokens
+    const cleanRDoc = normalizeDocStr(rDocName);
+    if (!cleanRDoc) {
+      // Reservation has no doctor assigned and provider ID did not match
+      return false;
+    }
+
+    const candidateAccountNames = [
+      normalizeDocStr(doctorName),
+      normalizeDocStr(providerRecord?.name),
+      normalizeDocStr(providerRecord?.name_en),
+      normalizeDocStr(providerRecord?.name_ar),
+      doctorEmail ? normalizeDocStr(doctorEmail.split("@")[0]) : "",
+    ].filter((n) => n.length >= 2 && !["doctor", "admin", "superadmin", "owner"].includes(n));
+
+    if (candidateAccountNames.length === 0) {
+      const rawClean = normalizeDocStr(doctorName);
+      return Boolean(rawClean && (cleanRDoc === rawClean || cleanRDoc.includes(rawClean) || rawClean.includes(cleanRDoc)));
+    }
+
+    for (const accName of candidateAccountNames) {
+      if (cleanRDoc === accName) return true;
+
+      // Full string inclusion for sufficiently distinct names
+      if (cleanRDoc.length >= 4 && accName.length >= 4) {
+        if (cleanRDoc === accName || cleanRDoc.startsWith(accName) || accName.startsWith(cleanRDoc)) return true;
+      }
+
+      // Multi-token exact subset matching (e.g. "Mohamed Zaky" matches "Dr. Mohamed Zaky")
+      const rTokens = cleanRDoc.split(" ").filter((t) => t.length >= 2);
+      const accTokens = accName.split(" ").filter((t) => t.length >= 2);
+      if (accTokens.length >= 2 && rTokens.length >= 2) {
+        const allAccInR = accTokens.every((at) => rTokens.includes(at));
+        const allRInAcc = rTokens.every((rt) => accTokens.includes(rt));
+        if (allAccInR || allRInAcc) return true;
+      } else if (accTokens.length === 1 && rTokens.length === 1) {
+        if (accTokens[0] === rTokens[0]) return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Dedicated Start Ongoing Session Handler
+  const handleStartOngoingSession = async (targetBooking: any) => {
+    if (!targetBooking) return;
+    const bookingId = targetBooking.id || targetBooking.booking_id || targetBooking.bookingId;
+    if (!bookingId) return;
+
+    try {
+      const headers = await getAuthHeaders();
+      const updatedBooking = {
+        ...targetBooking,
+        id: bookingId,
+        status: "started",
+      };
+
+      // Instantly update local state and switch to ongoing tab
+      setActiveSessionBooking(updatedBooking);
+      setScheduleModalBooking(null);
+      setActiveTab("ongoing");
+
+      setReservations((prev) =>
+        prev.map((r) => (String(r.id) === String(bookingId) ? { ...r, status: "started" } : r))
+      );
+
+      // Persist status transition to database
+      const res = await fetch(`/api/reservations?id=${encodeURIComponent(bookingId)}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          id: bookingId,
+          status: "started",
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Failed updating reservation status to started:", err);
+      }
+      fetchDoctorReservations(true);
+    } catch (err) {
+      console.error("Error starting ongoing session:", err);
+    }
+  };
+
+  // True while a reservations request is running. The 3 s poll skips a tick instead of stacking a second
+  // request on top of a slow one (responses take 2-5 s on a busy connection).
+  const doctorFetchInFlightRef = useRef(false);
+
+  // Fetch Doctor Reservations from DB (strictly isolated to this doctor)
+  const fetchDoctorReservations = async (silent = false) => {
+    if (!silent) setLoading(true);
+    doctorFetchInFlightRef.current = true;
+    try {
+      // No `limit`: the route returns every reservation and this view picks the doctor's own out
+      // client-side (isDoctorMatch), so a clinic-wide cap would silently drop the doctor's older
+      // bookings. A `limit=250` used to sit here but the route never honoured it (RISK-136).
+      const queryUrl = "/api/reservations";
+      const headers = await getAuthHeaders();
+      const res = await fetch(queryUrl, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        let resList = Array.isArray(data) ? data : data.reservations || [];
+        resList = filterValidDoctorBookings(resList);
+
+        // Find doctor bookings
+        const doctorBookings = resList.filter((r: any) => isDoctorMatch(r));
+
+        // Strictly set doctor-specific bookings (never fall back to clinic-wide reservations).
+        // Keep the previous array when the 3 s poll returns identical data so an
+        // unchanged tick does not re-render the whole view.
+        setReservations(prev => (pollDataEqual(prev, doctorBookings) ? prev : doctorBookings));
+      }
+    } catch (err) {
+      console.error("Error fetching doctor reservations:", err);
+    } finally {
+      doctorFetchInFlightRef.current = false;
+      if (!silent) setLoading(false);
+    }
+  };
+
+  // Silent 15-second background polling & event listeners. Realtime does not reach the browser for this table
+  // (row-level security), so this poll is how reception's changes arrive; the doctor's own actions and
+  // the booking/prescription events below refresh at once. A tick is skipped while the tab is
+  // hidden or the previous request is still running, and the list refreshes as soon as the tab is visible.
+  // Every request costs a Supabase Auth check on the server, hence 15 s and not 3 s (RISK-136).
+  useEffect(() => {
+    fetchDoctorReservations();
+    const interval = setInterval(() => {
+      if (document.visibilityState !== "visible" || doctorFetchInFlightRef.current) return;
+      fetchDoctorReservations(true);
+    }, DOCTOR_POLL_MS);
+
+    const onSync = () => fetchDoctorReservations(true);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchDoctorReservations(true);
+    };
+    window.addEventListener("revera-prescription-change", onSync);
+    window.addEventListener("revera-booking-change", onSync);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("revera-prescription-change", onSync);
+      window.removeEventListener("revera-booking-change", onSync);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [doctorDbId, doctorName, providerRecord]);
+
+  // Persistent Real-time Subscriptions for Started Sessions & Bookings
+  useEffect(() => {
+    const channel = supabase
+      .channel("doctor-realtime-reservations-" + (doctorDbId || providerRecord?.id || "doc"))
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reservations" },
+        (payload: any) => {
+          if (payload.new) {
+            const updated: any = payload.new;
+            const belongsToDoctor = isDoctorMatch(updated);
+            const st = String(updated.status || "").toLowerCase().trim();
+            const isActive = st === "started" || st === "in-progress" || st === "in_progress" || st === "active" || st === "in treatment";
+
+            // Normalize fields from raw database row
+            const serviceObj = servicesList.find((s) => String(s.id) === String(updated.service_id || updated.serviceId));
+            const serviceName = serviceObj?.en || serviceObj?.name || serviceObj?.title || updated.service || updated.service_name || "Clinical Session";
+
+            const normalizedBooking = {
+              ...updated,
+              id: updated.id,
+              name: updated.name || updated.customer_name || "Patient",
+              service: serviceName,
+              service_name: serviceName,
+              doctorName: updated.doctor_name || updated.doctorName || doctorName,
+              doctor_name: updated.doctor_name || updated.doctorName || doctorName,
+              time: updated.time_slot || updated.requested_time || updated.time || "Today",
+              time_slot: updated.time_slot || updated.requested_time || updated.time,
+              room: updated.room_name || updated.room || "Treatment Room",
+              date: updated.date,
+              status: updated.status,
+            };
+
+            if (belongsToDoctor) {
+              setReservations((prev) => {
+                const idx = prev.findIndex((item) => String(item.id) === String(updated.id));
+                if (idx >= 0) {
+                  const next = [...prev];
+                  next[idx] = { ...next[idx], ...normalizedBooking };
+                  return next;
+                }
+                return [normalizedBooking, ...prev];
+              });
+
+              if (isActive) {
+                setActiveSessionBooking(normalizedBooking);
+              } else if (st === "completed" || st === "done" || st === "cancelled" || st === "canceled" || st === "rejected") {
+                setActiveSessionBooking((curr: any) => (curr && String(curr.id) === String(updated.id) ? null : curr));
+                setScheduleModalBooking((curr: any) => (curr && String(curr.id) === String(updated.id) ? null : curr));
+              }
+            } else {
+              // If it does not belong to this doctor, make sure it is removed if previously present
+              setReservations((prev) => prev.filter((item) => String(item.id) !== String(updated.id)));
+              if (st === "completed" || st === "done" || st === "cancelled" || st === "canceled" || st === "rejected") {
+                setActiveSessionBooking((curr: any) => (curr && String(curr.id) === String(updated.id) ? null : curr));
+                setScheduleModalBooking((curr: any) => (curr && String(curr.id) === String(updated.id) ? null : curr));
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [servicesList, doctorName, doctorDbId, providerRecord]);
+
+  // Auto-detect receptionist started session for THIS doctor strictly
+  const receptionistStartedSession = useMemo(() => {
+    return reservations.find((r) => {
+      const st = String(r.status || "").toLowerCase().trim();
+      const isActive = st === "started" || st === "in-progress" || st === "in_progress" || st === "active" || st === "in treatment";
+      return isActive && isDoctorMatch(r);
+    }) || null;
+  }, [reservations, doctorName, doctorDbId, providerRecord]);
+
+  useEffect(() => {
+    if (receptionistStartedSession) {
+      if (!activeSessionBooking || String(activeSessionBooking.id) !== String(receptionistStartedSession.id) || activeSessionBooking.status !== receptionistStartedSession.status) {
+        setActiveSessionBooking(receptionistStartedSession);
+      }
+    } else if (activeSessionBooking) {
+      const isEnded = (value: any) => {
+        const s = String(value || "").toLowerCase().trim();
+        return s === "completed" || s === "done" || s === "cancelled" || s === "canceled" || s === "rejected";
+      };
+      if (isEnded(activeSessionBooking.status)) {
+        setActiveSessionBooking(null);
+      } else {
+        // RISK-123: this copy only follows the booking while it is "started". If someone else ends the
+        // booking (e.g. reception completes it) the poll updates `reservations` but not this copy, so the
+        // panel used to stay open on a finished session. The realtime handler above already closes it for
+        // the same statuses; this does it for the polled data too. A booking the list has not caught up
+        // with yet (still confirmed right after the doctor pressed Start) is left alone.
+        const current = reservations.find((r) => String(r.id) === String(activeSessionBooking.id));
+        if (current && isEnded(current.status)) {
+          setActiveSessionBooking(null);
+        }
+      }
+    }
+  }, [receptionistStartedSession, activeSessionBooking, reservations]);
+
+  // Sync active session clinical notes — Brief 33: prefer doctor_notes (clean column),
+  // fall back to regex-cleaned legacy notes for pre-migration bookings
+  useEffect(() => {
+    if (activeSessionBooking) {
+      const dedicatedDoctorNote = activeSessionBooking.doctorNotes ?? activeSessionBooking.doctor_notes ?? null;
+      if (dedicatedDoctorNote !== null && dedicatedDoctorNote !== undefined) {
+        setClinicalNote(dedicatedDoctorNote);
+      } else {
+        const existingNotes = activeSessionBooking.notes || "";
+        const parsed = parseBookingNotes(existingNotes);
+        setClinicalNote(parsed.cleanDoctorNote || (parsed as any).cleanNote || "");
+      }
+    }
+  }, [activeSessionBooking]);
+
+  // Auto-fetch Patient Medical Record
+  useEffect(() => {
+    const fetchPatientMedicalRecord = async () => {
+      if (!activeSessionBooking) return;
+
+      const custId = activeSessionBooking.customer_id || activeSessionBooking.customerId || activeSessionBooking.id;
+      if (!custId) return;
+
+      setResolvedCustomerId(custId);
+      setMedicalRecordLoading(true);
+
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`/api/medical-records?customerId=${encodeURIComponent(custId)}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const record = data.form || data.medicalRecord || (Array.isArray(data) ? data[0] : null);
+          setMedicalRecord(record);
+
+          if (record) {
+            setFormSkinType(record.skin_type || "Normal");
+            setFormAllergies(record.allergies || "");
+            setFormMedicationDetails(record.medication_details || "");
+            setFormMedicalConditionsDetails(record.medical_conditions_details || "");
+            setFormPreviousTreatmentsDetails(record.previous_treatments_details || "");
+            setShowMedicalForm(false);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading medical record:", err);
+      } finally {
+        setMedicalRecordLoading(false);
+      }
+    };
+
+    fetchPatientMedicalRecord();
+  }, [activeSessionBooking]);
+
+  // Month navigation handlers
+  const handlePrevCalendarMonth = () => {
+    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+  const handleNextCalendarMonth = () => {
+    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+  const handleTodayCalendarMonth = () => {
+    setCalendarMonth(new Date());
+    setSelectedDateStr(todayStr);
+  };
+
+  // Group reservations by date
+  const reservationsByDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    reservations.forEach((r) => {
+      const dStr = r.date || todayStr;
+      if (!map[dStr]) map[dStr] = [];
+      map[dStr].push(r);
+    });
+    return map;
+  }, [reservations, todayStr]);
+
+  // Generate calendar days for month grid using local date strings
+  const calendarDaysList = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean }[] = [];
+
+    // Prev month padding
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = prevMonthDays - i;
+      const d = new Date(year, month - 1, dayNum);
+      days.push({
+        dateStr: getLocalDateString(d),
+        dayNum,
+        isCurrentMonth: false
+      });
+    }
+
+    // Current month days
+    for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+      const d = new Date(year, month, dayNum);
+      days.push({
+        dateStr: getLocalDateString(d),
+        dayNum,
+        isCurrentMonth: true
+      });
+    }
+
+    // Next month padding to fill 35/42 cells grid
+    const totalCells = days.length > 35 ? 42 : 35;
+    const remaining = totalCells - days.length;
+    for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+      const d = new Date(year, month + 1, dayNum);
+      days.push({
+        dateStr: getLocalDateString(d),
+        dayNum,
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  }, [calendarMonth]);
+
+  // Filter appointments for selected date & search query
+  const filteredSchedule = useMemo(() => {
+    const listForDate = reservationsByDate[selectedDateStr] || [];
+    if (!searchQuery.trim()) return listForDate;
+    const q = searchQuery.toLowerCase();
+    return listForDate.filter((r) => {
+      const pName = (r.name || r.customer_name || "").toLowerCase();
+      const sName = (r.service || r.service_name || "").toLowerCase();
+      const rName = (r.room || r.room_name || "").toLowerCase();
+      const phone = (r.phone || "").toLowerCase();
+      return pName.includes(q) || sName.includes(q) || rName.includes(q) || phone.includes(q);
+    });
+  }, [reservationsByDate, selectedDateStr, searchQuery]);
+
+  // Quick stats summary (Properly contextualized for Calendar Month vs Queue List Date)
+  const stats = useMemo(() => {
+    let list = reservations;
+    if (scheduleViewMode === "calendar") {
+      // Month view stats
+      const currentMonthKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, "0")}`;
+      list = reservations.filter((r) => (r.date || "").startsWith(currentMonthKey));
+    } else {
+      // Queue List view stats: filter by selectedDateStr
+      list = reservationsByDate[selectedDateStr] || [];
+    }
+    const total = list.length;
+    const completed = list.filter((r) => r.status === "completed" || r.status === "done").length;
+    const inProgress = list.filter((r) => r.status === "started" || r.status === "in-progress").length;
+    const upcoming = list.filter((r) => ["pending", "approved", "confirmed", "arrived"].includes(r.status)).length;
+    return { total, completed, inProgress, upcoming };
+  }, [reservations, scheduleViewMode, calendarMonth, selectedDateStr, reservationsByDate]);
+
+  // Open Schedule Details Drawer Modal
+  const handleOpenScheduleModal = (booking: any) => {
+    setScheduleModalBooking(booking);
+  };
+
+  // Add Product to Session Consumables
+  const handleAddProductToSession = () => {
+    if (!selectedProductId) return;
+    const prod = productsList.find((p) => p.id === selectedProductId);
+    if (!prod) return;
+
+    const unitPrice = Number(prod.price || prod.unit_price || prod.selling_price || 0);
+    const total = unitPrice * selectedProductQty;
+
+    setUsedProducts((prev) => [
+      ...prev,
+      {
+        id: prod.id,
+        name: prod.name,
+        qty: selectedProductQty,
+        unitPrice,
+        total
+      }
+    ]);
+    setSelectedProductId("");
+    setSelectedProductQty(1);
+  };
+
+  const handleRemoveProductFromSession = (idx: number) => {
+    setUsedProducts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Subtotals
+  // RISK-056: activeSessionBooking is populated straight from GET /api/reservations (mapRow shape)
+  // or a raw Supabase realtime row — neither ever carries a `.price`/`.total_price`/`.amount`
+  // field. Those only appear locally after handleChangePrimaryService() sets them as a side
+  // effect of switching the service dropdown. Until a doctor actually touches that dropdown,
+  // this fell straight to `|| 0`, silently dropping the reserved service's real price from the
+  // completed invoice (e.g. a 110 EGP Therapeutic Laser session invoiced for 0 + whatever
+  // products/add-ons were logged). Fall back to looking the price up from the booking's own
+  // service id via servicesList, same source handleChangePrimaryService already uses.
+  const bookingServiceId =
+    activeSessionBooking?.serviceId ??
+    activeSessionBooking?.service_id ??
+    (Array.isArray(activeSessionBooking?.serviceIds) ? activeSessionBooking.serviceIds[0] : undefined) ??
+    (Array.isArray(activeSessionBooking?.service_ids) ? activeSessionBooking.service_ids[0] : undefined);
+  const bookingServiceFromList = servicesList.find((s) => String(s.id) === String(bookingServiceId));
+  const baseBookingPrice = Number(
+    activeSessionBooking?.price ||
+    activeSessionBooking?.total_price ||
+    activeSessionBooking?.amount ||
+    activeSessionBooking?.services?.price ||
+    bookingServiceFromList?.price ||
+    0
+  );
+  const productsSubtotal = usedProducts.reduce((sum, item) => sum + item.total, 0);
+  const extraPulsesSubtotal = extraPulsesCount * pricePerPulse;
+  const additionalServicesSubtotal = additionalServices.reduce((sum, item) => {
+    const srv = servicesList.find((s) => String(s.id) === String(item.serviceId));
+    const isLaser = item.isLaser || checkIsLaserService(srv);
+    const isBookingPackageMode = Boolean(
+      activeSessionBooking?.laser_payment_mode === "PACKAGE" ||
+      activeSessionBooking?.laserPaymentMode === "PACKAGE" ||
+      String(activeSessionBooking?.notes || "").toLowerCase().includes("package session") ||
+      String(activeSessionBooking?.notes || "").toLowerCase().includes("package redemption") ||
+      String(activeSessionBooking?.notes || "").toLowerCase().includes("pulses package") ||
+      String(activeSessionBooking?.notes || "").includes("[Laser Package]")
+    );
+    if (isBookingPackageMode && isLaser) return sum;
+    return sum + (Number(item.price) || 0);
+  }, 0);
+  const updatedInvoiceTotal = baseBookingPrice + additionalServicesSubtotal + productsSubtotal + extraPulsesSubtotal;
+
+  // Change Primary Service for Active Session or Drawer Booking
+  const handleChangePrimaryService = async (targetBooking: any, newServiceId: string) => {
+    if (!targetBooking || !newServiceId) return;
+    const newService = servicesList.find((s) => String(s.id) === String(newServiceId));
+    if (!newService) return;
+
+    const newServiceName = newService.en || newService.name || newService.title || newService.name_en || newService.ar || "Clinical Service";
+    const newServicePrice = Number(newService.price || 0);
+
+    const updatedBooking = {
+      ...targetBooking,
+      service: newServiceName,
+      service_name: newServiceName,
+      service_id: newService.id,
+      price: newServicePrice,
+      total_price: newServicePrice
+    };
+
+    if (activeSessionBooking && String(activeSessionBooking.id) === String(targetBooking.id)) {
+      setActiveSessionBooking(updatedBooking);
+    }
+    if (scheduleModalBooking && String(scheduleModalBooking.id) === String(targetBooking.id)) {
+      setScheduleModalBooking(updatedBooking);
+    }
+
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`/api/reservations?id=${encodeURIComponent(targetBooking.id)}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          // PATCH /api/reservations only reads `serviceId` (camelCase) off the body — it was
+          // sent here as `service_id`, so the server silently ignored it and the reservation's
+          // actual service_id/service_ids never changed, even though the local optimistic state
+          // below made the price look updated on screen.
+          serviceId: newService.id,
+          service_name: newServiceName,
+          price: newServicePrice
+        })
+      });
+      fetchDoctorReservations(true);
+    } catch (err) {
+      console.error("Error updating primary booking service:", err);
+    }
+  };
+
+  // Save Medical Record Intake
+  const handleSaveMedicalRecord = async (customData?: any) => {
+    if (customData && typeof customData.preventDefault === "function") {
+      customData.preventDefault();
+    }
+    const targetBooking = activeSessionBooking || scheduleModalBooking;
+    if (!targetBooking) return;
+    const custId = resolvedCustomerId || targetBooking.customer_id || targetBooking.customerId || targetBooking.id;
+
+    setSavingMedicalRecord(true);
+    try {
+      const headers = await getAuthHeaders();
+      const payload: any = {
+        customer_id: custId,
+        reservation_id: targetBooking.id,
+        patient_name: targetBooking.name || targetBooking.customer_name || "Patient",
+        skin_type: customData?.skin_type || formSkinType,
+        allergies: customData?.allergies || formAllergies,
+        medication_details: customData?.medication_details || formMedicationDetails,
+        medical_conditions_details: customData?.medical_conditions_details || formMedicalConditionsDetails,
+        previous_treatments_details: customData?.previous_treatments_details || formPreviousTreatmentsDetails
+      };
+
+      if (customData && typeof customData === "object" && !customData.nativeEvent) {
+        if (customData.template_id) payload.template_id = customData.template_id;
+        if (customData.responses) payload.responses = customData.responses;
+      }
+
+      const res = await fetch("/api/medical-records", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const savedRecord = data.medicalRecord || data.form || data;
+        setMedicalRecord(savedRecord);
+        setShowMedicalForm(false);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("Error saving medical record:", err);
+      }
+    } catch (err: any) {
+      console.error("Error saving medical record:", err);
+    } finally {
+      setSavingMedicalRecord(false);
+    }
+  };
+
+  // Save Doctor Clinical Notes
+  const handleSaveClinicalNote = async (targetBooking: any) => {
+    if (!targetBooking) return;
+
+    setSavingNote(true);
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/reservations?id=${encodeURIComponent(targetBooking.id)}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          doctorNotes: clinicalNote || ""
+        })
+      });
+
+      if (res.ok) {
+        alert("Doctor clinical notes saved successfully!");
+        fetchDoctorReservations();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("revera-booking-change"));
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || err.message || "Failed to save clinical note.");
+      }
+    } catch (err: any) {
+      console.error("Error saving clinical note:", err);
+      alert(err.message || "Error saving clinical note.");
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // DEC-042: writes real reservation_products rows for everything accumulated in local session
+  // state (products, additional services, extra device pulses) so writeCheckoutInvoice
+  // (src/app/api/reservations/route.ts) can fold them into real invoice_lines when the completing
+  // PATCH below flips status to 'completed'. Must resolve before that PATCH fires -- it only reads
+  // reservation_products rows that already exist at the moment of the status transition. The
+  // notes-text summary built further down is kept alongside this, unchanged -- a human-readable
+  // audit trail and a safety net for the regex-based display fallback (RISK-057), not replaced.
+  // Failures here are logged, not thrown -- a doctor completing a session must not be blocked by
+  // this new write path failing; the pre-existing amountLeft/notes PATCH is still the number that
+  // matters to the patient's balance.
+  const persistSessionLineItems = async (targetBooking: any, pulsesToDeduct: number, deviceName: string, laserInfo?: any) => {
+    const headers = await getAuthHeaders();
+    const reservationId = targetBooking?.id || targetBooking?.booking_id || targetBooking?.bookingId;
+    if (!reservationId) return;
+
+    const writes: Promise<any>[] = [];
+    for (const p of usedProducts) {
+      writes.push(
+        fetch("/api/reservation-products", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            reservationId,
+            lineType: "product",
+            productId: p.id,
+            description: p.name,
+            qty: p.qty,
+            unitPrice: p.unitPrice,
+            addedByRole: "doctor_session",
+          }),
+        })
+      );
+    }
+    for (const s of additionalServices) {
+      const realServiceId = s.serviceId || (typeof s.id === 'number' && s.id < 1000000 ? s.id : null);
+      const srv = servicesList.find((x) => String(x.id) === String(realServiceId));
+      const isLaser = s.isLaser || checkIsLaserService(srv);
+      const isPkg = laserInfo?.pulseType === "PACKAGE";
+      const effectivePrice = (isPkg && isLaser) ? 0 : s.price;
+      writes.push(
+        fetch("/api/reservation-products", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            reservationId,
+            lineType: "additional_service",
+            serviceId: realServiceId ? Number(realServiceId) : null,
+            description: (isPkg && isLaser)
+              ? `${s.name} (Package Redemption · 0 EGP)`
+              : s.name,
+            qty: 1,
+            unitPrice: effectivePrice,
+            totalPrice: effectivePrice,
+            addedByRole: "doctor_session",
+          }),
+        })
+      );
+    }
+    if (pulsesToDeduct > 0) {
+      // In PACKAGE mode, PER_PULSE mode, or standard SERVICE mode without extra pulse fees,
+      // pulses are recorded for hardware tracking with unitPrice: 0 so patient is not double billed.
+      const isExtraFee = laserInfo?.pulseType === "SERVICE" && Number(laserInfo?.additionalCharge || 0) > 0;
+      const unitRate = isExtraFee ? Number(laserInfo?.pulseValue || pricePerPulse) : 0;
+      writes.push(
+        fetch("/api/reservation-products", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            reservationId,
+            lineType: "device_pulses",
+            description: `${deviceName} — ${pulsesToDeduct} pulses`,
+            productName: `${deviceName} — ${pulsesToDeduct} pulses`,
+            qty: pulsesToDeduct,
+            quantity: pulsesToDeduct,
+            unitPrice: unitRate,
+            addedByRole: "doctor_session",
+          }),
+        })
+      );
+    }
+
+    if (writes.length === 0) return;
+    const results = await Promise.allSettled(writes);
+    const failed = results.filter((r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
+    if (failed.length > 0) {
+      console.error(`persistSessionLineItems: ${failed.length}/${writes.length} reservation_products writes failed for reservation ${reservationId}`);
+    }
+  };
+
+  // Complete Treatment Session
+  const handleCompleteTreatment = async (targetBooking: any, overrideSessionPulses?: number, laserData?: any) => {
+    if (!targetBooking) return;
+
+    const custId = resolvedCustomerId || targetBooking.customer_id || targetBooking.customerId || targetBooking.id;
+    const phone = targetBooking.phone || targetBooking.customer_phone;
+    const name = (targetBooking.name || targetBooking.customer_name || "").toLowerCase().trim();
+
+    // Verify if patient is a first-visit patient without prior medical record
+    const pastCompletedVisits = reservations.filter((r) => {
+      if (String(r.id) === String(targetBooking.id)) return false;
+      const isFinished = r.status === "completed" || r.status === "done";
+      if (!isFinished) return false;
+
+      const rCustId = r.customer_id || r.customerId;
+      const rPhone = r.phone || r.customer_phone;
+      const rName = (r.name || r.customer_name || "").toLowerCase().trim();
+
+      if (custId && rCustId && String(custId) === String(rCustId)) return true;
+      if (phone && rPhone && phone === rPhone) return true;
+      if (name && rName && name === rName) return true;
+      return false;
+    });
+
+    const isFirstVisitPatient = !medicalRecord && pastCompletedVisits.length === 0;
+
+    // Strict guard: Block completion if first visit patient has no medical record intake
+    if (isFirstVisitPatient && !medicalRecord) {
+      if (formSkinType || formAllergies || formMedicationDetails || formMedicalConditionsDetails || formPreviousTreatmentsDetails) {
+        try {
+          const headers = await getAuthHeaders();
+          const medRes = await fetch("/api/medical-records", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              customer_id: custId,
+              reservation_id: targetBooking.id,
+              patient_name: targetBooking.name || targetBooking.customer_name || "Patient",
+              skin_type: formSkinType || "Normal",
+              allergies: formAllergies,
+              medication_details: formMedicationDetails,
+              medical_conditions_details: formMedicalConditionsDetails,
+              previous_treatments_details: formPreviousTreatmentsDetails
+            })
+          });
+          if (medRes.ok) {
+            const mData = await medRes.json();
+            setMedicalRecord(mData.form || mData.medicalRecord || mData);
+          } else {
+            alert("Cannot complete treatment: Medical record intake is strictly required for first-visit patients. Please complete and save the intake form.");
+            setShowMedicalForm(true);
+            return;
+          }
+        } catch (e) {
+          alert("Cannot complete treatment: Medical record intake is required for first-visit patients. Please save the intake form first.");
+          setShowMedicalForm(true);
+          return;
+        }
+      } else {
+        alert("Cannot complete treatment: Medical record intake is strictly required for first-visit patients. Please complete and save the intake form before ending the session.");
+        setShowMedicalForm(true);
+        return;
+      }
+    }
+
+    const bookingTargetId = targetBooking?.id || targetBooking?.booking_id || targetBooking?.bookingId || targetBooking?._id || targetBooking?.reservation_id;
+    if (!bookingTargetId) {
+      alert("Booking ID is missing. Cannot complete treatment session.");
+      return;
+    }
+
+    // DEC-079: a PACKAGE deficit no longer needs a rate here — the doctor never bills it.
+    const requiresPerPulseRate = laserData?.pulseType === "PER_PULSE" ||
+      targetBooking.laser_payment_mode === "PER_PULSE" ||
+      targetBooking.laserPaymentMode === "PER_PULSE";
+    const resolvedDoctorPulseRate = resolveLaserPulseRate({
+      reservationRate: targetBooking.laser_price_per_pulse ?? targetBooking.laserPricePerPulse,
+      clinicDefaultRate: laserData?.pulseValue,
+      notes: targetBooking.notes,
+    });
+    if (requiresPerPulseRate && resolvedDoctorPulseRate === null) {
+      alert("Per-pulse rate not configured — set it in Booking Settings.");
+      return;
+    }
+
+    // 2. Deduct Used Products from Inventory Stock DB via /api/inventory/products/sales
+    if (usedProducts && usedProducts.length > 0) {
+      try {
+        const headers = await getAuthHeaders();
+        for (const item of usedProducts) {
+          const prodId = item.id || (item as any).productId;
+          if (prodId) {
+            await fetch("/api/inventory/products/sales", {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                product_id: prodId,
+                product_name: item.name,
+                quantity: Number(item.qty) || 1,
+                unit_price: Number(item.unitPrice) || 0,
+                total_amount: Number(item.total) || 0,
+                customer_id: targetBooking.customer_id || targetBooking.customerId || "",
+                customer_name: targetBooking.name || targetBooking.customer_name || "Patient",
+                customer_mobile: targetBooking.phone || targetBooking.customer_phone || "N/A",
+                notes: `Consumable deducted during clinical session (Booking #${bookingTargetId})`
+              })
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Error deducting used products from inventory stock:", e);
+      }
+    }
+
+    // 3. Deduct Device Pulses from DB via PUT /api/inventory/devices (Uses Total Session Pulses)
+    const pulsesToDeduct = Number(overrideSessionPulses || extraPulsesCount || 0);
+    const activeDevId = laserData?.deviceId || selectedDeviceId;
+    if (activeDevId && pulsesToDeduct > 0) {
+      try {
+        const headers = await getAuthHeaders();
+        const devObj = devicesList.find((d) => String(d.id) === String(activeDevId));
+        if (devObj) {
+          const currentPulses = Number(devObj.current_pulse_count || devObj.total_pulses || 0);
+          const newPulseCount = currentPulses + pulsesToDeduct;
+          await fetch("/api/inventory/devices", {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({
+              id: devObj.id,
+              current_pulse_count: newPulseCount,
+              notes: `Session pulse usage for ${targetBooking.name || 'Patient'} (${pulsesToDeduct} pulses deducted)`
+            })
+          });
+        }
+      } catch (e) {
+        console.error("Error updating device pulses in DB:", e);
+      }
+    }
+
+    // 4. Laser Pulse Counter Engine: 3 Modes (SERVICE, PER_PULSE, PACKAGE) & Deficit Spillover Engine
+    let effectiveLaserSessionCharge = 0;
+
+    if (laserData) {
+      try {
+        const headers = await getAuthHeaders();
+
+        // Mode 1 (SERVICE): Base catalog price applies; extra pulses charged if any
+        if (laserData.pulseType === "SERVICE") {
+          effectiveLaserSessionCharge = Number(laserData.additionalCharge || 0);
+          if (effectiveLaserSessionCharge > 0) {
+            try {
+              await fetch("/api/reservation-products", {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  reservationId: bookingTargetId,
+                  lineType: "device_pulses",
+                  description: `Additional Laser Pulses (${laserData.treatmentArea || "Treatment"})`,
+                  productName: `Additional Laser Pulses (${laserData.treatmentArea || "Treatment"})`,
+                  qty: Number(laserData.additionalPulses) || 1,
+                  quantity: Number(laserData.additionalPulses) || 1,
+                  unitPrice: Number(laserData.pulseValue) || 0,
+                  totalPrice: effectiveLaserSessionCharge,
+                  addedByRole: "doctor_session"
+                })
+              });
+            } catch (e) {
+              console.error("Error persisting additional pulses line item:", e);
+            }
+          }
+        }
+
+        // Mode 2 (PER_PULSE): Pay per pulse (Delivered Pulses × Unit Price)
+        else if (laserData.pulseType === "PER_PULSE") {
+          const deliveredPulses = Number(laserData.pulsesUsed || 0);
+          const unitRate = Number(laserData.pulseValue || 0);
+          effectiveLaserSessionCharge = deliveredPulses * unitRate;
+          // Primary service bills delivered_pulses × unitRate directly.
+          // We record usage for device tracking with unitPrice = 0 so the patient invoice is not double-billed.
+          if (deliveredPulses > 0) {
+            try {
+              await fetch("/api/reservation-products", {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                  reservationId: bookingTargetId,
+                  lineType: "device_pulses",
+                  description: `Laser Pulses Delivered (${deliveredPulses} pulses @ ${unitRate} EGP - ${laserData.treatmentArea || "Treatment"})`,
+                  productName: `Laser Pulses Delivered (${deliveredPulses} pulses @ ${unitRate} EGP - ${laserData.treatmentArea || "Treatment"})`,
+                  qty: deliveredPulses,
+                  quantity: deliveredPulses,
+                  unitPrice: 0,
+                  totalPrice: 0,
+                  addedByRole: "doctor_session"
+                })
+              });
+            } catch (e) {
+              console.error("Error persisting per-pulse device tracking item:", e);
+            }
+          }
+        }
+
+        // Mode 3 (PACKAGE): clamped consume against the source package only.
+        // DEC-079 / Brief 35: the doctor's screen records delivered pulses — it does not sell
+        // packages, resolve deficits, or write invoice lines. Any deficit is resolved by
+        // reception at checkout via POST /api/reservations/laser-deficit.
+        else if (laserData.pulseType === "PACKAGE") {
+          const pulsesUsed = Number(laserData.pulsesUsed || 0);
+
+          const availablePkgPulses = laserData.selectedPackage ? Number(
+            laserData.selectedPackage.remainingPulses ??
+            laserData.selectedPackage.pulsesRemaining ??
+            laserData.selectedPackage.remaining_pulses ??
+            laserData.selectedPackage.pulses_remaining ??
+            pulsesUsed
+          ) : pulsesUsed;
+          const pulsesToDeductFromActivePkg = Math.min(availablePkgPulses > 0 ? availablePkgPulses : pulsesUsed, pulsesUsed);
+
+          // Resolve target pulses package ID from multiple sources to guarantee deduction
+          let targetPkgId = laserData.sourceId || targetBooking?.packageId || targetBooking?.package_id || (targetBooking as any)?.packageId || null;
+          if (!targetPkgId) {
+            const notesPkgMatch = String(targetBooking?.notes || "").match(/\[Customer Package ID\]:\s*([0-9a-f-]+)/i) ||
+              String(targetBooking?.notes || "").match(/Package ID:\s*([0-9a-f-]+)/i) ||
+              String(targetBooking?.notes || "").match(/\[Customer Package ID\]:\s*([^\n\]]+)/i);
+            if (notesPkgMatch) {
+              targetPkgId = notesPkgMatch[1].trim();
+            }
+          }
+          if (!targetPkgId && (custId || phone)) {
+            try {
+              const param = custId ? `customerId=${encodeURIComponent(custId)}` : `phone=${encodeURIComponent(phone)}`;
+              const pkgLookupRes = await fetch(`/api/customers/packages?${param}`, { headers });
+              if (pkgLookupRes.ok) {
+                const pkgLookupData = await pkgLookupRes.json();
+                const pList = pkgLookupData.customerPackages || pkgLookupData.packages || [];
+                const foundActive = pList.find((p: any) => {
+                  const rem = Number(p.remainingPulses ?? p.pulsesRemaining ?? p.remaining_pulses ?? p.pulses_remaining ?? 0);
+                  return (p.status || "active").toLowerCase() === "active" && rem > 0;
+                });
+                if (foundActive) targetPkgId = foundActive.id;
+              }
+            } catch (lookupErr) {
+              console.warn("Could not lookup active pulse package for customer:", lookupErr);
+            }
+          }
+
+          if (targetPkgId && pulsesToDeductFromActivePkg > 0) {
+            try {
+              await fetch("/api/customers/packages", {
+                method: "PATCH",
+                headers,
+                body: JSON.stringify({
+                  action: "consume_package_pulses",
+                  customer_package_id: targetPkgId,
+                  package_id: targetPkgId,
+                  quantity_used: pulsesToDeductFromActivePkg,
+                  pulses: pulsesToDeductFromActivePkg,
+                  booking_id: bookingTargetId,
+                  reservationId: bookingTargetId,
+                  treatment_area: laserData.treatmentArea,
+                  used_by: doctorName || "Doctor",
+                  notes: `Laser session deduction: ${pulsesToDeductFromActivePkg} pulses`
+                })
+              });
+            } catch (e) {
+              console.error("Error executing package pulse deduction:", e);
+            }
+          }
+        }
+
+        // Record Unified Laser History Log for clinic & patient records
+        await fetch("/api/laser-pulses", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            reservation_id: bookingTargetId,
+            customer_id: custId,
+            patient_name: targetBooking.name || targetBooking.customer_name || "Patient",
+            customer_phone: phone,
+            doctor_id: doctorDbId || null,
+            doctor_name: doctorName || "Doctor",
+            device_id: activeDevId || null,
+            device_name: laserData.deviceName || devicesList.find((d) => String(d.id) === String(activeDevId))?.name || null,
+            pulse_type: laserData.pulseType,
+            treatment_area: laserData.treatmentArea,
+            pulses_used: Number(laserData.pulsesUsed) || 0,
+            additional_pulses: Number(laserData.additionalPulses) || 0,
+            pulse_value: Number(laserData.pulseValue) || 0,
+            additional_charge: effectiveLaserSessionCharge,
+            additional_reason: laserData.additionalReason || "",
+            source_id: laserData.sourceId || null,
+            source_name: laserData.sourceName || null,
+            notes: clinicalNote || ""
+          })
+        });
+      } catch (e) {
+        console.error("Error during laser pulse processing:", e);
+      }
+    }
+
+    try {
+      const deviceNameForPulses = devicesList.find((d) => String(d.id) === String(activeDevId))?.name || "Device";
+      await persistSessionLineItems({ ...targetBooking, id: bookingTargetId }, pulsesToDeduct, deviceNameForPulses, laserData);
+    } catch (e) {
+      console.error("persistSessionLineItems threw (non-fatal, continuing to complete treatment):", e);
+    }
+
+    // Compute final session total according to laser mode:
+    // Option 1 (SERVICE): Base catalog price + additional services + products + extra pulses
+    // Option 2 (PER_PULSE): 0 base + per-pulse total + additional services + products
+    // Option 3 (PACKAGE): package price (from booking) + additional non-laser services + products + deficit charge
+    const effectiveBasePrice = (!laserData?.pulseType || laserData.pulseType === "SERVICE") ? baseBookingPrice : 0;
+    const isDoctorPackage = laserData?.pulseType === "PACKAGE" || targetBooking.laser_payment_mode === "PACKAGE" || targetBooking.laserPaymentMode === "PACKAGE";
+    const additionalServicesSub = (additionalServices || []).reduce((sum, s) => {
+      const srv = servicesList.find((x) => String(x.id) === String(s.serviceId));
+      const isLaser = s.isLaser || checkIsLaserService(srv);
+      if (isDoctorPackage && isLaser) return sum;
+      return sum + (Number(s.price) || 0);
+    }, 0);
+    const sessionComputedRaw = effectiveBasePrice + additionalServicesSub + productsSubtotal + effectiveLaserSessionCharge;
+
+    // For PACKAGE mode: the booking may have an in-booking package purchase price recorded in notes.
+    // We must not collapse total to 0 when effectiveLaserSessionCharge and effectiveBasePrice are both 0
+    // (which happens for standard package redemption with no deficit). Use the higher of:
+    //  - computed session charges
+    //  - booked package price parsed from notes ([Purchasing New Pulses Package]: Name (PRICE EGP))
+    //  - amountPaid + existing amountLeft (the original booking commitment)
+    let bookedPackagePrice = 0;
+    if (isDoctorPackage) {
+      const pkgPriceMatch = String(targetBooking.notes || "").match(
+        /\[(?:Purchasing New Pulses Package|Laser Package Purchase & Redemption)\]:[^(]+\((\d+(?:\.\d+)?)\s*EGP/i
+      );
+      if (pkgPriceMatch) {
+        bookedPackagePrice = parseFloat(pkgPriceMatch[1]) || 0;
+      }
+    }
+    const originalBookingCommitment = Number(targetBooking.amountPaid ?? 0) + Number(targetBooking.amountLeft ?? 0);
+    const sessionComputedTotal = isDoctorPackage
+      ? Math.max(sessionComputedRaw, bookedPackagePrice, originalBookingCommitment)
+      : sessionComputedRaw;
+
+    let completionNotes = String(targetBooking.notes || "");
+    const isDoctorPerPulse = laserData?.pulseType === "PER_PULSE" || targetBooking.laser_payment_mode === "PER_PULSE" || targetBooking.laserPaymentMode === "PER_PULSE";
+    const doctorPulseRate = resolvedDoctorPulseRate!;
+    const doctorDeliveredPulses = Number(laserData?.pulsesUsed || 0);
+
+    if (isDoctorPerPulse && doctorDeliveredPulses > 0) {
+      const totalLaserCost = doctorDeliveredPulses * doctorPulseRate;
+      const pulseString = `\n[Laser Pulses Delivered]: Primary: ${doctorDeliveredPulses} pulses (@ ${doctorPulseRate} EGP/pulse = ${totalLaserCost} EGP), Total: ${doctorDeliveredPulses} pulses`;
+      completionNotes = completionNotes.replace(/\[(?:Laser Pulses Delivered|Extra Device Pulses)\]:[^\n\[]*/gi, "").trim() + pulseString;
+      const settlementString = `\n[Laser Settlement]: Settled that laser services in this session are charged per pulse (${doctorDeliveredPulses} pulses × ${doctorPulseRate} EGP = ${totalLaserCost} EGP) / تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مدفوعة بنظام حساب النبضات (${doctorDeliveredPulses} نبضة × ${doctorPulseRate} ج.م = ${totalLaserCost} ج.م)`;
+    } else if (isDoctorPackage && doctorDeliveredPulses > 0) {
+      const pulseCountString = `\n[Laser Pulses Delivered]: Primary: ${doctorDeliveredPulses} pulses, Total: ${doctorDeliveredPulses} pulses`;
+      completionNotes = completionNotes.replace(/\[(?:Laser Pulses Delivered|Extra Device Pulses)\]:[^\n\[]*/gi, "").trim() + pulseCountString;
+    }
+    // DEC-079 / Brief 35: the doctor's completion no longer writes [Laser Settlement] /
+    // [Laser Package Redemption] tags for PACKAGE mode — deliberate deletion, not a
+    // behavior-preserving refactor. The pulse audit lives in package_pulse_usage; the
+    // settlement statement is written by reception's checkout path (BookingDetailsModal /
+    // the laser-deficit route). Older bookings' tags remain valid as a legacy read fallback.
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/reservations?id=${encodeURIComponent(bookingTargetId)}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          id: bookingTargetId,
+          status: "completed",
+          doctorNotes: clinicalNote || "",
+          notes: completionNotes,
+          amountLeft: Math.max(0, sessionComputedTotal - Number(targetBooking.amountPaid ?? 0)),
+          laser_payment_mode: isDoctorPerPulse ? "PER_PULSE" : isDoctorPackage ? "PACKAGE" : "SERVICE",
+          laserPaymentMode: isDoctorPerPulse ? "PER_PULSE" : isDoctorPackage ? "PACKAGE" : "SERVICE",
+          delivered_pulses: doctorDeliveredPulses,
+          ...(isDoctorPerPulse ? {
+            laser_price_per_pulse: doctorPulseRate,
+            laserPricePerPulse: doctorPulseRate,
+          } : {})
+        })
+      });
+
+      if (res.ok) {
+        alert("Session completed successfully! Laser pulses, products & charges recorded.");
+        setReservations((prev) =>
+          prev.map((r) =>
+            String(r.id) === String(bookingTargetId)
+              ? {
+                  ...r,
+                  status: "completed",
+                  doctorNotes: clinicalNote || "",
+                  notes: completionNotes,
+                  total_price: sessionComputedTotal,
+                  price: sessionComputedTotal,
+                  amountLeft: Math.max(0, sessionComputedTotal - Number(targetBooking.amountPaid ?? 0)),
+                  laser_payment_mode: isDoctorPerPulse ? "PER_PULSE" : isDoctorPackage ? "PACKAGE" : "SERVICE",
+                  laserPaymentMode: isDoctorPerPulse ? "PER_PULSE" : isDoctorPackage ? "PACKAGE" : "SERVICE",
+                  delivered_pulses: doctorDeliveredPulses,
+                  ...(isDoctorPerPulse ? {
+                    laser_price_per_pulse: doctorPulseRate,
+                    laserPricePerPulse: doctorPulseRate,
+                  } : {})
+                }
+              : r
+          )
+        );
+        setActiveSessionBooking(null);
+        setScheduleModalBooking(null);
+        setUsedProducts([]);
+        setAdditionalServices([]);
+        setExtraPulsesCount(0);
+        setSelectedDeviceId("");
+        setClinicalNote("");
+        setActiveTab("schedule");
+        await fetchDoctorReservations(true);
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("revera-prescription-change"));
+          window.dispatchEvent(new CustomEvent("revera-booking-change"));
+          window.dispatchEvent(new CustomEvent("revera-laser-change"));
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || err.message || "Failed to complete treatment session.");
+      }
+    } catch (err: any) {
+      console.error("Error completing session:", err);
+      alert(err.message || "Error completing session.");
+    }
+  };
+
+  return (
+    <div className="h-screen min-h-[100dvh] w-full bg-[var(--color-brand-light)] text-[var(--cr-dark)] font-sans grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] overflow-hidden" dir={lang === "ar" ? "rtl" : "ltr"}>
+      {/* 1. SIDEBAR NAVIGATION (Desktop Sidebar & Mobile Drawer) */}
+      <DoctorSidebar
+        activeTab={activeTab}
+        setActiveTab={(tab) => {
+          setSelectedPatientHistory(null);
+          setActiveTab(tab);
+        }}
+        doctorName={doctorName}
+        doctorEmail={doctorEmail}
+        doctorPatientsCount={doctorPatientsList.length}
+        receptionistStartedSession={!!receptionistStartedSession}
+        activeSessionBooking={activeSessionBooking}
+        loading={loading}
+        t={t}
+        lang={lang}
+        setLang={setLang}
+        onFetchReservations={fetchDoctorReservations}
+        onLogout={confirmSignOut}
+        onSwitchToAdmin={onSwitchToAdmin}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+
+      {/* 2. MAIN CONTENT WRAPPER */}
+      <div className="flex flex-col min-w-0 w-full h-full min-h-[100dvh] md:h-screen overflow-hidden">
+        {/* MOBILE TOP HEADER BAR (< md) */}
+        <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[var(--cr-primary)] text-white shrink-0 sticky top-0 z-30 shadow-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition active:scale-95 cursor-pointer relative shrink-0"
+            aria-label="Toggle Doctor Menu"
+          >
+            <Menu size={20} />
+            {receptionistStartedSession && activeSessionBooking?.status !== "completed" && (
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+              </span>
+            )}
+          </button>
+          
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative h-7 w-7 rounded-lg bg-white p-1 overflow-hidden shrink-0">
+              <Image src={CLIENT.logoPath} alt={CLIENT.name} fill style={{ objectFit: "contain" }} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-bold leading-tight truncate">{t.portalTitle}</h1>
+              <p className="text-[9px] text-white/60 leading-none truncate">{doctorName}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Quick Language Toggle */}
+          <button
+            type="button"
+            onClick={() => setLang(lang === "en" ? "ar" : "en")}
+            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/10 hover:bg-white/20 text-white transition border border-white/15 cursor-pointer"
+          >
+            {lang === "en" ? "العربية" : "English"}
+          </button>
+
+          {/* Quick Profile Avatar */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedPatientHistory(null);
+              setActiveTab("profile");
+            }}
+            className={`h-8 w-8 rounded-lg font-bold text-[11px] flex items-center justify-center shadow-xs transition cursor-pointer ${
+              activeTab === "profile"
+                ? "bg-white text-[var(--cr-primary)] ring-2 ring-emerald-400"
+                : "bg-white/15 text-white hover:bg-white/25"
+            }`}
+            title={t.profileMenuTitle}
+          >
+            {(doctorName.replace(/^Dr\.?\s*/i, "") || "D").slice(0, 2).toUpperCase()}
+          </button>
+        </div>
+      </header>
+
+      {/* 3. MAIN CONTENT AREA */}
+      <main className="flex-1 w-full h-full overflow-y-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 pb-24 md:pb-6 animate-fadeIn flex flex-col min-w-0">
+        {/* GLOBAL LIVE STARTED SESSION PULSE BANNER (Visible across all tabs except ongoing) */}
+        {receptionistStartedSession && receptionistStartedSession.status !== "completed" && receptionistStartedSession.status !== "done" && activeTab !== "ongoing" && (
+          <div className="mb-4 sm:mb-6 rounded-2xl sm:rounded-3xl border-2 border-amber-400 bg-gradient-to-r from-amber-500 via-amber-600 to-emerald-700 p-4 sm:p-5 text-white shadow-lg animate-fadeIn flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md text-white font-bold shadow-inner">
+                <Play size={22} className="animate-pulse text-amber-200 fill-amber-200" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2.5 py-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-white">
+                    <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                    {t.sessionStartedByReception}
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white mt-1 truncate">
+                  {receptionistStartedSession.name || receptionistStartedSession.customer_name || "Patient"}
+                </h3>
+                <p className="text-xs text-white/90 font-medium truncate mt-0.5">
+                  {receptionistStartedSession.service || receptionistStartedSession.service_name || "Clinical Session"} • {receptionistStartedSession.time || receptionistStartedSession.time_slot || "Today"} • <strong>{receptionistStartedSession.room || receptionistStartedSession.room_name || "Treatment Room"}</strong>
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSessionBooking(receptionistStartedSession);
+                setActiveTab("ongoing");
+              }}
+              className="shrink-0 rounded-2xl bg-white text-[var(--cr-primary)] px-5 py-2.5 text-xs font-black shadow-md hover:bg-[var(--color-brand-light)] active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Stethoscope size={16} />
+              <span>{t.openActiveSessionBtn}</span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB 1: SCHEDULE VIEW */}
+        {activeTab === "schedule" && (
+          <DoctorScheduleTab
+            selectedDateStr={selectedDateStr}
+            setSelectedDateStr={setSelectedDateStr}
+            todayStr={todayStr}
+            yesterdayStr={yesterdayStr}
+            tomorrowStr={tomorrowStr}
+            lang={lang}
+            setLang={setLang}
+            scheduleViewMode={scheduleViewMode}
+            setScheduleViewMode={setScheduleViewMode}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            calendarMonth={calendarMonth}
+            handlePrevCalendarMonth={handlePrevCalendarMonth}
+            handleTodayCalendarMonth={handleTodayCalendarMonth}
+            handleNextCalendarMonth={handleNextCalendarMonth}
+            calendarDaysList={calendarDaysList}
+            reservationsByDate={reservationsByDate}
+            stats={stats}
+            filteredSchedule={filteredSchedule}
+            handleOpenScheduleModal={handleOpenScheduleModal}
+            onOpenOngoingSession={handleStartOngoingSession}
+            onStartOngoingSession={handleStartOngoingSession}
+            t={t}
+          />
+        )}
+
+        {/* TAB 2: ONGOING SESSION VIEW */}
+        {activeTab === "ongoing" && (
+          <DoctorOngoingSessionTab
+            activeSessionBooking={activeSessionBooking || receptionistStartedSession}
+            setActiveSessionBooking={setActiveSessionBooking}
+            handleCompleteTreatment={handleCompleteTreatment}
+            onStartOngoingSession={handleStartOngoingSession}
+            medicalRecord={medicalRecord}
+            medicalRecordLoading={medicalRecordLoading}
+            showMedicalForm={showMedicalForm}
+            setShowMedicalForm={setShowMedicalForm}
+            formSkinType={formSkinType}
+            setFormSkinType={setFormSkinType}
+            formAllergies={formAllergies}
+            setFormAllergies={setFormAllergies}
+            formMedicationDetails={formMedicationDetails}
+            setFormMedicationDetails={setFormMedicationDetails}
+            formMedicalConditionsDetails={formMedicalConditionsDetails}
+            setFormMedicalConditionsDetails={setFormMedicalConditionsDetails}
+            formPreviousTreatmentsDetails={formPreviousTreatmentsDetails}
+            setFormPreviousTreatmentsDetails={setFormPreviousTreatmentsDetails}
+            savingMedicalRecord={savingMedicalRecord}
+            handleSaveMedicalRecord={handleSaveMedicalRecord}
+            clinicalNote={clinicalNote}
+            setClinicalNote={setClinicalNote}
+            savingNote={savingNote}
+            handleSaveClinicalNote={handleSaveClinicalNote}
+            productsList={productsList}
+            selectedProductId={selectedProductId}
+            setSelectedProductId={setSelectedProductId}
+            selectedProductQty={selectedProductQty}
+            setSelectedProductQty={setSelectedProductQty}
+            handleAddProductToSession={handleAddProductToSession}
+            handleRemoveProductFromSession={handleRemoveProductFromSession}
+            setActiveTab={setActiveTab}
+            usedProducts={usedProducts}
+            devicesList={devicesList}
+            servicesList={servicesList}
+            handleChangePrimaryService={handleChangePrimaryService}
+            selectedDeviceId={selectedDeviceId}
+            setSelectedDeviceId={setSelectedDeviceId}
+            extraPulsesCount={extraPulsesCount}
+            setExtraPulsesCount={setExtraPulsesCount}
+            pricePerPulse={pricePerPulse}
+            setPricePerPulse={setPricePerPulse}
+            baseBookingPrice={baseBookingPrice}
+            productsSubtotal={productsSubtotal}
+            extraPulsesSubtotal={extraPulsesSubtotal}
+            updatedInvoiceTotal={updatedInvoiceTotal}
+            onAdditionalServicesChange={setAdditionalServices}
+            reservations={reservations}
+            t={t}
+          />
+        )}
+
+        {/* TAB 3: PATIENTS DIRECTORY VIEW */}
+        {activeTab === "patients" && (
+          <DoctorPatientsTab
+            patientSearchQuery={patientSearchQuery}
+            setPatientSearchQuery={setPatientSearchQuery}
+            filteredPatients={filteredPatientsList}
+            doctorPatientsList={doctorPatientsList}
+            reservations={reservations}
+            setSelectedPatientHistory={setSelectedPatientHistory}
+            t={t}
+          />
+        )}
+
+        {/* TAB 4: ANALYTICS & INSIGHTS VIEW */}
+        {activeTab === "analytics" && (
+          <DoctorAnalyticsTab analyticsData={analyticsData} doctorPatientsList={doctorPatientsList} reservations={reservations} t={t} />
+        )}
+
+        {/* TAB 5: ACCOUNT & SYSTEM SETTINGS VIEW */}
+        {activeTab === "settings" && (
+          <DoctorSettingsTab t={t} />
+        )}
+
+        {/* TAB 6: SECURITY & PROFILE VIEW */}
+        {activeTab === "profile" && (
+          <UserProfileView
+            user={{
+              id: doctorDbId || providerRecord?.id,
+              name: doctorName || providerRecord?.name || "Doctor Account",
+              email: doctorEmail || providerRecord?.email || "",
+              phone: providerRecord?.phone || "",
+              address: providerRecord?.address || "",
+              role: "Doctor / Specialist",
+              branch: providerBranches.length > 0 ? providerBranches.join(", ") : resolvedBranchName,
+              branchesList: providerBranches.length > 0 ? providerBranches : [resolvedBranchName],
+              department: "Doctor",
+              employeeId: doctorDbId ? `DOC-${String(doctorDbId).slice(0, 5).toUpperCase()}` : (providerRecord?.id ? `DOC-${providerRecord.id.slice(0, 5).toUpperCase()}` : "DOC-001"),
+              joiningDate: providerRecord?.created_at
+                ? new Date(providerRecord.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+                : "—",
+              shiftType: providerRecord?.shift || (providerRecord?.working_days_hours ? "Multi-Shift Schedule" : "Day"),
+              workingDays: providerRecord?.working_days || null,
+              workingHours: providerRecord?.working_hours || null,
+              workingDaysHours: providerRecord?.working_days_hours || providerRecord?.workingDaysHours,
+              basicSalary: Number(providerRecord?.fixed_salary || providerRecord?.salary || 0),
+              bonuses: 0,
+              deductions: 0,
+              monthlyTarget: Number(providerRecord?.target_amount || providerRecord?.required_target_amount || 0)
+            }}
+            isDoctorView={true}
+            lang={lang}
+            t={adminTranslations[lang].userProfile as UserProfileViewTranslations}
+          />
+        )}
+      </main>
+      </div>
+
+      {/* 3. MOBILE BOTTOM NAVIGATION BAR (< md) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[var(--cr-primary)]/15 px-2 py-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPatientHistory(null);
+            setActiveTab("schedule");
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "schedule"
+              ? "text-[var(--cr-primary)] font-bold"
+              : "text-[var(--color-brand-secondary)]/70 hover:text-[var(--cr-primary)]"
+          }`}
+        >
+          <div className={`p-1 rounded-lg ${activeTab === "schedule" ? "bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]" : ""}`}>
+            <CalendarDays size={18} />
+          </div>
+          <span className="text-[10px] mt-0.5">{t.schedule}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPatientHistory(null);
+            setActiveTab("ongoing");
+          }}
+          className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "ongoing"
+              ? "text-[var(--cr-primary)] font-bold"
+              : "text-[var(--color-brand-secondary)]/70 hover:text-[var(--cr-primary)]"
+          }`}
+        >
+          <div className={`p-1 rounded-lg relative ${activeTab === "ongoing" ? "bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]" : ""}`}>
+            <Stethoscope size={18} />
+            {receptionistStartedSession && activeSessionBooking?.status !== "completed" && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5">{t.ongoingSession}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPatientHistory(null);
+            setActiveTab("patients");
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "patients"
+              ? "text-[var(--cr-primary)] font-bold"
+              : "text-[var(--color-brand-secondary)]/70 hover:text-[var(--cr-primary)]"
+          }`}
+        >
+          <div className={`p-1 rounded-lg ${activeTab === "patients" ? "bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]" : ""}`}>
+            <Users size={18} />
+          </div>
+          <span className="text-[10px] mt-0.5">{t.patients}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPatientHistory(null);
+            setActiveTab("analytics");
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "analytics"
+              ? "text-[var(--cr-primary)] font-bold"
+              : "text-[var(--color-brand-secondary)]/70 hover:text-[var(--cr-primary)]"
+          }`}
+        >
+          <div className={`p-1 rounded-lg ${activeTab === "analytics" ? "bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]" : ""}`}>
+            <BarChart3 size={18} />
+          </div>
+          <span className="text-[10px] mt-0.5">{t.analytics}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedPatientHistory(null);
+            setActiveTab("profile");
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+            activeTab === "profile"
+              ? "text-[var(--cr-primary)] font-bold"
+              : "text-[var(--color-brand-secondary)]/70 hover:text-[var(--cr-primary)]"
+          }`}
+        >
+          <div className={`p-1 rounded-lg ${activeTab === "profile" ? "bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]" : ""}`}>
+            <User size={18} />
+          </div>
+          <span className="text-[10px] mt-0.5">{t.profile}</span>
+        </button>
+      </nav>
+
+      {/* MODAL 1: SCHEDULE DETAILS DRAWER */}
+      {scheduleModalBooking && (
+        <DoctorSessionDrawer
+          scheduleModalBooking={scheduleModalBooking}
+          setScheduleModalBooking={setScheduleModalBooking}
+          selectedDateStr={selectedDateStr}
+          medicalRecord={medicalRecord}
+          medicalRecordLoading={medicalRecordLoading}
+          showMedicalForm={showMedicalForm}
+          setShowMedicalForm={setShowMedicalForm}
+          formSkinType={formSkinType}
+          setFormSkinType={setFormSkinType}
+          formAllergies={formAllergies}
+          setFormAllergies={setFormAllergies}
+          formMedicationDetails={formMedicationDetails}
+          setFormMedicationDetails={setFormMedicationDetails}
+          formMedicalConditionsDetails={formMedicalConditionsDetails}
+          setFormMedicalConditionsDetails={setFormMedicalConditionsDetails}
+          formPreviousTreatmentsDetails={formPreviousTreatmentsDetails}
+          setFormPreviousTreatmentsDetails={setFormPreviousTreatmentsDetails}
+          savingMedicalRecord={savingMedicalRecord}
+          handleSaveMedicalRecord={handleSaveMedicalRecord}
+          clinicalNote={clinicalNote}
+          setClinicalNote={setClinicalNote}
+          handleSaveClinicalNote={handleSaveClinicalNote}
+          savingNote={savingNote}
+          handleCompleteTreatment={handleCompleteTreatment}
+          setActiveSessionBooking={setActiveSessionBooking}
+          onStartOngoingSession={handleStartOngoingSession}
+          setActiveTab={setActiveTab}
+          servicesList={servicesList}
+          handleChangePrimaryService={handleChangePrimaryService}
+          t={t}
+        />
+      )}
+
+      {/* MODAL 3: PATIENT HISTORY & VISITS DRAWER */}
+      {selectedPatientHistory && (
+        <DoctorPatientHistoryDrawer
+          selectedPatientHistory={selectedPatientHistory}
+          setSelectedPatientHistory={setSelectedPatientHistory}
+          handleOpenScheduleModal={handleOpenScheduleModal}
+          t={t}
+          lang={lang}
+          doctorName={doctorName}
+          adminRole="doctor"
+        />
+      )}
+    </div>
+  );
+}
+
+// Memoized at the export boundary: the admin shell re-renders on its own state changes, and this view
+// (1.9k lines plus every doctor tab) should only re-render when its own props change. The shell passes
+// stable callbacks (handleDoctorLogout, handleSwitchToAdmin); an inline arrow prop would defeat this.
+export default React.memo(DoctorAccountView);

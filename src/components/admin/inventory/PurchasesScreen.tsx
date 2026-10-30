@@ -1,0 +1,490 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Plus, X, Search, PackageCheck, AlertTriangle, Trash2 } from "lucide-react";
+import { adminTranslations } from "../translations";
+
+type Supplier = {
+  id: string;
+  name: string;
+  active: boolean;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  unit: string;
+};
+
+type PurchaseLine = {
+  id: string;
+  product_id: string;
+  qty: number;
+  unit_cost: number;
+  inventory_products?: { name: string } | null;
+};
+
+type Purchase = {
+  id: string;
+  supplier_id: string | null;
+  purchased_at: string;
+  total: number;
+  paid: number;
+  due_date: string | null;
+  suppliers?: { name: string } | null;
+  purchase_lines: PurchaseLine[];
+};
+
+type Props = {
+  authHeaders: Record<string, string>;
+  canManage?: boolean;
+  lang: "en" | "ar";
+  t: typeof adminTranslations["en"]["inventory"]["purchases"];
+};
+
+type FormLine = { productId: string; qty: string; unitCost: string };
+
+const EMPTY_LINE: FormLine = { productId: "", qty: "", unitCost: "" };
+
+export default function PurchasesScreen({ authHeaders, canManage = true, lang, t }: Props) {
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [supplierId, setSupplierId] = useState("");
+  const [lines, setLines] = useState<FormLine[]>([{ ...EMPTY_LINE }]);
+  const [paid, setPaid] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const [purchasesRes, suppliersRes, productsRes] = await Promise.all([
+        fetch("/api/purchases", { headers: authHeaders }),
+        fetch("/api/suppliers", { headers: authHeaders }),
+        fetch("/api/inventory/products", { headers: authHeaders }),
+      ]);
+      const purchasesJson = await purchasesRes.json();
+      const suppliersJson = await suppliersRes.json();
+      const productsJson = await productsRes.json();
+
+      if (!purchasesRes.ok) throw new Error(purchasesJson.error || t.errLoadPurchases);
+      if (!suppliersRes.ok) throw new Error(suppliersJson.error || t.errLoadSuppliers);
+      if (!productsRes.ok) throw new Error(productsJson.error || t.errLoadProducts);
+
+      setPurchases(purchasesJson.purchases || []);
+      setSuppliers(suppliersJson.suppliers || []);
+      setProducts(productsJson.products || []);
+      setError(null);
+    } catch (e: any) {
+      setError(e.message || t.errLoadPurchases);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openModal() {
+    setSupplierId("");
+    setLines([{ ...EMPTY_LINE }]);
+    setPaid("");
+    setDueDate("");
+    setFormError(null);
+    setModalOpen(true);
+  }
+
+  function updateLine(index: number, patch: Partial<FormLine>) {
+    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  function addLine() {
+    setLines((prev) => [...prev, { ...EMPTY_LINE }]);
+  }
+
+  function removeLine(index: number) {
+    setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  }
+
+  const previewTotal = lines.reduce((sum, line) => {
+    const qty = Number(line.qty) || 0;
+    const unitCost = Number(line.unitCost) || 0;
+    return sum + qty * unitCost;
+  }, 0);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    const cleanLines = lines
+      .filter((line) => line.productId)
+      .map((line) => ({
+        productId: line.productId,
+        qty: Number(line.qty),
+        unitCost: Number(line.unitCost),
+      }));
+
+    if (cleanLines.length === 0) {
+      setFormError(t.errNoLines);
+      return;
+    }
+    if (cleanLines.some((line) => !Number.isFinite(line.qty) || line.qty <= 0)) {
+      setFormError(t.errInvalidQty);
+      return;
+    }
+    if (cleanLines.some((line) => !Number.isFinite(line.unitCost) || line.unitCost < 0)) {
+      setFormError(t.errNegativeCost);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/purchases", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          supplierId: supplierId || undefined,
+          lines: cleanLines,
+          paid: paid ? Number(paid) : 0,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || t.errRecordFailed);
+
+      setModalOpen(false);
+      await loadAll();
+    } catch (e: any) {
+      setFormError(e.message || t.errRecordFailed);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const filteredPurchases = purchases.filter((p) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const supplierName = (p.suppliers?.name || "").toLowerCase();
+    const itemNames = (p.purchase_lines || []).map((l) => (l.inventory_products?.name || "").toLowerCase()).join(" ");
+    return supplierName.includes(q) || itemNames.includes(q);
+  });
+
+  return (
+    <div className="space-y-6" dir={lang === "ar" ? "rtl" : "ltr"}>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-bold text-[var(--cr-dark)]">{t.heading}</h3>
+          <p className="text-xs text-[var(--color-brand-secondary)]">{t.subtitle}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-[var(--color-brand-secondary)]" />
+            <input
+              type="text"
+              placeholder={t.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-2xl border border-[#E6E9EB] bg-white py-2 ps-9 pe-4 text-xs text-[var(--cr-dark)] focus:border-[var(--cr-primary)] focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={openModal}
+            className={`${canManage ? "inline-flex" : "hidden"} items-center gap-1.5 rounded-2xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#2e3a26]`}
+          >
+            <Plus size={14} /> {t.recordPurchaseBtn}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
+          <AlertTriangle size={14} /> {error}
+        </div>
+      )}
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto [scrollbar-width:thin] rounded-[32px] border border-[#E6E9EB] bg-white">
+        <table className="w-full min-w-[800px] text-sm">
+          <thead>
+            <tr className="border-b border-[#E6E9EB] bg-[#F7F7F9] text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-brand-secondary)]">
+              <th className="px-6 py-4 text-start">{t.thDate}</th>
+              <th className="px-6 py-4 text-start">{t.thSupplier}</th>
+              <th className="px-6 py-4 text-start">{t.thItems}</th>
+              <th className="px-6 py-4 text-end">{t.thTotal}</th>
+              <th className="px-6 py-4 text-end">{t.thPaid}</th>
+              <th className="px-6 py-4 text-start">{t.thStatus}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#E6E9EB] text-[var(--cr-primary)]">
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">{t.loading}</td>
+              </tr>
+            ) : filteredPurchases.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-[var(--color-brand-secondary)]">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <PackageCheck size={32} className="text-[#A3B19B]" />
+                    <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
+                    <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredPurchases.map((p) => {
+                const isPaid = p.paid >= p.total;
+                const isPartial = p.paid > 0 && p.paid < p.total;
+                return (
+                  <tr key={p.id} className="transition hover:bg-[#F9F9F7]">
+                    <td className="px-6 py-4 font-mono text-xs text-[var(--color-brand-secondary)]">
+                      {new Date(p.purchased_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-[var(--cr-dark)]">{p.suppliers?.name || "—"}</td>
+                    <td className="px-6 py-4 text-xs text-[var(--color-brand-secondary)]">
+                      {(p.purchase_lines || [])
+                        .map((l) => `${l.inventory_products?.name || t.unknownItem} (${l.qty})`)
+                        .join(", ")}
+                    </td>
+                    <td className="px-6 py-4 text-end font-mono font-semibold text-[var(--cr-dark)]">
+                      EGP {Number(p.total).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 text-end font-mono text-xs text-[var(--color-brand-secondary)]">
+                      EGP {Number(p.paid).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          isPaid
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : isPartial
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : "bg-gray-100 text-gray-600 border border-gray-200"
+                        }`}
+                      >
+                        {isPaid ? t.paid : isPartial ? t.partiallyPaid : t.unpaid}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Adaptive Cards View */}
+      <div className="block md:hidden space-y-3">
+        {loading ? (
+          <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-sm text-[var(--color-brand-secondary)]">
+            {t.loading}
+          </div>
+        ) : filteredPurchases.length === 0 ? (
+          <div className="rounded-2xl border border-[#E6E9EB] bg-white p-8 text-center text-[var(--color-brand-secondary)]">
+            <div className="flex flex-col items-center justify-center gap-2">
+              <PackageCheck size={32} className="text-[#A3B19B]" />
+              <p className="font-semibold text-[var(--cr-dark)]">{t.emptyTitle}</p>
+              <p className="text-xs text-[var(--color-brand-secondary)]">{t.emptyDesc}</p>
+            </div>
+          </div>
+        ) : (
+          filteredPurchases.map((p) => {
+            const isPaid = p.paid >= p.total;
+            const isPartial = p.paid > 0 && p.paid < p.total;
+            return (
+              <div
+                key={p.id}
+                className="rounded-2xl border border-[#E6E9EB] bg-white p-4 shadow-xs space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2 border-b border-gray-100 pb-2">
+                  <div>
+                    <span className="font-mono text-xs text-[var(--color-brand-secondary)] block">
+                      {new Date(p.purchased_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}
+                    </span>
+                    <h4 className="font-bold text-sm text-[var(--cr-dark)] mt-0.5">{p.suppliers?.name || "—"}</h4>
+                  </div>
+                  <span
+                    className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                      isPaid
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : isPartial
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : "bg-gray-100 text-gray-600 border border-gray-200"
+                    }`}
+                  >
+                    {isPaid ? t.paid : isPartial ? t.partiallyPaid : t.unpaid}
+                  </span>
+                </div>
+
+                {/* Items */}
+                <div className="rounded-xl bg-[#FAFBF9] p-2.5 text-xs border border-[#E6E9EB]/60">
+                  <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block mb-1">{t.thItems}</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(p.purchase_lines || []).map((l, idx) => (
+                      <span key={idx} className="inline-flex items-center rounded-md bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--cr-dark)] border border-[#E6E9EB]">
+                        {l.inventory_products?.name || t.unknownItem} <span className="font-mono ms-1 text-[var(--cr-primary)] font-bold">({l.qty})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Total & Paid */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <div>
+                    <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block">{t.thPaid}</span>
+                    <span className="font-mono text-[var(--color-brand-secondary)]">EGP {Number(p.paid).toFixed(2)}</span>
+                  </div>
+                  <div className="text-end">
+                    <span className="text-[10px] uppercase font-semibold text-[var(--color-brand-secondary)] block">{t.thTotal}</span>
+                    <span className="font-mono font-bold text-sm text-[var(--cr-dark)]">EGP {Number(p.total).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl border border-[var(--cr-primary)]/10 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4 mb-4">
+              <h3 className="text-xl font-bold text-[var(--cr-dark)]">{t.modalTitle}</h3>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.supplierLabel}</label>
+                <select
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[var(--cr-primary)]"
+                >
+                  <option value="">{t.noSupplierOption}</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] uppercase tracking-wider">{t.linesLabel}</label>
+                {lines.map((line, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <select
+                      required
+                      value={line.productId}
+                      onChange={(e) => updateLine(index, { productId: e.target.value })}
+                      className="flex-1 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--cr-primary)]"
+                    >
+                      <option value="" disabled>{t.selectProductOption}</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      required
+                      placeholder={t.qtyPlaceholder}
+                      value={line.qty}
+                      onChange={(e) => updateLine(index, { qty: e.target.value })}
+                      className="w-24 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--cr-primary)]"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      required
+                      placeholder={t.unitCostPlaceholder}
+                      value={line.unitCost}
+                      onChange={(e) => updateLine(index, { unitCost: e.target.value })}
+                      className="w-28 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--cr-primary)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeLine(index)}
+                      disabled={lines.length === 1}
+                      className="rounded-xl border border-rose-100 p-2 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={t.removeLineTitle}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addLine}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/20 px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:bg-[#EBF0E6]"
+                >
+                  <Plus size={13} /> {t.addLineBtn}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl bg-[#F7F7F9] px-4 py-2.5 text-sm">
+                <span className="text-[var(--color-brand-secondary)]">{t.estimatedTotalLabel}</span>
+                <span className="font-mono font-bold text-[var(--cr-dark)]">EGP {previewTotal.toFixed(2)}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.paidNowLabel}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="0.00"
+                    value={paid}
+                    onChange={(e) => setPaid(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[var(--cr-primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.dueDateLabel}</label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[var(--cr-primary)]"
+                  />
+                </div>
+              </div>
+
+              {formError && (
+                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700">
+                  <AlertTriangle size={14} /> {formError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 mt-2"
+              >
+                {saving ? t.recordingBtn : t.recordPurchaseBtn}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

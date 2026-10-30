@@ -1,0 +1,11800 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useCallback, useRef, Fragment } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/lib/supabaseClient";
+import { clockSkewMs, isClockSkewed } from "@/lib/clockSkew";
+import ClockSkewBanner from "@/components/admin/ClockSkewBanner";
+import { recoverFromInvoluntarySignOut, verifyStaffSession, pushAuthTrail, readAuthTrail, recordLogoutReason, clearLogoutReason, broadcastDeliberateLogout, wasDeliberateLogoutRecently, writeSharedActivity, lastActivityAcrossTabs, isIdleExpired, IDLE_LOGOUT_MS } from "@/lib/authRecovery";
+import { parseSection, withSection } from "@/lib/adminSection";
+import { ServiceItem, SERVICES, ALL_15MIN_SLOTS, getServiceDurationMinutes, getDurationInMinutes, getDurationLabel, normaliseTo24hSlot, getEffectiveServicePrice, getServicePriceDetails } from "@/lib/services";
+import { 
+  getServiceToggles, 
+  setServiceToggle, 
+  getDynamicCategories, 
+  saveDynamicCategories,
+  LocalCategory 
+} from "@/lib/serviceStore";
+import { compressImage } from "@/lib/image";
+import { printInvoice } from "@/lib/printUtils";
+import { Branch } from "@/types";
+import { translations } from "@/lib/translations";
+import { CLIENT } from "@/config/client";
+import { getRoleSlug, getRoleDisplayName, isPortalRoleMatch, normalizeWorkspace, type RoleWorkspace } from "@/lib/roleUtils";
+import { adminTranslations } from "@/components/admin/translations";
+import { describeDeletionCounts, type PatientDeletionCounts } from "@/lib/customerDeletionText";
+import UserProfileView, { UserProfileViewTranslations } from "@/components/admin/UserProfileView";
+import ClinicProfileSettingsView from "@/components/admin/settings/ClinicProfileSettingsView";
+import MedicalRecordsSettingsView from "@/components/admin/settings/MedicalRecordsSettingsView";
+import RoleManagementView from "@/components/admin/settings/RoleManagementView";
+import BookingSettingsView from "@/components/admin/settings/BookingSettingsView";
+import DepositSettingsView from "@/components/admin/settings/DepositSettingsView";
+import NotificationSettingsView from "@/components/admin/settings/NotificationSettingsView";
+import QueueSettingsView from "@/components/admin/settings/QueueSettingsView";
+import InactivitySettingsView from "@/components/admin/settings/InactivitySettingsView";
+import BranchesView from "@/components/admin/settings/BranchesView";
+import ServiceHoursView from "@/components/admin/settings/ServiceHoursView";
+import ServicesPageSettingsView from "@/components/admin/settings/ServicesPageSettingsView";
+import HomePageSettingsView from "@/components/admin/settings/HomePageSettingsView";
+import AboutUsPageSettingsView from "@/components/admin/settings/AboutUsPageSettingsView";
+import MedicalReportModal from "@/components/admin/patients/MedicalReportModal";
+import MedicalFormModal from "@/components/admin/patients/MedicalFormModal";
+import CustomerFormModal from "@/components/admin/patients/CustomerFormModal";
+import PatientsDirectoryView from "@/components/admin/patients/PatientsDirectoryView";
+import CustomerProfileDrawer from "@/components/admin/patients/CustomerProfileDrawer";
+import { useCustomerProfile } from "@/components/admin/patients/useCustomerProfile";
+import { useOpenProfileFinancialSync } from "@/components/admin/patients/useOpenProfileFinancialSync";
+import BookingDetailsModal, { checkIsLaserService, parseAdditionalServiceLine, extractPrimaryPulses } from "@/components/admin/bookings/BookingDetailsModal";
+import { extractPulsePackageQuota } from "@/lib/laserDeficit";
+import { totalPaidFromBookings, totalOutstandingFromBookings } from "@/lib/patientSpend";
+import {
+  AlarmClock,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Camera,
+  BarChart3,
+  Bell,
+  Box,
+  CalendarDays,
+  Calendar,
+  Printer,
+  ChevronDown,
+  ChevronRight,
+  CreditCard,
+  DollarSign,
+  Download,
+  Eye,
+  MoreVertical,
+  FileText,
+  Filter,
+  Info,
+  Hourglass,
+  Layers,
+  LayoutGrid,
+  LogOut,
+  MessageSquare,
+  Monitor,
+  Menu,
+  Package,
+  PackageCheck,
+  Archive,
+  Cpu,
+  Gauge,
+  History,
+  RotateCcw,
+  Wrench,
+  AlertTriangle,
+  Plus,
+  Receipt,
+  Search,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  FlaskConical,
+  CheckCircle2,
+  XCircle,
+  Play,
+  Terminal,
+  Activity,
+  ShoppingBag,
+  CircleDollarSign,
+  Presentation,
+  TrendingUp,
+  CircleUser,
+  Tag,
+  PlusCircle,
+  Pencil,
+  Megaphone,
+  Quote,
+  Map as MapIcon,
+  ClipboardList,
+  Clock,
+  Shield,
+  Star,
+  Store,
+  Ticket,
+  Trophy,
+  Truck,
+  Undo,
+  Upload,
+  Users,
+  Trash2,
+  Briefcase,
+  Phone,
+  Lock,
+  Zap,
+  Coffee,
+  CheckCircle,
+  UserX,
+  Target,
+  Check,
+  GripVertical,
+  X,
+  ListOrdered,
+  DoorOpen,
+  MapPin,
+  Loader2,
+  Copy,
+  Wallet,
+  ReceiptText,
+  Stethoscope,
+} from "lucide-react";
+import { TransactionsView } from "@/components/admin/transactions/TransactionsView";
+import { NewManualTransactionView } from "@/components/admin/transactions/NewManualTransactionView";
+import RoomsManagerView from "@/components/RoomsManagerView";
+import SupplierManagementScreen from "@/components/admin/inventory/SupplierManagementScreen";
+import { PackageAdminPanel } from "@/components/admin/packages/PackageAdminPanel";
+import { PromotionsAdminPanel } from "@/components/admin/marketing/PromotionsAdminPanel";
+import { FinanceSection } from "@/components/admin/Finance/FinanceSection";
+import { DoctorServiceCommissionEditor, ServiceCommissionEntry, DefaultCommissionType } from "@/components/admin/services/DoctorServiceCommissionEditor";
+import DoctorAccountView from "@/components/admin/DoctorAccountView";
+import ReceptionDashboardView from "@/components/admin/reception/ReceptionDashboardView";
+import { AdminBookingsView } from "@/components/admin/bookings/AdminBookingsView";
+import AdminNewBookingView from "@/components/admin/bookings/AdminNewBookingView";
+import AdminAddPreviousBookingView from "@/components/admin/bookings/AdminAddPreviousBookingView";
+import LaserDeficitPrompt from "@/components/admin/bookings/LaserDeficitPrompt";
+import { DoctorProfileDetailsView } from "@/components/admin/doctor/DoctorProfileDetailsView";
+import DoctorAuditLogsModal from "@/components/admin/doctor/DoctorAuditLogsModal";
+import { useProviderForm } from "@/components/admin/doctor/useProviderForm";
+import ProviderFormModal from "@/components/admin/doctor/ProviderFormModal";
+import AdminDoctorsView from "@/components/admin/doctor/AdminDoctorsView";
+import AdminServicesView from "@/components/admin/services/AdminServicesView";
+import AdminInventoryView from "@/components/admin/inventory/AdminInventoryView";
+import AdminEmployeesView from "@/components/admin/employees/AdminEmployeesView";
+import AdminHrView from "@/components/admin/hr/AdminHrView";
+import CustomerSupportView from "@/components/admin/support/CustomerSupportView";
+import { ReportsSection } from "@/components/admin/reports/ReportsSection";
+import type { InventoryProductsTabRef } from "@/components/admin/inventory/InventoryProductsTab";
+import TermsManagerView from "@/components/TermsManagerView";
+import { useAlertConfirm } from "@/contexts/AlertConfirmContext";
+import { cachedFetch, clearFetchCache } from "@/lib/fetchCache";
+import { pollDataEqual } from "@/lib/pollEqual";
+import { startVisiblePoll } from "@/lib/visiblePoll";
+import { canLoadAdminDirectory, loadAdminDirectory } from "@/lib/adminDirectory";
+import { getEmployeeBranchIds } from "@/lib/employeeBranches";
+
+export type Req = {
+  id: string;
+  serviceId: number;
+  serviceIds?: number[];
+  date: string;
+  requestedTime?: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  notes?: string;
+  doctorNotes?: string | null;
+  receptionNotes?: string | null;
+  status: string;
+  timeSlot?: string | null;
+  sessionType?: string;
+  doctorName?: string | null;
+  createdAt?: string;
+  isManual?: boolean;
+  branchId?: string | null;
+  customerId?: string | null;
+  amountPaid?: number;
+  amountLeft?: number | null;
+  roomId?: string | null;
+  rooms?: string[];
+  createdByEmployeeId?: string | null;
+  followUpDate?: string | null;
+  followUpNotes?: string | null;
+  laserPaymentMode?: string | null;
+  laserPricePerPulse?: number | null;
+  laserSettlementNote?: string | null;
+  attachedProducts?: any[];
+  is_historical?: boolean;
+  isHistorical?: boolean;
+};
+
+function getStatusBadgeClass(status: string): string {
+  const s = status?.toLowerCase() || 'pending';
+  switch (s) {
+    case 'approved':
+      return 'bg-green-50 text-green-700 border border-green-200/50';
+    case 'confirmed':
+      return 'bg-sky-50 text-sky-700 border border-sky-200/50';
+    case 'started':
+      return 'bg-indigo-50 text-indigo-700 border border-indigo-200/50';
+    case 'completed':
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-200/50';
+    case 'cancelled':
+    case 'canceled':
+      return 'bg-gray-50 text-gray-500 border border-gray-200/50';
+    case 'rejected':
+      return 'bg-red-50 text-red-700 border border-red-200/50';
+    case 'pending_deposit':
+      return 'bg-purple-50 text-purple-700 border border-purple-200/50';
+    case 'no_show':
+      return 'bg-orange-50 text-orange-700 border border-orange-200/50';
+    case 'postponed':
+      return 'bg-yellow-50 text-yellow-700 border border-yellow-200/50';
+    case 'pending':
+    default:
+      return 'bg-amber-50 text-amber-700 border border-amber-200/50';
+  }
+}
+
+const SLOTS = ALL_15MIN_SLOTS;
+
+const SIDEBAR_ITEMS = [
+  { label: "Dashboard", icon: LayoutGrid },
+  { label: "Bookings", icon: CalendarDays },
+  { label: "Patients", icon: Users },
+  { label: "Doctors", icon: ShieldCheck },
+  { label: "Services", icon: Layers },
+  { label: "Inventory", icon: PackageCheck },
+  { label: "Employees", icon: CircleUser },
+  { label: "HR", icon: ClipboardList },
+  { label: "Marketing", icon: Megaphone, submenu: true },
+  { label: "Transactions", icon: ReceiptText },
+  { label: "Customer Support", icon: MessageSquare },
+  { label: "Reports", icon: BarChart3 },
+  { label: "Finance", icon: CircleDollarSign },
+  { label: "Settings", icon: Settings, submenu: true },
+  { label: "Logout", icon: LogOut },
+];
+
+const overviewCards = [
+  { label: "Active bookings", value: "34", accent: "bg-[var(--cr-accent)]/10", icon: CalendarDays },
+  { label: "New customers", value: "14", accent: "bg-[var(--cr-accent)]/10", icon: Users },
+  { label: "Revenue", value: "$76K", accent: "bg-[var(--cr-accent)]/10", icon: DollarSign },
+  { label: "Open requests", value: "9", accent: "bg-[var(--cr-accent)]/10", icon: FileText },
+];
+
+const PROVIDERS: any[] = [];
+
+const TARGET_BONUSES = [] as const;
+
+type Customer = {
+  id?: string;
+  email: string;
+  name: string;
+  phone: string;
+  createdAt: string;
+  lastBookingDate?: string | null;
+  lastBookingTime?: string | null;
+  bookings: number;
+  spent: number;
+  outstanding: number;
+  wallet: number;
+  mobile?: string;
+  gender?: string | null;
+  number_of_bookings?: number;
+  registration_date?: string;
+  active?: boolean;
+  spent_amount?: number;
+  wallet_balance?: number;
+  area?: string | null;
+  location_name?: string | null;
+  street_name?: string | null;
+  building_no?: string | null;
+  floor_no?: string | null;
+  city?: string | null;
+  street?: string | null;
+  building?: string | null;
+  note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  // new demographic fields
+  age?: number | null;
+  national_id?: string | null;
+  address?: string | null;
+  referral?: string | null;
+  avatar_url?: string | null;
+  occupation?: string | null;
+};
+
+const MOCK_MEDICINES = [
+  {
+    id: "MED-001",
+    name: "Amoxicillin 500mg",
+    description: "Broad-spectrum antibiotic",
+    category: "Antibiotics",
+    dosageForm: "Capsule",
+    price: "EGP 120.00",
+    stock: "In Stock"
+  },
+  {
+    id: "MED-002",
+    name: "Paracetamol 500mg",
+    description: "Analgesic and antipyretic",
+    category: "Analgesics",
+    dosageForm: "Tablet",
+    price: "EGP 45.00",
+    stock: "In Stock"
+  },
+  {
+    id: "MED-003",
+    name: "Ibuprofen 400mg",
+    description: "Nonsteroidal anti-inflammatory drug",
+    category: "Analgesics",
+    dosageForm: "Tablet",
+    price: "EGP 60.00",
+    stock: "In Stock"
+  },
+  {
+    id: "MED-004",
+    name: "Claritin 10mg",
+    description: "Non-drowsy 24-hour allergy relief",
+    category: "Antihistamines",
+    dosageForm: "Tablet",
+    price: "EGP 180.00",
+    stock: "Low Stock"
+  },
+  {
+    id: "MED-005",
+    name: "Flonase Nasal Spray",
+    description: "Allergy symptom reliever spray",
+    category: "Antihistamines",
+    dosageForm: "Spray",
+    price: "EGP 250.00",
+    stock: "In Stock"
+  },
+  {
+    id: "MED-006",
+    name: "Lipitor 20mg",
+    description: "Cholesterol-lowering medication",
+    category: "Cardiovascular",
+    dosageForm: "Tablet",
+    price: "EGP 320.00",
+    stock: "Out of Stock"
+  }
+];
+
+function parseEgyptianNationalId(id: string) {
+  if (!id || id.length !== 14 || !/^\d{14}$/.test(id)) {
+    return { isValid: false, reason: "National ID must be exactly 14 digits.", age: null, dobIso: null, dobFormatted: null, gender: null, governorate: null };
+  }
+
+  const centuryDigit = parseInt(id.charAt(0));
+  if (centuryDigit !== 2 && centuryDigit !== 3) {
+    return { isValid: false, reason: "Invalid first digit (must start with 2 or 3).", age: null, dobIso: null, dobFormatted: null, gender: null, governorate: null };
+  }
+
+  const yearPart = id.substring(1, 3);
+  const monthPart = id.substring(3, 5);
+  const dayPart = id.substring(5, 7);
+
+  const year = (centuryDigit === 2 ? 1900 : 2000) + parseInt(yearPart);
+  const month = parseInt(monthPart);
+  const day = parseInt(dayPart);
+
+  // Validate date
+  const birthDate = new Date(year, month - 1, day);
+  if (
+    birthDate.getFullYear() !== year ||
+    birthDate.getMonth() !== month - 1 ||
+    birthDate.getDate() !== day
+  ) {
+    return { isValid: false, reason: "Invalid birth date encoded in ID.", age: null, dobIso: null, dobFormatted: null, gender: null, governorate: null };
+  }
+
+  const govCode = id.substring(7, 9);
+  const governorates: Record<string, string> = {
+    "01": "Cairo",
+    "02": "Alexandria",
+    "03": "Port Said",
+    "04": "Suez",
+    "11": "Damietta",
+    "12": "Dakahlia",
+    "13": "Sharkia",
+    "14": "Kalyobia",
+    "15": "Kafr El-Sheikh",
+    "16": "Gharbia",
+    "17": "Menoufia",
+    "18": "Beheira",
+    "19": "Ismailia",
+    "21": "Giza",
+    "22": "Beni Suef",
+    "23": "Fayoum",
+    "24": "Minya",
+    "25": "Asyut",
+    "26": "Sohag",
+    "27": "Qena",
+    "28": "Aswan",
+    "29": "Luxor",
+    "31": "Red Sea",
+    "32": "New Valley",
+    "33": "Matrouh",
+    "34": "North Sinai",
+    "35": "South Sinai",
+    "88": "Foreign birth"
+  };
+
+  const governorate = governorates[govCode] || "Unknown Governorate";
+
+  const genderDigit = parseInt(id.charAt(12));
+  const gender = genderDigit % 2 === 0 ? "Female" : "Male";
+
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const monthDiff = today.getMonth() - (month - 1);
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < day)) {
+    age--;
+  }
+
+  const dobIso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const dobFormatted = birthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  return {
+    isValid: true,
+    birthDate: birthDate.toLocaleDateString("en-US", { dateStyle: "long" }),
+    dobFormatted,
+    dobIso,
+    age,
+    governorate,
+    gender
+  };
+}
+
+function getDoctorFirstReservationDate(docName: string, resList: any[]): string | null {
+  if (!docName || !Array.isArray(resList) || resList.length === 0) return null;
+  const cleanDoc = docName.trim().toLowerCase();
+  if (!cleanDoc) return null;
+  
+  const doctorBookings = resList.filter((r: any) => {
+    if (!r || r.status === 'rejected' || r.status === 'cancelled') return false;
+    const rName = (r.doctorName || r.doctor_name || '').trim().toLowerCase();
+    if (!rName) return false;
+    return rName.includes(cleanDoc) || cleanDoc.includes(rName);
+  });
+
+  if (doctorBookings.length === 0) return null;
+
+  doctorBookings.sort((a, b) => {
+    const da = String(a.date || '').slice(0, 10);
+    const db = String(b.date || '').slice(0, 10);
+    return da.localeCompare(db);
+  });
+
+  const firstDate = String(doctorBookings[0].date || '').slice(0, 10);
+  return firstDate && /^\d{4}-\d{2}-\d{2}$/.test(firstDate) ? firstDate : null;
+}
+
+const DEFAULT_HERO_SLIDES = [
+  {
+    welcome: `Welcome to ${CLIENT.name}`,
+    heading: "Transform Your Beauty Naturally!",
+    description: "Expert dermatology and cosmetic surgery services with personalized care designed to help you achieve your beauty and health goals through advanced medical techniques.",
+    bookBtn: "Book Appointment",
+    rating: "4.5",
+    reviewCount: "(1000+ review)",
+    image: "/images/hero/slide-1.jpg"
+  },
+  {
+    welcome: `Welcome to ${CLIENT.name}`,
+    heading: "Advanced Medical Care You Can Trust!",
+    description: "Discover comprehensive dermatology, cosmetic surgery, laser treatments, and physical therapy services tailored to your unique needs. With over 15 years of professional expertise, we're here to guide you toward lasting beauty and wellness.",
+    bookBtn: "Book Appointment",
+    rating: "4.5",
+    reviewCount: "(1000+ review)",
+    image: "/images/hero/slide-2.jpg"
+  },
+  {
+    welcome: `Welcome to ${CLIENT.name}`,
+    heading: "Your Beauty & Health Journey Starts Here!",
+    description: "Specialized clinics under full medical supervision offering services in dermatology, cosmetic surgery, laser treatments, and physical therapy care for all ages.",
+    bookBtn: "Book Appointment",
+    rating: "4.5",
+    reviewCount: "(1000+ review)",
+    image: "/images/hero/slide-3.jpg"
+  }
+];
+
+const DEFAULT_HERO_SLIDES_AR = [
+  {
+    welcome: "مرحباً بكم في عيادات ريفيرا",
+    heading: "حوّل جمالك بشكل طبيعي!",
+    description: "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية مصممة لمساعدتك على تحقيق أهدافك في الجمال والصحة من خلال تقنيات طبية متقدمة.",
+    bookBtn: "احجز موعدًا",
+    rating: "4.5",
+    reviewCount: "(1000+ تقييم)",
+    image: "/images/hero/slide-1.jpg"
+  },
+  {
+    welcome: "مرحباً بكم في عيادات ريفيرا",
+    heading: "رعاية طبية متقدمة يمكنك الوثوق بها!",
+    description: "اكتشف خدمات شاملة في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان المصممة لاحتياجاتك الفريدة. مع أكثر من 15 عاماً من الخبرة المهنية، نحن هنا لإرشادك نحو الجمال الدائم والعافية.",
+    bookBtn: "احجز موعدًا",
+    rating: "4.5",
+    reviewCount: "(1000+ تقييم)",
+    image: "/images/hero/slide-2.jpg"
+  },
+  {
+    welcome: "مرحباً بكم في عيادات ريفيرا",
+    heading: "رحلتك نحو الجمال والصحة تبدأ هنا!",
+    description: "عيادات متخصصة تحت إشراف طبي كامل تقدم خدمات في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان لجميع الأعمار.",
+    bookBtn: "احجز موعدًا",
+    rating: "4.5",
+    reviewCount: "(1000+ تقييم)",
+    image: "/images/hero/slide-3.jpg"
+  }
+];
+
+// Shows staff, wherever a patient is in view for booking/checkout, whether that patient owns
+// active packages (with remaining sessions) and/or is eligible for an active promotion on a
+// specific service — informational only here; redemption itself only happens at checkout
+// (see the Payment Settlement modal), since a package session can only be consumed against a
+// real completed reservation (DEC-023's deferred-revenue model).
+function PatientPackagePromoBanner({
+  packages,
+  promotions,
+}: {
+  packages: any[];
+  promotions: { serviceName: string; promotionText: string }[];
+}) {
+  const activeItems = packages
+    .filter((pkg: any) => pkg.status === "active" && (!pkg.expiresAt || new Date(pkg.expiresAt) >= new Date()))
+    .flatMap((pkg: any) =>
+      (pkg.items || [])
+        .filter((it: any) => it.qtyRemaining > 0)
+        .map((it: any) => ({ key: `${pkg.id}-${it.id}`, packageName: pkg.packageName, serviceName: it.serviceName || `Service #${it.serviceId}`, qtyRemaining: it.qtyRemaining }))
+    );
+
+  if (activeItems.length === 0 && promotions.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-[var(--cr-accent)]/30 bg-[#FBF8F0] p-4 space-y-2.5 text-xs">
+      {activeItems.length > 0 && (
+        <div>
+          <p className="font-bold text-[var(--cr-primary)] uppercase tracking-wider text-[10px] mb-1.5">Active Packages</p>
+          <div className="flex flex-wrap gap-1.5">
+            {activeItems.map((it) => (
+              <span key={it.key} className="inline-flex rounded-full bg-white border border-[var(--cr-accent)]/40 px-2.5 py-1 font-semibold text-[var(--cr-primary)]">
+                {it.packageName}: {it.serviceName} ({it.qtyRemaining} left)
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {promotions.length > 0 && (
+        <div>
+          <p className="font-bold text-[var(--cr-accent)] uppercase tracking-wider text-[10px] mb-1.5">Active Promotion</p>
+          <div className="flex flex-wrap gap-1.5">
+            {promotions.map((p, idx) => (
+              <span key={idx} className="inline-flex rounded-full bg-[var(--cr-accent)] text-white px-2.5 py-1 font-bold uppercase tracking-wide">
+                {p.serviceName}: {p.promotionText}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AdminPage({ portalRole = 'admin' }: { portalRole?: string } = {}) {
+  const { showAlert, showConfirm, showDeleteConfirm } = useAlertConfirm();
+  const { isRTL } = useLanguage();
+  // Auth state
+  const [session, setSession] = useState<any>(null);
+
+  const getAccessToken = useCallback(async () => {
+    if (session?.access_token) return session.access_token;
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.access_token) {
+        setSession(data.session);
+        return data.session.access_token;
+      }
+    } catch {}
+    return null;
+  }, [session?.access_token]);
+
+  // Memoized on the access token so children can put these headers in hook
+  // dependency arrays without refetching on every shell render (the 15 s poll,
+  // any state change). A token rotation still produces a fresh object.
+  const authenticatedJsonHeaders = useMemo(() => ({
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session?.access_token || ""}`
+  }), [session?.access_token]);
+
+  // Category CRUD helpers — backed by /api/categories and Supabase
+  const loadCategoriesFromApi = useCallback(async () => {
+    try {
+      const res = await fetch("/api/categories", {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLocalCategories(data);
+          saveDynamicCategories(data);
+          setExpandedCategories(prev => {
+            const exp = { ...prev };
+            data.forEach((c: LocalCategory) => {
+              if (exp[c.key] === undefined) exp[c.key] = true;
+            });
+            return exp;
+          });
+          return data;
+        }
+      }
+    } catch (err) {
+      console.error("Error loading categories from API:", err);
+    }
+    const fallback = getDynamicCategories();
+    setLocalCategories(fallback);
+    return fallback;
+  }, []);
+
+  const syncCategoriesToApi = useCallback(async (categories: LocalCategory[]) => {
+    saveDynamicCategories(categories);
+    const token = await getAccessToken();
+    if (!token) return categories;
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(categories),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const saved = Array.isArray(data) ? data : [data];
+        setLocalCategories(saved);
+        saveDynamicCategories(saved);
+        return saved;
+      }
+    } catch (err) {
+      console.error("Error saving categories to API:", err);
+    }
+    return categories;
+  }, [getAccessToken]);
+
+  const deleteCategoryFromApi = useCallback(async (key: string) => {
+    const token = await getAccessToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`/api/categories?key=${encodeURIComponent(key)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.ok;
+    } catch (err) {
+      console.error("Error deleting category from API:", err);
+      return false;
+    }
+  }, [getAccessToken]);
+
+  // Service CRUD helpers — services are now database-primary, not localStorage (RISK-025)
+  const loadServicesFromApi = useCallback(async () => {
+    try {
+      const token = await getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch("/api/services", {
+        headers,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error("Failed to load services from API:", res.status, await res.text());
+        return;
+      }
+      const data = await res.json();
+      const servicesList: ServiceItem[] = Array.isArray(data) ? data : [];
+      setLocalServices(servicesList);
+
+      // Build database-driven toggles directly from database active & visible columns
+      const dbToggles = Object.fromEntries(
+        servicesList.map((s: ServiceItem) => [
+          s.id,
+          { visible: s.visible !== false, active: s.active !== false }
+        ])
+      );
+      setServiceToggles(dbToggles);
+
+      // Auto-discover any missing categories from database services so no service is ever hidden
+      setLocalCategories(prevCats => {
+        const knownKeys = new Set(prevCats.map(c => c.key));
+        const missingKeys = new Set<string>();
+        servicesList.forEach(s => {
+          if (s.cat && !knownKeys.has(s.cat)) {
+            missingKeys.add(s.cat);
+          }
+        });
+        if (missingKeys.size > 0) {
+          const autoCats: LocalCategory[] = Array.from(missingKeys).map((catKey, idx) => ({
+            key: catKey,
+            en: catKey.charAt(0).toUpperCase() + catKey.slice(1).replace(/_/g, " "),
+            ar: catKey.charAt(0).toUpperCase() + catKey.slice(1).replace(/_/g, " "),
+            sortOrder: prevCats.length + idx,
+          }));
+          const merged = [...prevCats, ...autoCats];
+          saveDynamicCategories(merged);
+          setExpandedCategories(prevExp => {
+            const exp = { ...prevExp };
+            autoCats.forEach(c => { exp[c.key] = true; });
+            return exp;
+          });
+          return merged;
+        }
+        return prevCats;
+      });
+    } catch (err) {
+      console.error("Error loading services from API:", err);
+    }
+  }, [getAccessToken]);
+
+  const syncServicesToApi = useCallback(async (services: ServiceItem[]) => {
+    const token = await getAccessToken();
+    if (!token) return null;
+    try {
+      const res = await fetch("/api/services", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(services),
+      });
+      if (!res.ok) {
+        console.error("Failed to save services to API:", res.status, await res.text());
+        return null;
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data : [data];
+    } catch (err) {
+      console.error("Error saving services to API:", err);
+      return null;
+    }
+  }, [getAccessToken]);
+
+  const deleteServiceFromApi = useCallback(async (id: number) => {
+    const token = await getAccessToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`/api/services?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.ok;
+    } catch (err) {
+      console.error("Error deleting service from API:", err);
+      return false;
+    }
+  }, [getAccessToken]);
+
+  // Inactivity Settings State
+  const [inactivityThreshold, setInactivityThreshold] = useState<number>(30);
+  const [inactivityCountdown, setInactivityCountdown] = useState<number>(10);
+  const [globalEndingSession, setGlobalEndingSession] = useState<boolean>(false);
+  const [savingInactivitySettings, setSavingInactivitySettings] = useState(false);
+  // RISK-043: how long a session may sit `started`/`in_progress` before AdminBookingsView flags it
+  // as forgotten. Configurable so a clinic that runs longer sessions isn't stuck with false alarms.
+  const [bookingStaleSessionHours, setBookingStaleSessionHours] = useState<number>(2);
+  const [bookingFollowUpLeadDays, setBookingFollowUpLeadDays] = useState<number>(2);
+  const [bookingDefaultPricePerPulse, setBookingDefaultPricePerPulse] = useState<number>(5);
+  // Rooms state
+  const [rooms, setRooms] = useState<any[]>([]);
+
+  function fetchRooms() {
+    cachedFetch("/api/rooms", 5000)
+      .then(data => {
+        setRooms(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setRooms([]));
+  }
+  const [authChecking, setAuthChecking] = useState(true);
+  // RISK-117: a valid session exists but /api/auth/me could not be reached or answered (cold start,
+  // brief network loss). The page keeps the session and offers a retry instead of bouncing to /login.
+  const [sessionVerifyFailed, setSessionVerifyFailed] = useState(false);
+  // RISK-130: this computer's clock minus the server's (ms), measured from /api/auth/me; null until known.
+  const [clockSkew, setClockSkew] = useState<number | null>(null);
+  const retryVerifyRef = useRef<(() => void) | null>(null);
+  // True once the person pressed Logout. signOut() fires SIGNED_OUT and empties `session` a moment
+  // before the redirect to /login, and the "no session -> /login" effect below must not label that
+  // as an unexpected end of session.
+  const deliberateLogoutRef = useRef(false);
+  const lastActivityRef = useRef<number>(Date.now());
+  // RISK-114: tells apart "we chose to end this session" (logout button, idle timeout, a rejected
+  // /api/auth/me check) from Supabase's own client silently giving up on a background token
+  // refresh and firing SIGNED_OUT with no action from this page at all - e.g. a refresh-token
+  // rotation collision when the same login is open in more than one browser tab/window. Set to
+  // true immediately before every deliberate supabase.auth.signOut() call in this file; the
+  // onAuthStateChange listener below only treats SIGNED_OUT as final when this is true.
+  const explicitSignOutRef = useRef(false);
+  // The last session this page actually held, kept across an involuntary SIGNED_OUT so a recovery
+  // attempt can hand Supabase the real refresh_token - by the time SIGNED_OUT fires, the SDK has
+  // already cleared its own stored session, so there is nothing left to refresh from otherwise.
+  const lastKnownSessionRef = useRef<any>(null);
+  // Which section the URL asked for is applied once, right after the first successful login check.
+  const sectionRestoredRef = useRef(false);
+  // The last login this page fully verified against /api/auth/me. Supabase re-announces the same
+  // login (SIGNED_IN) every time the browser tab becomes visible again; re-verifying and re-fetching
+  // everything each time made every table reload on a simple window switch.
+  const lastVerifiedRef = useRef<{ userId: string; token: string; at: number } | null>(null);
+  const verifyingTokenRef = useRef<string | null>(null);
+  const pollBranchRef = useRef<string | null>(null);
+  const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [adminDepartment, setAdminDepartment] = useState<string>("");
+  // DEC-113: the role's explicit workspace ('doctor' = doctor screens, 'standard' = admin shell).
+  const [adminWorkspace, setAdminWorkspace] = useState<RoleWorkspace>("standard");
+  // An admin/superadmin who is also a doctor can flip to the doctor screens and back. Remembered
+  // per tab (and per account) so a reload does not throw them out of the view they chose.
+  const [viewAsDoctor, setViewAsDoctor] = useState(false);
+  const viewAsDoctorKey = `${CLIENT.storagePrefix}_view_as_doctor`;
+  const [adminIsAlsoDoctor, setAdminIsAlsoDoctor] = useState(false);
+  // The Doctor view switch is optional (DEC-114): offered to accounts flagged "also a doctor", and
+  // always to the superadmin, who is not listed under Employees (so cannot tick the box) and needs
+  // the screen for support. Other admins do not see it.
+  const canSwitchWorkspace = adminRole === "superadmin" || adminIsAlsoDoctor;
+  // Mirror of adminRole for code that runs right after the role is learned, before React re-renders
+  // (the first roles/employees load); see canLoadAdminDirectory.
+  const adminRoleRef = useRef<string | null>(null);
+  useEffect(() => {
+    adminRoleRef.current = adminRole;
+  }, [adminRole]);
+  // DEC-113: the doctor screens are chosen by the role's workspace setting, never by guessing from
+  // the person's name, department or role name. An admin/superadmin can also open them on purpose.
+  // Declared here (not next to the early return that uses it) so the booking poll can stand down
+  // while the doctor screens are shown: they load their own reservations (DEC-132).
+  const showDoctorWorkspace = adminWorkspace === "doctor" || (canSwitchWorkspace && viewAsDoctor);
+  const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
+  const hasPermission = useCallback((permKey: string): boolean => {
+    if (adminRole === 'superadmin') return true;
+    if (!adminPermissions) return false;
+    if (adminPermissions.includes(permKey)) return true;
+    
+    // Backward compatibility & hierarchical fallbacks
+    // Bookings fallbacks
+    if (permKey.startsWith("bookings.")) {
+      if (adminPermissions.includes("Bookings") || adminPermissions.includes("bookings")) return true;
+      if (["bookings.action_print_schedule", "bookings.action_export_csv"].includes(permKey)) {
+        if (adminPermissions.includes("bookings.view_calendar") || adminPermissions.includes("bookings.view_list")) return true;
+      }
+      if (permKey === "bookings.action_add_previous" && adminPermissions.includes("bookings.create")) return true;
+      if (["bookings.action_postpone", "bookings.action_cancel", "bookings.action_no_show", "bookings.status_change", "bookings.manage_services", "bookings.manage_notes", "bookings.manage_prescriptions", "bookings.manage_invoices", "bookings.settle_payment"].includes(permKey)) {
+        if (adminPermissions.includes("bookings.edit")) return true;
+      }
+    }
+
+    // Customers fallbacks
+    if (permKey.startsWith("customers.")) {
+      if (adminPermissions.includes("Customers") || adminPermissions.includes("customers")) return true;
+      if (["customers.create", "customers.edit", "customers.import", "customers.action_edit", "customers.action_settle_balance", "customers.manage_wallet", "customers.manage_reports"].includes(permKey)) {
+        if (adminPermissions.includes("customers.create_edit") || adminPermissions.includes("customers.edit")) return true;
+      }
+      if (["customers.action_view_profile", "customers.view_history", "customers.export"].includes(permKey)) {
+        if (adminPermissions.includes("customers.view")) return true;
+      }
+      if (permKey === "customers.delete" || permKey === "customers.action_delete") {
+        if (adminPermissions.includes("customers.delete")) return true;
+      }
+    }
+
+    // Providers / Doctors fallbacks
+    if (permKey.startsWith("providers.")) {
+      if (adminPermissions.includes("Providers") || adminPermissions.includes("providers") || adminPermissions.includes("Doctors") || adminPermissions.includes("doctors")) return true;
+      if (["providers.create", "providers.edit", "providers.action_edit", "providers.action_change_status", "providers.manage_schedule", "providers.commissions"].includes(permKey)) {
+        if (adminPermissions.includes("providers.create_edit") || adminPermissions.includes("providers.edit")) return true;
+      }
+      if (permKey === "providers.delete" || permKey === "providers.action_delete") {
+        if (adminPermissions.includes("providers.delete")) return true;
+      }
+    }
+
+    // Services fallbacks
+    if (permKey.startsWith("services.")) {
+      if (adminPermissions.includes("Services") || adminPermissions.includes("services")) return true;
+      if (["services.create", "services.create_category", "services.edit", "services.edit_category", "services.action_edit", "services.action_toggle_status"].includes(permKey)) {
+        if (adminPermissions.includes("services.create_edit_delete") || adminPermissions.includes("services.edit") || adminPermissions.includes("services.create")) return true;
+      }
+      if (permKey === "services.delete" || permKey === "services.delete_category" || permKey === "services.action_delete") {
+        if (adminPermissions.includes("services.create_edit_delete") || adminPermissions.includes("services.delete")) return true;
+      }
+    }
+
+    // Inventory fallbacks
+    if (permKey.startsWith("inventory.")) {
+      if (adminPermissions.includes("Inventory") || adminPermissions.includes("inventory")) return true;
+      if (["inventory.action_update_pulses", "inventory.action_reset_counter", "inventory.action_edit_device", "inventory.action_delete_device"].includes(permKey)) {
+        if (adminPermissions.includes("inventory.manage_devices")) return true;
+      }
+      if (permKey === "inventory.action_view_device_history" && (adminPermissions.includes("inventory.view") || adminPermissions.includes("inventory.manage_devices"))) return true;
+      if (["inventory.create_product", "inventory.edit_product", "inventory.adjust_stock", "inventory.delete_product"].includes(permKey)) {
+        if (adminPermissions.includes("inventory.manage_products")) return true;
+      }
+      if (permKey === "inventory.manage_orders" && adminPermissions.includes("inventory.manage_suppliers")) return true;
+    }
+
+    // Employees fallbacks
+    if (permKey.startsWith("employees.")) {
+      if (adminPermissions.includes("Employees") || adminPermissions.includes("employees")) return true;
+      if (permKey === "employees.action_view_info" && adminPermissions.includes("employees.view")) return true;
+      if (["employees.action_edit", "employees.action_resend_invite", "employees.manage_departments"].includes(permKey)) {
+        if (adminPermissions.includes("employees.edit")) return true;
+      }
+      if (permKey === "employees.action_delete" && adminPermissions.includes("employees.delete")) return true;
+      if (permKey === "employees.export_attendance" && adminPermissions.includes("employees.view")) return true;
+    }
+
+    // HR fallbacks
+    if (permKey.startsWith("hr.")) {
+      if (adminPermissions.includes("HR") || adminPermissions.includes("hr")) return true;
+      if (permKey === "hr.action_process_payroll" && (adminPermissions.includes("hr.manage_payroll") || adminPermissions.includes("hr.view_payroll"))) return true;
+      if (permKey === "hr.export_attendance" && adminPermissions.includes("hr.view_attendance")) return true;
+      if (["hr.manage_leaves", "hr.manage_performance"].includes(permKey) && adminPermissions.includes("hr.manage_attendance")) return true;
+    }
+
+    // Transactions fallbacks (the two manual-money keys are exact-grant only, mirroring the API)
+    if (permKey.startsWith("transactions.") && permKey !== "transactions.manual_payment" && permKey !== "transactions.manual_wallet") {
+      if (adminPermissions.includes("Transactions") || adminPermissions.includes("transactions")) return true;
+      if (["transactions.action_view_details", "transactions.action_print_receipt"].includes(permKey)) {
+        if (adminPermissions.includes("transactions.view")) return true;
+      }
+      if (permKey === "transactions.action_refund" && adminPermissions.includes("transactions.refund")) return true;
+    }
+
+    // Settings fallbacks
+    if (permKey.startsWith("settings.")) {
+      if (adminPermissions.includes("Settings") || adminPermissions.includes("settings")) return true;
+    }
+
+    // Clinical / Doctor Portal fallbacks
+    if (permKey.startsWith("clinical.")) {
+      if (adminPermissions.includes("Clinical") || adminPermissions.includes("clinical") || adminRole === "doctor" || adminRole === "Doctor" || adminRole === "receptionist" || adminRole === "reception" || adminRole === "Receptionist") return true;
+    }
+
+    // Dashboard & Reception fallbacks
+    if (permKey.startsWith("dashboard.") || permKey.startsWith("reception.")) {
+      if (adminPermissions.includes("Dashboard") || adminPermissions.includes("dashboard") || adminPermissions.some(p => p.startsWith("dashboard.")) || adminPermissions.some(p => p.startsWith("reception."))) return true;
+    }
+
+    const parentScreenMap: Record<string, string> = {
+      "dashboard": "Dashboard",
+      "reception": "Dashboard",
+      "bookings": "Bookings",
+      "customers": "Patients",
+      "providers": "Doctors",
+      "services": "Services",
+      "inventory": "Inventory",
+      "employees": "Employees",
+      "hr": "HR",
+      "transactions": "Transactions",
+      "marketing": "Marketing",
+      "support": "Customer Support",
+      "reports": "Reports",
+      "finance": "Finance",
+      "settings": "Settings",
+      "clinical": "Clinical"
+    };
+    const category = permKey.split('.')[0];
+    const legacyScreen = parentScreenMap[category];
+    if (legacyScreen && adminPermissions.includes(legacyScreen)) {
+      return true;
+    }
+
+    return false;
+  }, [adminRole, adminPermissions]);
+
+  const permittedSidebarItems = useMemo(() => {
+    if (!adminRole) return [];
+    if (adminRole === 'superadmin') return SIDEBAR_ITEMS;
+    return SIDEBAR_ITEMS.filter(item => {
+      if (item.label === 'Logout') return true;
+      if (adminPermissions.includes(item.label)) return true;
+      
+      const parentScreenMap: Record<string, string> = {
+        "Dashboard": "dashboard",
+        "Bookings": "bookings",
+        "Patients": "customers",
+        "Doctors": "providers",
+        "Services": "services",
+        "Inventory": "inventory",
+        "Employees": "employees",
+        "HR": "hr",
+        "Transactions": "transactions",
+        "Marketing": "marketing",
+        "Customer Support": "support",
+        "Reports": "reports",
+        "Finance": "finance",
+        "Settings": "settings"
+      };
+      const prefix = parentScreenMap[item.label];
+      if (prefix && (adminPermissions.includes(prefix) || adminPermissions.some(p => p.startsWith(prefix + ".")))) return true;
+      if (prefix && hasPermission(prefix)) return true;
+
+      // DEC-097: Reports item is visible if user has any legacy finance permission (finance.view_pnl, finance.view_margins,
+      // finance.view_capacity) so that users who could see these reports inside Finance still see the Reports sidebar item.
+      if (item.label === "Reports" && (hasPermission('finance.view_pnl') || hasPermission('finance.view_margins') || hasPermission('finance.view_capacity'))) return true;
+
+      // Legacy roles (created before the granular permission keys existed) store coarse labels like
+      // "Customers" and "Providers". Three of those five happen to equal a sidebar label exactly
+      // -- Bookings, Services, Settings -- so they resolve on the includes(item.label) check above.
+      // The other two never match anything: this sidebar calls them "Patients" and "Doctors", the
+      // includes() checks are case-sensitive, and hasPermission(prefix) is passed a bare category
+      // with no dot, so its own dotted fallbacks are skipped. The result was a role holding
+      // "Customers" and "Providers" silently losing both screens. Map the old names onto the
+      // current ones rather than leaving that to look like a permissions decision.
+      const legacyLabelAliases: Record<string, string[]> = {
+        "Patients": ["Customers", "customers"],
+        "Doctors": ["Providers", "providers"],
+      };
+      if (legacyLabelAliases[item.label]?.some(alias => adminPermissions.includes(alias))) return true;
+
+      return false;
+    });
+  }, [adminRole, adminPermissions, hasPermission]);
+
+  const [adminEmail, setAdminEmail] = useState("");
+  useEffect(() => {
+    if (!canSwitchWorkspace || !adminEmail || typeof window === "undefined") return;
+    try {
+      setViewAsDoctor(sessionStorage.getItem(viewAsDoctorKey) === adminEmail.toLowerCase());
+    } catch {
+      /* storage unavailable: start in the admin view */
+    }
+  }, [canSwitchWorkspace, adminEmail, viewAsDoctorKey]);
+  const switchWorkspaceView = (toDoctor: boolean) => {
+    setViewAsDoctor(toDoctor);
+    try {
+      if (toDoctor) sessionStorage.setItem(viewAsDoctorKey, adminEmail.toLowerCase());
+      else sessionStorage.removeItem(viewAsDoctorKey);
+    } catch {
+      /* the choice just will not survive a reload */
+    }
+  };
+  const [adminEmployeeId, setAdminEmployeeId] = useState("");
+  const [adminDbId, setAdminDbId] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Setup password states (for invited users / password resets)
+  const [showSetupPasswordModal, setShowSetupPasswordModal] = useState(false);
+  const [setupPassword, setSetupPassword] = useState("");
+  const [setupConfirmPassword, setSetupConfirmPassword] = useState("");
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState("");
+  const [setupSuccess, setSetupSuccess] = useState("");
+
+  // Role Management state
+  const [rolesList, setRolesList] = useState<any[]>([]);
+  const [employeesList, setEmployeesList] = useState<any[]>([]);
+  const [loadingRolesAndEmployees, setLoadingRolesAndEmployees] = useState(false);
+  const [newEmployeeEmail, setNewEmployeeEmail] = useState("");
+  const [newEmployeeName, setNewEmployeeName] = useState("");
+  const [newEmployeeRole, setNewEmployeeRole] = useState("");
+  const [employeeCreateError, setEmployeeCreateError] = useState("");
+  const [employeeCreateSuccess, setEmployeeCreateSuccess] = useState("");
+
+
+  // Helpers: serialize structured address to a single string, and parse it back
+
+  const [activeInfoFeature, setActiveInfoFeature] = useState<{ title: string; description: string } | null>(null);
+  const [viewingEmployee, setViewingEmployee] = useState<any | null>(null);
+  const [employeeProfileActiveTab, setEmployeeProfileActiveTab] = useState<string>("basic");
+  const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
+  const [isEditingEmployeeModalOpen, setIsEditingEmployeeModalOpen] = useState(false);
+
+
+
+
+
+
+  // HR Module states
+  const [hrActiveSubTab, setHrActiveSubTab] = useState("overview");
+  const [payrollList, setPayrollList] = useState<any[]>([]);
+  const [loadingPayroll, setLoadingPayroll] = useState(false);
+  const [leavesList, setLeavesList] = useState<any[]>([]);
+  const [loadingLeaves, setLoadingLeaves] = useState(false);
+  const [performanceReviews, setPerformanceReviews] = useState<any[]>([]);
+  const [loadingPerformance, setLoadingPerformance] = useState(false);
+
+  // Targets sub-tab states
+  const [editingTargetEmployee, setEditingTargetEmployee] = useState<any | null>(null);
+  const [targetAmountInput, setTargetAmountInput] = useState("");
+  const [bonusPercentageInput, setBonusPercentageInput] = useState("");
+  const [targetTypeInput, setTargetTypeInput] = useState<"reservations" | "revenue">("reservations");
+  const [bonusTypeInput, setBonusTypeInput] = useState<"percentage" | "fixed">("percentage");
+
+  // Doctor payroll states
+  const [doctorPayrollList, setDoctorPayrollList] = useState<any[]>([]);
+  const [loadingDoctorPayroll, setLoadingDoctorPayroll] = useState(false);
+  const [selectedDoctorPayrollMonth, setSelectedDoctorPayrollMonth] = useState("2026-07");
+  const [doctorPayrollSearchQuery, setDoctorPayrollSearchQuery] = useState("");
+  const [doctorPayrollFilterStatus, setDoctorPayrollFilterStatus] = useState("All");
+  const [doctorPayrollCurrentPage, setDoctorPayrollCurrentPage] = useState(1);
+
+  const [selectedPayrollMonth, setSelectedPayrollMonth] = useState("2026-07");
+  const [payrollSearchQuery, setPayrollSearchQuery] = useState("");
+  const [payrollFilterDepartment, setPayrollFilterDepartment] = useState("All");
+  const [payrollFilterStatus, setPayrollFilterStatus] = useState("All");
+  const [payrollCurrentPage, setPayrollCurrentPage] = useState(1);
+  const [newLeaveEmployeeId, setNewLeaveEmployeeId] = useState("");
+  const [newLeaveType, setNewLeaveType] = useState("Sick");
+  const [newLeaveStartDate, setNewLeaveStartDate] = useState("");
+  const [newLeaveEndDate, setNewLeaveEndDate] = useState("");
+  const [newLeaveReason, setNewLeaveReason] = useState("");
+
+  const [newReviewEmployeeId, setNewReviewEmployeeId] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewComments, setNewReviewComments] = useState("");
+  const [newReviewGoals, setNewReviewGoals] = useState("");
+  // Attendance and Activity Monitoring states
+  const [attendanceList, setAttendanceList] = useState<any[]>([]);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [activeMissingAlerts, setActiveMissingAlerts] = useState<any[]>([]);
+  const [presenceModalOpen, setPresenceModalOpen] = useState(false);
+  const [presenceCountdown, setPresenceCountdown] = useState(10);
+  const [locationWarningOpen, setLocationWarningOpen] = useState(false);
+  const [locationWarningMsg, setLocationWarningMsg] = useState("");
+  // Profile settings states
+
+  // Personal profile states
+  const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileAddress, setProfileAddress] = useState("");
+  const [profileNatId, setProfileNatId] = useState("");
+  const [profileNatIdFront, setProfileNatIdFront] = useState("");
+  const [profileNatIdBack, setProfileNatIdBack] = useState("");
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [profileUpdateError, setProfileUpdateError] = useState("");
+  const [profileUpdateSuccess, setProfileUpdateSuccess] = useState("");
+
+
+  const [requests, setRequests] = useState<Req[]>([]);
+  const [allReservations, setAllReservations] = useState<Req[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Req | null>(null);
+  const [viewingBooking, setViewingBooking] = useState<Req | null>(null);
+  const [dayBookingsSelector, setDayBookingsSelector] = useState<{
+    open: boolean;
+    date: string;
+    bookings: any[];
+  }>({
+    open: false,
+    date: "",
+    bookings: [],
+  });
+  const [loadingApproveId, setLoadingApproveId] = useState<string | null>(null);
+  const [doctorName, setDoctorName] = useState<string>("");
+  const [slot, setSlot] = useState<string>("12:00");
+  const [approveDate, setApproveDate] = useState<string>("");
+  const [activeNav, setActiveNav] = useState("Dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [branch, setBranch] = useState<string>(""); // branch id; empty = all branches
+  const [lang, setLang] = useState<"en" | "ar">(() => {
+    if (typeof window === "undefined") return "en";
+    const stored = localStorage.getItem(`${CLIENT.storagePrefix}_admin_lang`);
+    return stored === "ar" ? "ar" : "en";
+  });
+  useEffect(() => {
+    localStorage.setItem(`${CLIENT.storagePrefix}_admin_lang`, lang);
+  }, [lang]);
+  const [showQuickActionMenu, setShowQuickActionMenu] = useState(false);
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([
+    {
+      id: "system-1",
+      title: "Clinic System Active",
+      message: "Twilio SMS integration and Supabase auth are fully operational.",
+      time: "10m ago",
+      read: false,
+      type: "system"
+    }
+  ]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showExportCustomersModal, setShowExportCustomersModal] = useState(false);
+  const [dbCustomers, setDbCustomers] = useState<Customer[]>([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [showCustomerFilterPanel, setShowCustomerFilterPanel] = useState(false);
+  const [customerFilterGender, setCustomerFilterGender] = useState("All");
+  const [customerFilterStatus, setCustomerFilterStatus] = useState("All");
+  const [customerFilterReferral, setCustomerFilterReferral] = useState("All");
+  const [showImportCustomersModal, setShowImportCustomersModal] = useState(false);
+  const [showCustomerMoreMenu, setShowCustomerMoreMenu] = useState(false);
+  const [activeCustomerRowMenuId, setActiveCustomerRowMenuId] = useState<string | null>(null);
+  const [activeDoctorRowMenuId, setActiveDoctorRowMenuId] = useState<string | null>(null);
+  const [activeServiceRowMenuId, setActiveServiceRowMenuId] = useState<string | number | null>(null);
+  const [activeDeviceRowMenuId, setActiveDeviceRowMenuId] = useState<string | number | null>(null);
+  const [activeProductRowMenuId, setActiveProductRowMenuId] = useState<string | number | null>(null);
+  const customerMoreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target && target.closest(".dropdown-action-menu")) {
+        return;
+      }
+      if (customerMoreMenuRef.current && !customerMoreMenuRef.current.contains(event.target as Node)) {
+        setShowCustomerMoreMenu(false);
+      }
+      setActiveCustomerRowMenuId(null);
+      setActiveDoctorRowMenuId(null);
+      setActiveServiceRowMenuId(null);
+      setActiveDeviceRowMenuId(null);
+      setActiveProductRowMenuId(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Customer Add/Edit Form states
+  const [showCustomerFormModal, setShowCustomerFormModal] = useState(false);
+  const [selectedCustomerForEdit, setSelectedCustomerForEdit] = useState<Customer | null>(null);
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = useState<Customer | null>(null);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
+  // DEC-132: what a permanent delete would remove, shown before the superadmin confirms.
+  const [deletePreview, setDeletePreview] = useState<
+    | { state: "loading" }
+    | { state: "error"; message: string }
+    | { state: "ready"; counts: PatientDeletionCounts; keptBookingsOtherName: number }
+    | null
+  >(null);
+  const [hardDeleteArmed, setHardDeleteArmed] = useState(false);
+
+  // Checkout & Payment states
+  const [checkoutBooking, setCheckoutBooking] = useState<any>(null);
+  const [checkoutAmountPaid, setCheckoutAmountPaid] = useState<string>("");
+  const [useWalletBalance, setUseWalletBalance] = useState<boolean>(false);
+  const [depositChangeToWallet, setDepositChangeToWallet] = useState<boolean>(false);
+  const [savingCheckout, setSavingCheckout] = useState<boolean>(false);
+  const [checkoutDeficitChoice, setCheckoutDeficitChoice] = useState<"BUY_NEW_PACKAGE" | "PAY_PER_PULSE">("BUY_NEW_PACKAGE");
+  const [checkoutDeficitPackageId, setCheckoutDeficitPackageId] = useState<string>("");
+  const [checkoutDeficitPulseRate, setCheckoutDeficitPulseRate] = useState<number>(1.5);
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<"cash" | "card" | "instapay" | "vodafone_cash" | "bank_transfer">("cash");
+  const [checkoutPaymentReference, setCheckoutPaymentReference] = useState<string>("");
+  const [allCatalogPackages, setAllCatalogPackages] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (checkoutBooking) {
+      setCheckoutPaymentMethod("cash");
+      setCheckoutPaymentReference("");
+      fetch("/api/packages", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : []))
+        .then((data) => {
+          const pkgs = Array.isArray(data) ? data : [];
+          setAllCatalogPackages(pkgs);
+          const pulsePkgs = pkgs.filter(
+            (p: any) =>
+              p.active !== false &&
+              (p.package_type === "pulses" ||
+                p.packageType === "pulses" ||
+                Number(p.total_pulses || p.totalPulses || 0) > 0)
+          );
+          if (pulsePkgs.length > 0) {
+            setCheckoutDeficitPackageId(String(pulsePkgs[0].id));
+          }
+        })
+        .catch(() => {});
+
+      const custId = checkoutBooking.customerId || (checkoutBooking as any).customer_id;
+      const phone = checkoutBooking.phone || (checkoutBooking as any).customer_phone;
+      const param = custId ? `customerId=${encodeURIComponent(custId)}` : phone ? `phone=${encodeURIComponent(phone)}` : null;
+      if (param) {
+        fetch(`/api/customers/packages?${param}`, { headers: authenticatedJsonHeaders, cache: "no-store" })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            const list = data?.customerPackages || data?.packages || [];
+            setCheckoutCustomerPackages(list);
+          })
+          .catch(() => setCheckoutCustomerPackages([]));
+      } else {
+        setCheckoutCustomerPackages([]);
+      }
+    } else {
+      setCheckoutCustomerPackages([]);
+    }
+  }, [checkoutBooking]);
+
+  const [invoiceBooking, setInvoiceBooking] = useState<any>(null);
+  const [ledgerInvoice, setLedgerInvoice] = useState<{ invoice: any; lines: any[] } | null>(null);
+
+  useEffect(() => {
+    const activeId = invoiceBooking?.id;
+    if (!activeId) { setLedgerInvoice(null); return; }
+
+    // Fetch real ledger invoice from /api/invoices (Brief 32)
+    if (session?.access_token) {
+      fetch(`/api/invoices?reservationId=${encodeURIComponent(activeId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.invoice) {
+            setLedgerInvoice(data);
+          } else {
+            setLedgerInvoice(null);
+          }
+        })
+        .catch(() => setLedgerInvoice(null));
+    } else {
+      setLedgerInvoice(null);
+    }
+
+    supabase
+      .from('reservation_products')
+      .select('*')
+      .eq('reservation_id', activeId)
+      .then((res: any) => {
+        const { data, error } = res || {};
+        if (!error && data && data.length > 0) {
+          const mapped = data.map((p: any) => ({
+            id: p.id,
+            name: p.description,
+            qty: Number(p.qty) || 1,
+            unitPrice: Number(p.unit_price) || 0,
+            total: Number(p.total) || (Number(p.qty || 1) * Number(p.unit_price || 0)),
+            addedBy: p.added_by_role === 'doctor_session' ? 'Doctor Session' : 'Receptionist',
+            lineType: p.line_type || (p.service_id ? 'additional_service' : 'product'),
+            serviceId: p.service_id ?? null,
+          }));
+          setInvoiceBooking((prev: any) => {
+            if (prev && String(prev.id) === String(activeId)) {
+              return { ...prev, attachedProducts: mapped };
+            }
+            return prev;
+          });
+        }
+      });
+  }, [invoiceBooking?.id]);
+
+  // Postpone modal state (RISK-029 follow-up) — two modes: reschedule now (real date/time known)
+  // or follow-up later (status becomes 'postponed', no date/time change yet).
+  const [postponeBooking, setPostponeBooking] = useState<any>(null);
+  const [postponeMode, setPostponeMode] = useState<"reschedule" | "followup">("reschedule");
+  const [postponeNewDate, setPostponeNewDate] = useState("");
+  const [postponeNewTime, setPostponeNewTime] = useState("");
+  const [postponeFollowUpDate, setPostponeFollowUpDate] = useState("");
+  const [savingPostpone, setSavingPostpone] = useState(false);
+
+  // Customer Profile details drawer state
+  const [customerAvatars, setCustomerAvatars] = useState<Record<string, string>>({});
+
+  const fetchCustomerAvatars = useCallback(async () => {
+    try {
+      const res = await fetch("/api/customer-avatars");
+      if (res.ok) {
+        const data = await res.json();
+        setCustomerAvatars(data || {});
+      }
+    } catch (e) {
+      console.error("Failed to fetch customer avatars:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomerAvatars();
+  }, [fetchCustomerAvatars]);
+
+  const handleAvatarUpload = async (id: string, file: File) => {
+    try {
+      const compressedDataUrl = await compressImage(file, 400, 400, 0.8);
+      setCustomerAvatars(prev => ({ ...prev, [id]: compressedDataUrl }));
+      const res = await fetch(`/api/customer-avatars`, {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ id, avatar_url: compressedDataUrl })
+      });
+    } catch (e) {
+      console.error("Avatar upload failed:", e);
+    }
+  };
+
+  const handleAvatarRemove = async (id: string) => {
+    try {
+      setCustomerAvatars(prev => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      await fetch("/api/customer-avatars", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ id, avatar_url: null })
+      });
+    } catch (e) {
+      console.error("Avatar removal failed:", e);
+    }
+  };
+
+  // Package/promotion awareness at booking + checkout time
+  const [bookingCustomerPackages, setBookingCustomerPackages] = useState<any[]>([]);
+  const [checkoutCustomerPackages, setCheckoutCustomerPackages] = useState<any[]>([]);
+  const [redeemedPackageItems, setRedeemedPackageItems] = useState<Record<number, string>>({});
+  const [matchedCustomerId, setMatchedCustomerId] = useState<string | null>(null);
+  const [manualBookingCustomerPackages, setManualBookingCustomerPackages] = useState<any[]>([]);
+
+  const [couponSearch, setCouponSearch] = useState("");
+  const [couponDate, setCouponDate] = useState("");
+  const [couponStatus, setCouponStatus] = useState("All");
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [serviceSortBy, setServiceSortBy] = useState<"custom" | "name_asc" | "name_desc" | "price_asc" | "price_desc" | "newest">("custom");
+  const [showServiceFilterPanel, setShowServiceFilterPanel] = useState(false);
+  const [serviceFilterStatus, setServiceFilterStatus] = useState<"All" | "Active" | "Inactive">("All");
+  const [servicePage, setServicePage] = useState(1);
+  const SERVICE_PAGE_SIZE = 10;
+
+  // Services category state
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
+  const [addServiceTargetCategory, setAddServiceTargetCategory] = useState<string>("");
+  const [newCategoryNameEn, setNewCategoryNameEn] = useState("");
+  const [newCategoryNameAr, setNewCategoryNameAr] = useState("");
+  const [newServiceNameEn, setNewServiceNameEn] = useState("");
+  const [newServiceNameAr, setNewServiceNameAr] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("0");
+  // Local mutable services list (loaded on mount from localStorage/seeding)
+  const [localServices, setLocalServices] = useState<ServiceItem[]>([]);
+  // Local mutable categories list
+  const [localCategories, setLocalCategories] = useState<LocalCategory[]>([]);
+  // Delete Category confirmation target
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState<LocalCategory | null>(null);
+
+  // Service modal and drag-and-drop state variables
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [deleteServiceTarget, setDeleteServiceTarget] = useState<ServiceItem | null>(null);
+  
+  const [serviceNameEn, setServiceNameEn] = useState("");
+  const [serviceNameAr, setServiceNameAr] = useState("");
+  const [serviceCategory, setServiceCategory] = useState("");
+  const [serviceDuration, setServiceDuration] = useState("1:00 Hours");
+  const [serviceDurationMinutes, setServiceDurationMinutes] = useState<number>(60);
+  const [serviceUnitType, setServiceUnitType] = useState("both");
+  const [serviceDescEn, setServiceDescEn] = useState("");
+  const [serviceDescAr, setServiceDescAr] = useState("");
+  const [serviceSortOrder, setServiceSortOrder] = useState(0);
+  const [serviceIsShared, setServiceIsShared] = useState(true);
+  const [serviceIsLaser, setServiceIsLaser] = useState(false);
+  const [serviceEnableReminder, setServiceEnableReminder] = useState(true);
+  const [serviceShowOnWebsite, setServiceShowOnWebsite] = useState(true);
+  const [serviceImageUrl, setServiceImageUrl] = useState("");
+  const [servicePrice, setServicePrice] = useState<number>(0);
+  const [serviceBranchPricing, setServiceBranchPricing] = useState<Required<ServiceItem>['branchPricing']>([
+    { name: "Zayed", price: 0, visible: true, status: true, isDefault: true }
+  ]);
+
+  // Drag and drop sorting states
+  const [draggedServiceId, setDraggedServiceId] = useState<number | null>(null);
+  const [dragOverServiceId, setDragOverServiceId] = useState<number | null>(null);
+  const [rowDraggable, setRowDraggable] = useState<Record<number, boolean>>({});
+
+  const handleEditService = (svc: ServiceItem) => {
+    setEditingService(svc);
+    setServiceCategory(svc.cat);
+    setServiceNameEn(svc.en);
+    setServiceNameAr(svc.ar || "");
+    const editMinutes = getServiceDurationMinutes(svc);
+    setServiceDurationMinutes(editMinutes);
+    setServiceDuration(getDurationLabel(editMinutes));
+    let unitTypeVal = svc.unit || "both";
+    if (unitTypeVal !== "in_clinic" && unitTypeVal !== "online" && unitTypeVal !== "both") {
+      unitTypeVal = "both";
+    }
+    setServiceUnitType(unitTypeVal);
+    setServiceDescEn(svc.descriptionEn || "");
+    setServiceDescAr(svc.descriptionAr || "");
+    setServiceSortOrder(svc.sortOrder ?? 0);
+    setServiceIsShared(svc.isShared ?? false);
+    setServiceIsLaser(checkIsLaserService(svc));
+    setServiceEnableReminder(svc.enableReminder ?? true);
+    setServiceShowOnWebsite(svc.showOnWebsite ?? true);
+    setServiceImageUrl(svc.img || "");
+    setServicePrice(svc.price ?? 0);
+    
+    // Deleting a branch only removes it from `branches` — nothing prunes the matching entry out
+    // of a service's `branchPricing[]` (it's a denormalized JSON array keyed by branch name, not
+    // id). Loading the raw stored array here would both show and re-save stale branches on every
+    // edit, so filter down to currently-active branches before this form ever sees them.
+    const activeBranchNames = new Set(
+      branches
+        .filter((b) => b.status === "active")
+        .flatMap((b) => [b.name_en, b.name_ar])
+        .filter((n): n is string => Boolean(n))
+        .map((n) => n.toLowerCase())
+    );
+    const liveBranchPricing = Array.isArray(svc.branchPricing)
+      ? svc.branchPricing.filter((bp: any) => bp?.name && activeBranchNames.has(String(bp.name).toLowerCase()))
+      : [];
+
+    if (liveBranchPricing.length > 0) {
+      setServiceBranchPricing(liveBranchPricing);
+    } else {
+      const toggles = serviceToggles[svc.id] ?? { visible: true, active: true };
+      const fallbackBranch = branches.find((b) => b.status === "active") || branches[0];
+      setServiceBranchPricing([
+        {
+          name: (fallbackBranch?.name_en || fallbackBranch?.name_ar || "Zayed"),
+          price: svc.price ?? 0,
+          visible: toggles.visible,
+          status: toggles.active,
+          isDefault: true,
+        },
+      ]);
+    }
+    
+    setShowAddServiceModal(true);
+  };
+
+  const handleReorderServices = async (draggedId: number, targetId: number) => {
+    const draggedSvc = localServices.find(s => s.id === draggedId);
+    const targetSvc = localServices.find(s => s.id === targetId);
+    if (!draggedSvc || !targetSvc || draggedSvc.cat !== targetSvc.cat) return;
+
+    const catSvcs = localServices
+      .filter(s => s.cat === draggedSvc.cat)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    const draggedIndex = catSvcs.findIndex(s => s.id === draggedId);
+    const targetIndex = catSvcs.findIndex(s => s.id === targetId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const updatedCatSvcs = [...catSvcs];
+    const [removed] = updatedCatSvcs.splice(draggedIndex, 1);
+    updatedCatSvcs.splice(targetIndex, 0, removed);
+
+    updatedCatSvcs.forEach((svc, index) => {
+      svc.sortOrder = index;
+    });
+
+    const updatedAllServices = localServices.map(s => {
+      const matched = updatedCatSvcs.find(u => u.id === s.id);
+      return matched ? { ...s, sortOrder: matched.sortOrder } : s;
+    });
+
+    const sortedAllServices = updatedAllServices.sort((a, b) => {
+      if (a.cat !== b.cat) return 0;
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    });
+
+    setLocalServices(sortedAllServices);
+    await syncServicesToApi(sortedAllServices);
+  };
+
+  // Category drag and drop states
+  const [draggedCatKey, setDraggedCatKey] = useState<string | null>(null);
+  const [dragOverCatKey, setDragOverCatKey] = useState<string | null>(null);
+  const [catDraggable, setCatDraggable] = useState<Record<string, boolean>>({});
+
+  const handleReorderCategories = async (draggedKey: string, targetKey: string) => {
+    const draggedIndex = localCategories.findIndex(c => c.key === draggedKey);
+    const targetIndex = localCategories.findIndex(c => c.key === targetKey);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const updatedCategories = [...localCategories];
+    const [removed] = updatedCategories.splice(draggedIndex, 1);
+    updatedCategories.splice(targetIndex, 0, removed);
+
+    updatedCategories.forEach((cat, index) => {
+      cat.sortOrder = index;
+    });
+
+    setLocalCategories(updatedCategories);
+    saveDynamicCategories(updatedCategories);
+    await syncCategoriesToApi(updatedCategories);
+  };
+
+  function toggleCategoryExpand(cat: string) {
+    setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+  }
+  async function removeCategory(catKey: string) {
+    const removedServiceIds = localServices.filter(s => s.cat === catKey).map(s => s.id);
+
+    const updatedCats = localCategories.filter(c => c.key !== catKey);
+    setLocalCategories(updatedCats);
+    saveDynamicCategories(updatedCats);
+    await deleteCategoryFromApi(catKey);
+
+    const updatedSvcs = localServices.filter(s => s.cat !== catKey);
+    setLocalServices(updatedSvcs);
+
+    await Promise.all(removedServiceIds.map(id => deleteServiceFromApi(id)));
+    await loadServicesFromApi();
+    await loadCategoriesFromApi();
+
+    setExpandedCategories(prev => {
+      const copy = { ...prev };
+      delete copy[catKey];
+      return copy;
+    });
+  }
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [calendarView, setCalendarView] = useState<"Calendar" | "List" | "Schedule">("Calendar");
+
+  useEffect(() => {
+    if (adminRole === 'superadmin') return;
+    if (adminPermissions.length > 0) {
+      if (!hasPermission("bookings.view_calendar") && hasPermission("bookings.view_list")) {
+        setCalendarView("List");
+      }
+    }
+  }, [adminPermissions, adminRole, hasPermission]);
+
+  const [scheduleDate, setScheduleDate] = useState<Date>(() => new Date());
+  const [scheduleProviderFilter, setScheduleProviderFilter] = useState<string>("All");
+  const [scheduleServiceFilter, setScheduleServiceFilter] = useState<string>("All");
+  const [scheduleReservations, setScheduleReservations] = useState<Req[]>([]);
+
+  // Quick Actions states
+  const [showCancellationsModal, setShowCancellationsModal] = useState(false);
+  const [showTodayBookingsModal, setShowTodayBookingsModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showActionsMenuModal, setShowActionsMenuModal] = useState(false);
+  const [showAddBookingModal, setShowAddBookingModal] = useState(false);
+  const [showFullViewNewBooking, setShowFullViewNewBooking] = useState(false);
+  const [newBookingInitialData, setNewBookingInitialData] = useState<any | null>(null);
+  const [showAddPreviousBooking, setShowAddPreviousBooking] = useState(false);
+  const [editingPreviousBooking, setEditingPreviousBooking] = useState<any | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filters state
+  const [statusFilter, setStatusFilter] = useState<string>("All"); // All, approved, pending, rejected
+  const [typeFilter, setTypeFilter] = useState<string>("All");     // All, in_person, online
+  const [docFilter, setDocFilter] = useState<string>("All");       // All, Dr...
+  const [dateFilter, setDateFilter] = useState<string>("All");     // All, or "YYYY-MM-DD"
+
+  // Form states for manual booking creation
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [showPatientSearchResults, setShowPatientSearchResults] = useState(false);
+  const [newPatientName, setNewPatientName] = useState("");
+  const [newPatientEmail, setNewPatientEmail] = useState("");
+  const [newPatientPhone, setNewPatientPhone] = useState("");
+  const [newPatientDate, setNewPatientDate] = useState("");
+  const [isManualWhatsappSame, setIsManualWhatsappSame] = useState(true);
+  const [newPatientWhatsapp, setNewPatientWhatsapp] = useState("");
+  const [newPatientTimeSlot, setNewPatientTimeSlot] = useState("12:00");
+  const [newPatientService, setNewPatientService] = useState<number>(1);
+  const [newPatientSessionType, setNewPatientSessionType] = useState("in_person");
+  const [newPatientDoctor, setNewPatientDoctor] = useState("Dr. Sara El Gamel");
+  const [newPatientNotes, setNewPatientNotes] = useState("");
+  const [newPatientStatus, setNewPatientStatus] = useState("approved");
+  const [newPatientBranch, setNewPatientBranch] = useState("");
+  const [newPatientCreatedByEmployeeId, setNewPatientCreatedByEmployeeId] = useState("");
+  const [approveUnavailableSlots, setApproveUnavailableSlots] = useState<string[]>([]);
+  const [approveTimeWarning, setApproveTimeWarning] = useState<string>("");
+  const [manualUnavailableSlots, setManualUnavailableSlots] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (showAddBookingModal && adminDbId) {
+      setNewPatientCreatedByEmployeeId(adminDbId);
+    }
+  }, [showAddBookingModal, adminDbId]);
+
+  // Synchronize manual booking service selection and session type
+  useEffect(() => {
+    const selectedSvc = localServices.find(s => s.id === newPatientService);
+    if (selectedSvc) {
+      let allowedType = selectedSvc.unit?.toLowerCase() || "both";
+      if (allowedType !== "both" && allowedType !== "in_clinic" && allowedType !== "online") {
+        allowedType = "both";
+      }
+      if (allowedType === "in_clinic") {
+        setNewPatientSessionType("in_person");
+      } else if (allowedType === "online") {
+        setNewPatientSessionType("online");
+      }
+    }
+  }, [newPatientService, localServices]);
+  const filteredReservations = useMemo(() => {
+    return allReservations.filter((r) => {
+      const matchStatus = statusFilter === "All"
+        || r.status === statusFilter
+        || (statusFilter === "pending" && (r.status === "pending" || r.status === "pending_deposit"))
+        || (statusFilter === "pending_deposit" && (r.status === "pending" || r.status === "pending_deposit"));
+      const matchType = typeFilter === "All" || r.sessionType === typeFilter;
+      const matchDoc = docFilter === "All" || (r.doctorName || "Dr. Sara El Gamel") === docFilter;
+      const matchDate = dateFilter === "All" || (r.date && String(r.date).slice(0, 10) === dateFilter);
+      return matchStatus && matchType && matchDoc && matchDate;
+    });
+  }, [allReservations, statusFilter, typeFilter, docFilter, dateFilter]);
+
+  const bookingCountsByDay = useMemo(() => {
+    const counts = new Map<string, number>();
+    const monthKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}`;
+
+    filteredReservations.forEach((reservation) => {
+      if (!reservation.date || !['approved', 'confirmed', 'started', 'completed'].includes(reservation.status)) return;
+      // Slice directly — avoids UTC conversion that shifts dates for non-UTC timezones
+      const normalizedDate = String(reservation.date).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return;
+      const [year, month] = normalizedDate.split('-');
+      const currentKey = `${year}-${month}`;
+      if (currentKey !== monthKey) return;
+      counts.set(normalizedDate, (counts.get(normalizedDate) ?? 0) + 1);
+    });
+
+    return counts;
+  }, [filteredReservations, calendarMonth]);
+
+  const currentMonthLabel = calendarMonth.toLocaleString('en-US', { month: 'long' });
+  const currentYear = calendarMonth.getFullYear();
+  const daysInMonth = new Date(currentYear, calendarMonth.getMonth() + 1, 0).getDate();
+  const startWeekday = calendarMonth.getDay();
+
+  // per-service toggle state: visible & status
+  const [serviceToggles, setServiceToggles] = useState<Record<number, { visible: boolean; active: boolean }>>({});
+
+  // Auth and Role Management effects & handlers
+  useEffect(() => {
+    if (!supabase) {
+      setAuthChecking(false);
+      return;
+    }
+
+    // A short tag for this tab, so the shared auth trail (see authRecovery.ts) shows which tab did what.
+    const tabTag = Math.random().toString(36).slice(2, 5);
+    const trail = (text: string) => {
+      const online = typeof navigator !== "undefined" && navigator.onLine === false ? " OFFLINE" : "";
+      const vis = typeof document !== "undefined" ? ` ${document.visibilityState}` : "";
+      pushAuthTrail(CLIENT.storagePrefix, `[${tabTag}] ${text}${vis}${online}`);
+    };
+    trail("page opened");
+    const onVisibility = () => trail("visibility changed");
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // 1. Initial Auth Session Check
+    supabase.auth.getSession().then(({ data: { session: cachedSession } }: any) => {
+      trail(`getSession: ${cachedSession ? "has session" : "NO session"}`);
+      if (cachedSession) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`${CLIENT.storagePrefix}_admin_session_active`, "true");
+        }
+        // The listener below also reports this same login on load; verify it once, not twice.
+        if (verifyingTokenRef.current !== cachedSession.access_token && lastVerifiedRef.current?.token !== cachedSession.access_token) {
+          handleAuthSession(cachedSession);
+        }
+      } else {
+        setAuthChecking(false);
+      }
+    }).catch((err: any) => {
+      console.warn("getSession error:", err);
+      setAuthChecking(false);
+    });
+
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, newSession: any) => {
+      trail(`${event} session=${newSession ? "yes" : "no"}`);
+      if (event === "SIGNED_OUT") {
+        if (!explicitSignOutRef.current && wasDeliberateLogoutRecently(CLIENT.storagePrefix)) {
+          // Another tab of this browser pressed Logout: follow it. Trying to "recover" the session
+          // it just ended on purpose would fail, and the login page would then call it unexpected.
+          deliberateLogoutRef.current = true;
+        } else if (!explicitSignOutRef.current) {
+          // RISK-114: Supabase's own client ended the session with no deliberate signOut() call
+          // from this page - most likely a background refresh that failed (e.g. a refresh-token
+          // rotation collision across two open tabs of the same login). Try one silent recovery,
+          // handing it the real refresh_token from the last session this page actually held,
+          // rather than immediately dropping to the login screen mid-booking or mid-edit.
+          const lastRefreshToken = lastKnownSessionRef.current?.refresh_token;
+          if (!lastRefreshToken) trail("SIGNED_OUT: no earlier session in this tab to recover from");
+          if (lastRefreshToken) {
+            (async () => {
+              // First look at what is stored now: another tab may already have refreshed the login
+              // (refresh tokens rotate, so re-using this tab's older one could be refused, or worse
+              // flagged as reuse by Supabase). Only if nothing usable is stored try the old token.
+              try {
+                const { data } = await supabase.auth.getSession();
+                if (data?.session) {
+                  trail("recovery: another tab had already refreshed the login");
+                  handleAuthSession(data.session);
+                  return;
+                }
+              } catch {
+                /* fall through to the explicit refresh */
+              }
+              const result = await recoverFromInvoluntarySignOut(
+                {
+                  auth: {
+                    refreshSession: async (args) => {
+                      const r = await supabase.auth.refreshSession(args);
+                      if (r.error) trail(`refresh refused: ${r.error.status ?? "?"} ${String(r.error.message ?? "").slice(0, 80)}`);
+                      return r;
+                    },
+                  },
+                },
+                lastRefreshToken
+              );
+              trail(result.recovered ? "recovery: refreshed OK" : `recovery failed: ${result.reason}`);
+              if (result.recovered) {
+                handleAuthSession(result.session);
+              } else {
+                if (typeof window !== "undefined") {
+                  sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+                }
+                handleAuthSession(null);
+              }
+            })();
+            return;
+          }
+        }
+        explicitSignOutRef.current = false;
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+        }
+      }
+      // The same login announced again (Supabase does this on every return to the tab, and once more
+      // on page load) needs no new /api/auth/me check or data reload while it was verified recently.
+      const verified = lastVerifiedRef.current;
+      if (
+        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
+        newSession?.user &&
+        (verifyingTokenRef.current === newSession.access_token ||
+          (verified &&
+            verified.userId === newSession.user.id &&
+            verified.token === newSession.access_token &&
+            Date.now() - verified.at < 5 * 60 * 1000))
+      ) {
+        lastKnownSessionRef.current = newSession;
+        return;
+      }
+      // RISK-130: a token refresh of a login that was verified a moment ago does not need another
+      // /api/auth/me round trip; on a computer with a wrong clock refreshes arrive several per second.
+      if (
+        event === "TOKEN_REFRESHED" &&
+        newSession?.user &&
+        verified &&
+        verified.userId === newSession.user.id &&
+        Date.now() - verified.at < 60 * 1000
+      ) {
+        lastKnownSessionRef.current = newSession;
+        setSession(newSession);
+        return;
+      }
+      handleAuthSession(newSession);
+    });
+
+    async function handleAuthSession(currSession: any) {
+      // Same person and same token: keep the existing object so nothing keyed on `session` re-runs.
+      setSession((prev: any) =>
+        prev && currSession && prev.user?.id === currSession.user?.id && prev.access_token === currSession.access_token
+          ? prev
+          : currSession
+      );
+      if (currSession?.user) {
+        lastKnownSessionRef.current = currSession;
+      }
+      if (!currSession?.user) {
+        setAdminRole(null);
+        setAdminPermissions([]);
+        setAdminEmail("");
+        setAdminEmployeeId("");
+        setAdminDbId("");
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+        }
+        setAuthChecking(false);
+        return;
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(`${CLIENT.storagePrefix}_admin_session_active`, "true");
+      }
+      // Reset activity timer upon successful authentication
+      lastActivityRef.current = Date.now();
+      verifyingTokenRef.current = currSession.access_token ?? null;
+
+      try {
+        // RISK-117: a 401 is not final until one forced token refresh has failed to fix it, and a
+        // failure that is not an auth answer (cold start, network) keeps the session.
+        const verification = await verifyStaffSession({
+          session: currSession,
+          fetchMe: async (accessToken) => {
+            // RISK-131: do not wait for a stalled answer; a cut request counts as a network failure and is retried.
+            const res = await fetch('/api/auth/me', {
+              headers: { 'Authorization': `Bearer ${accessToken}` },
+              signal: typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(10000) : undefined,
+            });
+            const skew = clockSkewMs(res.headers.get('date'));
+            setClockSkew(skew);
+            if (isClockSkewed(skew)) trail(`clock off vs server: ${Math.round((skew as number) / 60000)} min`);
+            return res;
+          },
+          refreshSession: () => supabase.auth.refreshSession(),
+        });
+
+        if (verification.status === 'ok') {
+          setSessionVerifyFailed(false);
+          const authData = verification.me;
+          if (verification.session !== currSession) {
+            // the stored access token had gone stale; carry on with the refreshed one
+            setSession(verification.session);
+            lastKnownSessionRef.current = verification.session;
+          }
+
+          // Role Portal Restriction: Enforce that users can only log in from their matching role portal
+          const effectivePortal = portalRole || 'admin';
+          if (!isPortalRoleMatch(authData.role, effectivePortal, authData.workspace)) {
+            console.warn(`Role mismatch: user is ${authData.role} but attempted to access ${effectivePortal} portal.`);
+            recordLogoutReason(CLIENT.storagePrefix, 'wrong_portal');
+            explicitSignOutRef.current = true;
+            await supabase.auth.signOut({ scope: 'local' });
+            setAdminRole(null);
+            setAdminWorkspace("standard");
+            setAdminIsAlsoDoctor(false);
+            setAdminDepartment("");
+            setAdminPermissions([]);
+            setAdminEmail("");
+            setAdminEmployeeId("");
+            setAdminDbId("");
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+              window.location.href = "/login";
+            }
+            setAuthChecking(false);
+            return;
+          }
+
+          adminRoleRef.current = authData.role;
+          setAdminRole(authData.role);
+          setAdminWorkspace(normalizeWorkspace(authData.workspace));
+          setAdminIsAlsoDoctor(authData.isAlsoDoctor === true);
+          setAdminDepartment(authData.department || "");
+          setAdminPermissions(authData.permissions || []);
+          setAdminEmail(authData.email || "");
+          setAdminEmployeeId(authData.employeeId || "");
+          setAdminDbId(authData.id || "");
+          lastVerifiedRef.current = {
+            userId: verification.session?.user?.id,
+            token: verification.session?.access_token,
+            at: Date.now(),
+          };
+
+          if (!sectionRestoredRef.current) {
+            sectionRestoredRef.current = true;
+            const requested = typeof window !== "undefined" ? parseSection(window.location.search) : null;
+            // A section the person may not open is corrected by the permission effect further down.
+            if (requested) setActiveNav(requested);
+          }
+
+          if (typeof window !== "undefined") {
+            const roleSlug = getRoleSlug(authData.role, authData.workspace);
+            if (roleSlug) {
+              const targetPath = roleSlug === 'admin' ? '/admin' : `/${roleSlug}`;
+              if (window.location.pathname !== targetPath) {
+                window.history.replaceState(null, "", targetPath + window.location.search);
+              }
+            }
+          }
+
+          // Load roles and employees in the background. This used to be awaited so the doctor view
+          // could be decided from the employee list, but the workspace now comes from /api/auth/me
+          // (DEC-113), and /api/employees is slow (it lists every auth user): awaiting it kept the
+          // whole panel on "Verifying administrator session..." for as long as it took, or until a
+          // 504. The panels that need the lists already show their own loading state.
+          void fetchRolesAndEmployees();
+        } else if (verification.status === 'unauthorized') {
+          console.warn(`Unregistered or unauthorized employee session (${verification.httpStatus}) after a token refresh. Logging out.`);
+          recordLogoutReason(CLIENT.storagePrefix, verification.code === 'account_inactive' ? 'account_inactive' : 'session_rejected');
+          explicitSignOutRef.current = true;
+          await supabase.auth.signOut({ scope: 'local' });
+          setAdminRole(null);
+          setAdminWorkspace("standard");
+          setAdminIsAlsoDoctor(false);
+          setAdminDepartment("");
+          setAdminPermissions([]);
+          setAdminEmail("");
+          setAdminEmployeeId("");
+          setAdminDbId("");
+          if (typeof window !== "undefined") {
+            sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+            window.location.href = "/login";
+          }
+        } else {
+          console.warn("Could not verify the session right now (transient). Keeping the session and offering a retry.");
+          setSessionVerifyFailed(true);
+        }
+      } catch (err) {
+        console.error("Error retrieving admin permissions:", err);
+        setSessionVerifyFailed(true);
+      } finally {
+        verifyingTokenRef.current = null;
+        setAuthChecking(false);
+      }
+    }
+
+    retryVerifyRef.current = () => {
+      const held = lastKnownSessionRef.current;
+      if (held) handleAuthSession(held);
+    };
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  // 3. Inactivity idle timeout: auto logout after 1 hour of complete inactivity
+  useEffect(() => {
+    if (!session || !adminRole) return;
+
+    let lastSharedWrite = 0;
+    const resetTimer = () => {
+      const now = Date.now();
+      lastActivityRef.current = now;
+      // let the other tabs of this browser know this one is in use (at most every 10 s)
+      if (now - lastSharedWrite > 10000) {
+        lastSharedWrite = now;
+        writeSharedActivity(CLIENT.storagePrefix, now);
+      }
+      setPresenceModalOpen(prev => {
+        if (prev) return false;
+        return prev;
+      });
+    };
+
+    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Check every 10 seconds. Timeout is 1 hour, counted from the latest activity in ANY tab.
+    const interval = setInterval(() => {
+      const lastActivity = lastActivityAcrossTabs(lastActivityRef.current, CLIENT.storagePrefix);
+      if (isIdleExpired(Date.now(), lastActivity, IDLE_LOGOUT_MS)) {
+        clearInterval(interval);
+        console.log("Inactivity timeout reached. Logging out.");
+        recordLogoutReason(CLIENT.storagePrefix, 'inactivity');
+        broadcastDeliberateLogout(CLIENT.storagePrefix);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+        }
+        // wait at most 4 s for the attendance check-out so an unreachable server cannot stall the logout
+        Promise.race([triggerCheckout(), new Promise<void>((resolve) => setTimeout(resolve, 4000))]).finally(() => {
+          explicitSignOutRef.current = true;
+          supabase.auth.signOut({ scope: 'local' }).then(() => {
+            if (typeof window !== "undefined") {
+              window.location.href = "/login";
+            }
+          });
+        });
+      }
+    }, 10000);
+
+    return () => {
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+      clearInterval(interval);
+    };
+  }, [session, adminRole]);
+
+  const checkNavAccess = useCallback((nav: string): boolean => {
+    if (!adminRole) return false;
+    if (adminRole === 'superadmin') return true;
+    if (nav === 'Logout' || nav === 'Profile') return true;
+    
+    const settingsSubsections: Record<string, string> = {
+      "Clinic Profile": "settings.profile",
+      "Service Hours": "settings.service_hours",
+      "Branches": "settings.branches",
+      "Rooms": "settings.rooms",
+      "Booking Settings": "settings.booking_settings",
+      "Terms & Conditions": "settings.terms",
+      "Deposit Settings": "settings.booking_settings",
+      "Inactivity Settings": "settings.booking_settings",
+      "Notification Settings": "settings.notification",
+      "Queue Settings": "settings.queue",
+      "Pages Settings": "settings.pages",
+      "Medical Records": "settings.medical_records",
+      "Role Management": "settings.roles",
+      "System Test Suite": "settings.test_suite"
+    };
+    
+    if (settingsSubsections[nav]) {
+      return hasPermission(settingsSubsections[nav]);
+    }
+    
+    const parentScreenMap: Record<string, string> = {
+      "Dashboard": "dashboard",
+      "Bookings": "bookings",
+      "Patients": "customers",
+      "Doctors": "providers",
+      "Services": "services",
+      "Promotions": "marketing",
+      "Packages": "marketing",
+      "Inventory": "inventory",
+      "Employees": "employees",
+      "HR": "hr",
+      "Transactions": "transactions",
+      "Marketing": "marketing",
+      "Customer Support": "support",
+      "Reports": "reports",
+      "Finance": "finance",
+      "Settings": "settings",
+      "Clinical": "clinical"
+    };
+
+    if (adminPermissions.includes(nav)) return true;
+    const prefix = parentScreenMap[nav];
+    if (prefix) {
+      if (adminPermissions.includes(prefix) || adminPermissions.some(p => p.startsWith(prefix + "."))) return true;
+      if (hasPermission(prefix)) return true;
+    }
+
+    // DEC-097: Allow access to Reports if user has any legacy finance permission (for backward compatibility)
+    if (nav === "Reports" && (hasPermission('finance.view_pnl') || hasPermission('finance.view_margins') || hasPermission('finance.view_capacity'))) return true;
+
+    return false;
+  }, [adminRole, adminPermissions, hasPermission]);
+
+  const hasAccessToActiveNav = useMemo(() => {
+    return checkNavAccess(activeNav);
+  }, [checkNavAccess, activeNav]);
+
+  useEffect(() => {
+    if (adminRole === 'superadmin') return;
+    if (adminPermissions.length > 0) {
+      const isPermitted = checkNavAccess(activeNav);
+      if (!isPermitted && permittedSidebarItems.length > 0) {
+        const firstPermitted = permittedSidebarItems.find(item => item.label !== 'Logout');
+        if (firstPermitted && firstPermitted.label !== activeNav) {
+          setActiveNav(firstPermitted.label);
+        }
+      }
+    }
+  }, [adminPermissions, adminRole, activeNav, permittedSidebarItems, checkNavAccess]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get("setup") === "true" || searchParams.get("recovery") === "true") {
+        setShowSetupPasswordModal(true);
+      }
+    }
+  }, []);
+
+  // Automatically select the first permitted sub-tab in Bookings and Providers view
+  useEffect(() => {
+    if (adminRole === 'superadmin') return;
+
+    if (activeNav === "Bookings") {
+      const hasCalendar = hasPermission("bookings.view_calendar");
+      const hasList = hasPermission("bookings.view_list");
+      if (hasList && !hasCalendar && (calendarView === "Calendar" || calendarView === "Schedule")) {
+        setCalendarView("List");
+      } else if (hasCalendar && !hasList && calendarView === "List") {
+        setCalendarView("Calendar");
+      }
+    }
+  }, [activeNav, adminRole, adminPermissions, hasPermission, calendarView]);
+
+  // Close page-level dropdowns when any other dropdown is toggled
+  useEffect(() => {
+    const handleCloseDropdowns = (e: any) => {
+      const origin = e.detail;
+      if (origin !== "quickAction") setShowQuickActionMenu(false);
+      if (origin !== "notifications") setShowNotificationMenu(false);
+    };
+    window.addEventListener("close-admin-dropdowns", handleCloseDropdowns);
+    return () => window.removeEventListener("close-admin-dropdowns", handleCloseDropdowns);
+  }, []);
+
+  async function handleSetupPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!setupPassword || !setupConfirmPassword) {
+      setSetupError("Please fill in both fields.");
+      return;
+    }
+    if (setupPassword !== setupConfirmPassword) {
+      setSetupError("Passwords do not match.");
+      return;
+    }
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!strongPasswordRegex.test(setupPassword)) {
+      setSetupError("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (e.g. @$!%*?&#).");
+      return;
+    }
+
+    setSetupLoading(true);
+    setSetupError("");
+    setSetupSuccess("");
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: setupPassword,
+      });
+
+      if (error) {
+        setSetupError(error.message);
+      } else {
+        setSetupSuccess("Your password has been successfully configured! Redirecting to dashboard...");
+        setTimeout(() => {
+          setShowSetupPasswordModal(false);
+          // Remove query params from URL so it doesn't reopen
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("setup");
+            url.searchParams.delete("recovery");
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+          }
+        }, 3000);
+      }
+    } catch (err: any) {
+      setSetupError(err.message || "Failed to update password.");
+    } finally {
+      setSetupLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (session && (employeesList.length === 0 || activeNav === "Profile" || activeNav === "Employees" || activeNav === "Role Management")) {
+      fetchRolesAndEmployees();
+    }
+  }, [session, activeNav, employeesList.length]);
+
+  // DEC-110: branches a non-admin staff member may work in (primary first). Admins/superadmins are not
+  // branch-locked, so this stays empty for them. One entry = the pre-multi-branch behaviour (locked).
+  const myAssignedBranchIds = useMemo(() => {
+    if (adminRole === "superadmin" || adminRole === "admin" || !adminEmail) return [] as string[];
+    const me = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail.toLowerCase());
+    return getEmployeeBranchIds(me);
+  }, [adminRole, adminEmail, employeesList]);
+  const employeeBranchInitRef = useRef(false);
+
+  useEffect(() => {
+    if (!adminEmail || employeesList.length === 0) return;
+    const profileEmployee = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail?.toLowerCase());
+    if (profileEmployee) {
+      setProfileName(profileEmployee.name || "");
+      setProfilePhone(profileEmployee.phone || "");
+      setProfileAddress(profileEmployee.address || "");
+      setProfileNatId(profileEmployee.national_id || "");
+      setProfileNatIdFront(profileEmployee.national_id_front || "");
+      setProfileNatIdBack(profileEmployee.national_id_back || "");
+      if (adminRole !== "superadmin" && adminRole !== "admin" && profileEmployee.branch_id) {
+        // First time we learn who this is, land on their primary branch. After that, only pull the
+        // selection back if it is not one of their assigned branches -- a multi-branch employee who
+        // switched branch must not be bounced to the primary each time the employee list refreshes.
+        const assigned = getEmployeeBranchIds(profileEmployee);
+        const firstResolve = !employeeBranchInitRef.current;
+        employeeBranchInitRef.current = true;
+        setBranch((prev) => (firstResolve || !assigned.includes(prev) ? profileEmployee.branch_id : prev));
+      }
+    } else if (adminRole === "superadmin") {
+      setProfileName("System Owner");
+    }
+  }, [adminEmail, employeesList, adminRole]);
+
+  async function fetchRolesAndEmployees() {
+    // Only the owner and admins may read these lists (the server answers 403 to everyone else), so
+    // other roles do not ask at all (RISK-138). The role comes from the ref: this is also called in
+    // the same tick that learns the role, before state has caught up.
+    if (!session?.access_token || !canLoadAdminDirectory(adminRoleRef.current)) return;
+    if (employeesList.length === 0) setLoadingRolesAndEmployees(true);
+    try {
+      // Each list is loaded on its own so one slow or failing request no longer throws away the
+      // other, each has a time limit so it cannot hang forever, and a failure is retried once
+      // (a refusal, 401/403, is never retried).
+      const loaded = await loadAdminDirectory({ role: adminRoleRef.current, accessToken: session.access_token });
+      if (!loaded) return;
+      const { roles: rolesResult, employees: employeesResult } = loaded;
+      if (rolesResult.status === 'fulfilled') setRolesList(rolesResult.value);
+      if (employeesResult.status === 'fulfilled') setEmployeesList(employeesResult.value);
+      if (rolesResult.status === 'rejected' || employeesResult.status === 'rejected') {
+        throw new Error('Unable to load roles and employees.');
+      }
+    } catch (err) {
+      console.error("Error loading roles and employees:", err);
+    } finally {
+      setLoadingRolesAndEmployees(false);
+    }
+  }
+
+  async function fetchHrPayroll() {
+    if (!session?.access_token) return;
+    setLoadingPayroll(true);
+    try {
+      const res = await fetch('/api/hr/payroll', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPayrollList(data);
+      }
+    } catch (err) {
+      console.error("Error loading payroll:", err);
+    } finally {
+      setLoadingPayroll(false);
+    }
+  }
+
+  async function fetchDoctorPayroll() {
+    if (!session?.access_token) return;
+    setLoadingDoctorPayroll(true);
+    try {
+      const res = await fetch('/api/hr/doctor-payroll', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDoctorPayrollList(data);
+      }
+    } catch (err) {
+      console.error("Error loading doctor payroll:", err);
+    } finally {
+      setLoadingDoctorPayroll(false);
+    }
+  }
+
+  async function fetchHrLeaves() {
+    if (!session?.access_token) return;
+    setLoadingLeaves(true);
+    try {
+      const res = await fetch('/api/hr/leaves', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLeavesList(data);
+      }
+    } catch (err) {
+      console.error("Error loading leaves:", err);
+    } finally {
+      setLoadingLeaves(false);
+    }
+  }
+
+  async function fetchHrPerformance() {
+    if (!session?.access_token) return;
+    setLoadingPerformance(true);
+    try {
+      const res = await fetch('/api/hr/performance', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPerformanceReviews(data);
+      }
+    } catch (err) {
+      console.error("Error loading performance reviews:", err);
+    } finally {
+      setLoadingPerformance(false);
+    }
+  }
+
+  async function fetchHrAttendance() {
+    if (!session?.access_token) return;
+    setLoadingAttendance(true);
+    try {
+      const res = await fetch('/api/hr/attendance', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceList(data);
+      }
+    } catch (err) {
+      console.error("Error loading attendance:", err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  }
+
+  async function fetchHrAlerts() {
+    if (!session?.access_token) return;
+    try {
+      const res = await fetch('/api/hr/alerts', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+        cache: 'no-store'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveMissingAlerts(prev => (pollDataEqual(prev, data) ? prev : data));
+      }
+    } catch (err) {
+      console.error("Error loading missing alerts:", err);
+    }
+  }
+
+  async function triggerCheckout() {
+    if (session?.access_token && adminDbId) {
+      try {
+        console.log("Logging attendance check-out for user:", adminDbId);
+        await fetch('/api/hr/attendance', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ employeeId: adminDbId }),
+          // survives the redirect to /login that follows a logout
+          keepalive: true
+        });
+      } catch (err) {
+        console.error("Error during attendance check-out:", err);
+      }
+    }
+  }
+
+  const fetchHrData = useCallback(async () => {
+    await Promise.all([
+      fetchHrPayroll(),
+      fetchDoctorPayroll(),
+      fetchHrLeaves(),
+      fetchHrPerformance(),
+      fetchHrAttendance(),
+      fetchHrAlerts(),
+      fetchRolesAndEmployees()
+    ]);
+  }, [session]);
+
+  useEffect(() => {
+    if (activeNav === "HR") {
+      fetchHrData();
+    }
+  }, [activeNav, fetchHrData]);
+
+  async function handleLogout() {
+    deliberateLogoutRef.current = true;
+    clearLogoutReason(CLIENT.storagePrefix);
+    if (supabase) {
+      // Never let a slow attendance call leave the Logout button looking dead: wait at most 4s.
+      await Promise.race([triggerCheckout(), new Promise<void>((resolve) => setTimeout(resolve, 4000))]);
+      explicitSignOutRef.current = true;
+      broadcastDeliberateLogout(CLIENT.storagePrefix);
+      // 'local': ending this device's session must not log the same account out on other computers.
+      await supabase.auth.signOut({ scope: 'local' });
+    }
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+      localStorage.removeItem(`${CLIENT.storagePrefix}_staff_auth`);
+      clearLogoutReason(CLIENT.storagePrefix);
+      window.location.href = "/login";
+    }
+  }
+
+  // If session is missing after auth checking, redirect to /login
+  useEffect(() => {
+    // Only a missing session sends the person to /login. A session whose role could not be
+    // verified right now (RISK-117) stays here and is retried below.
+    if (!authChecking && !session) {
+      if (typeof window !== "undefined") {
+        if (!deliberateLogoutRef.current) {
+          recordLogoutReason(CLIENT.storagePrefix, 'session_ended', { onlyIfEmpty: true, detail: readAuthTrail(CLIENT.storagePrefix).join('\n') });
+        }
+        sessionStorage.removeItem(`${CLIENT.storagePrefix}_admin_session_active`);
+        window.location.replace("/login");
+      }
+    }
+  }, [authChecking, session, adminRole]);
+
+  useEffect(() => {
+    if (authChecking || !session || adminRole || !sessionVerifyFailed) return;
+    const timer = setInterval(() => retryVerifyRef.current?.(), 15000);
+    return () => clearInterval(timer);
+  }, [authChecking, session, adminRole, sessionVerifyFailed]);
+
+  // Synchronize browser URL to end with the user's role slug (/[role] or /admin)
+  useEffect(() => {
+    if (session && adminRole && typeof window !== "undefined") {
+      const roleSlug = getRoleSlug(adminRole, adminWorkspace);
+      if (roleSlug) {
+        const targetPath = roleSlug === 'admin' ? '/admin' : `/${roleSlug}`;
+        if (window.location.pathname !== targetPath) {
+          window.history.replaceState(null, "", targetPath + window.location.search);
+        }
+      }
+    }
+  }, [session, adminRole, adminWorkspace]);
+
+  // Keep the open section in the URL so a reload (F5) lands on the same page instead of Dashboard.
+  useEffect(() => {
+    if (!adminRole || !sectionRestoredRef.current || typeof window === "undefined") return;
+    const next = withSection(window.location.search, activeNav);
+    if (next !== window.location.search) {
+      window.history.replaceState(null, "", window.location.pathname + next + window.location.hash);
+    }
+  }, [activeNav, adminRole]);
+
+  // Geolocation Check-In on login resolution (Disabled for now per user request)
+  useEffect(() => {
+    // GPS Attendance Location Check-In Enforcement Disabled
+  }, []);
+
+  // Inactivity Presence Monitor for standard staff
+  useEffect(() => {
+    if (!session || !adminRole) return;
+    // Only for standard employees (not superadmin, admin, or HR)
+    if (adminRole === 'superadmin' || adminRole === 'admin' || adminRole === 'HR') return;
+
+    const profileEmployee = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail?.toLowerCase());
+    if (!profileEmployee) return;
+
+    const isTestMode = typeof window !== "undefined" && window.location.search.includes("test_presence=true");
+    const thresholdMs = isTestMode ? 15000 : inactivityThreshold * 60 * 1000;
+    const checkIntervalMs = isTestMode ? 1000 : 5000;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastActivityAcrossTabs(lastActivityRef.current, CLIENT.storagePrefix);
+      if (elapsed >= thresholdMs && !presenceModalOpen) {
+        setPresenceCountdown(inactivityCountdown);
+        setPresenceModalOpen(true);
+      }
+    }, checkIntervalMs);
+
+    return () => clearInterval(interval);
+  }, [session, adminRole, adminEmail, employeesList, inactivityThreshold, inactivityCountdown, presenceModalOpen]);
+
+  // Presence countdown timer logic
+  useEffect(() => {
+    if (!presenceModalOpen) return;
+    if (presenceCountdown <= 0) {
+      setPresenceModalOpen(false);
+      
+      const profileEmployee = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail?.toLowerCase());
+      if (profileEmployee && session?.access_token) {
+        fetch('/api/hr/alerts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ employeeId: profileEmployee.id })
+        }).then((res) => {
+          if (res.ok) {
+            alert("You did not respond in time. An inactivity alert has been sent to the administrator.");
+          }
+        }).catch((err) => console.error("Failed to send missing alert:", err));
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setPresenceCountdown(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [presenceModalOpen, presenceCountdown, session, adminEmail, employeesList]);
+
+  // Admin Missing Alerts Polling
+  useEffect(() => {
+    if (!session || !adminRole) return;
+    if (adminRole !== 'superadmin' && adminRole !== 'admin' && adminRole !== 'HR') return;
+
+    const isTestMode = typeof window !== "undefined" && window.location.search.includes("test_presence=true");
+    const intervalMs = isTestMode ? 5000 : 30000;
+
+    // First load now, then every interval while the tab is visible; never overlapping, paused in a
+    // hidden tab and refreshed when it is shown again (RISK-138).
+    return startVisiblePoll(fetchHrAlerts, intervalMs, { immediate: true });
+  }, [session, adminRole]);
+
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Please enter both email/ID and password.");
+      return;
+    }
+    setLoginLoading(true);
+    setLoginError("");
+
+    let emailToSign = loginEmail.trim();
+    if (!emailToSign.includes("@")) {
+      try {
+        const res = await fetch(`/api/auth/employee-email?id=${encodeURIComponent(emailToSign)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.email) {
+            emailToSign = data.email;
+          }
+        } else {
+          setLoginError("Invalid Employee ID or account not found.");
+          setLoginLoading(false);
+          return;
+        }
+      } catch (err) {
+        setLoginError("Failed to lookup Employee ID. Please try entering your full email.");
+        setLoginLoading(false);
+        return;
+      }
+    }
+    // Verify that the email is not registered as a customer
+    try {
+      const checkRes = await fetch(`/api/customers?email=${encodeURIComponent(emailToSign)}`, {
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` }
+      });
+      if (checkRes.ok) {
+        const customer = await checkRes.json();
+        if (customer) {
+          setLoginError("This email is registered as a customer and cannot be used for administrator access.");
+          setLoginLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Customer email verification failed:", err);
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailToSign,
+        password: loginPassword,
+      });
+
+      if (error) {
+        setLoginError(error.message);
+        setLoginLoading(false);
+        return;
+      }
+    } catch (err: any) {
+      setLoginError(err.message || "An authentication error occurred.");
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleDeleteEmployee(id: string) {
+    const targetEmp = employeesList.find(e => e.id === id);
+    const deleteChoice = await showDeleteConfirm({
+      title: "Delete Employee Account",
+      itemName: targetEmp?.name || targetEmp?.email || "Employee",
+      itemType: "employee",
+      isSuperAdmin: adminRole === "superadmin",
+      message: adminRole === "superadmin"
+        ? undefined
+        : "Are you sure you want to delete this employee account? They will lose access to the admin panel immediately."
+    });
+    if (!deleteChoice) return;
+
+    try {
+      const mode = deleteChoice === "soft" ? "soft" : "hard";
+      const res = await fetch(`/api/employees?id=${encodeURIComponent(id)}&mode=${mode}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
+      if (res.ok) {
+        clearFetchCache();
+        fetchRolesAndEmployees();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete account.");
+      }
+    } catch (err: any) {
+      alert("Error deleting account: " + err.message);
+    }
+  }
+
+  // DEC-117: switch an employee account Active / Inactive. Inactive keeps the role and all records but
+  // removes every kind of access; the server enforces it (this is only the control).
+  async function handleToggleEmployeeActive(id: string, makeActive: boolean) {
+    const targetEmp = employeesList.find(e => e.id === id);
+    const who = targetEmp?.name || targetEmp?.email || "this employee";
+    if (!makeActive) {
+      const ok = await showConfirm(
+        `Make ${who} inactive? They lose all access to the system immediately and are signed out. Their records stay, and you can switch them back on at any time.`
+      );
+      if (!ok) return;
+    }
+    try {
+      const res = await fetch('/api/employees', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ id, isActive: makeActive }),
+      });
+      if (res.ok) {
+        clearFetchCache();
+        fetchRolesAndEmployees();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not change the account status.');
+      }
+    } catch (err: any) {
+      alert('Error changing the account status: ' + err.message);
+    }
+  }
+
+  async function handleResendInvitation(id: string) {
+    if (!(await showConfirm("Resend the invitation email to this employee? Their old invite link will be invalidated."))) return;
+    try {
+      const res = await fetch('/api/employees', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        alert('Invitation re-sent successfully! The employee will receive a new email.');
+        fetchRolesAndEmployees();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to resend invitation.');
+      }
+    } catch (err: any) {
+      alert('Error resending invitation: ' + err.message);
+    }
+  }
+
+
+  // Force English/LTR context on Admin page
+  useEffect(() => {
+    const prevDir = document.documentElement.dir;
+    const prevLang = document.documentElement.lang;
+    const prevBodyClass = document.body.className;
+
+    const applyOverride = () => {
+      document.documentElement.dir = "ltr";
+      document.documentElement.lang = "en";
+      document.body.className = "ltr";
+    };
+
+    applyOverride();
+    const timer = setTimeout(applyOverride, 0);
+    const timer2 = setTimeout(applyOverride, 50);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+      document.documentElement.dir = prevDir || "ltr";
+      document.documentElement.lang = prevLang || "en";
+      document.body.className = prevBodyClass || "ltr";
+    };
+  }, []);
+
+  useEffect(() => {
+    loadCategoriesFromApi();
+  }, [loadCategoriesFromApi]);
+
+  useEffect(() => {
+    loadServicesFromApi();
+  }, [session?.access_token, loadServicesFromApi]);
+  // BRANCHES is now derived from the real branches state loaded from Supabase
+
+  const filteredServices = useMemo(() => {
+    if (!serviceSearch.trim()) return localServices;
+    const q = serviceSearch.toLowerCase();
+    return localServices.filter((s) => s.en.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q));
+  }, [serviceSearch, localServices]);
+
+  const allServicesList = useMemo(() => {
+    const map = new Map<string, { id: number; en: string; ar?: string }>();
+    SERVICES.forEach(s => {
+      map.set(s.en, { id: s.id, en: s.en, ar: s.ar });
+    });
+    localServices.forEach(s => {
+      map.set(s.en, { id: s.id, en: s.en, ar: s.ar });
+    });
+    return Array.from(map.values()).sort((a, b) => a.en.localeCompare(b.en));
+  }, [localServices]);
+
+  const totalServicePages = Math.ceil(filteredServices.length / SERVICE_PAGE_SIZE);
+  const pagedServices = filteredServices.slice((servicePage - 1) * SERVICE_PAGE_SIZE, servicePage * SERVICE_PAGE_SIZE);
+
+  // Grouped services: category key → filtered services in that category
+  const groupedServices = useMemo(() => {
+    const groups: Record<string, typeof localServices> = {};
+    localCategories.forEach(cat => { groups[cat.key] = []; });
+    filteredServices.forEach(svc => {
+      if (groups[svc.cat]) groups[svc.cat].push(svc);
+      else groups[svc.cat] = [svc];
+    });
+    return groups;
+  }, [filteredServices, localCategories]);
+
+  function toggleService(id: number, field: "visible" | "active") {
+    let serviceToSync: ServiceItem | undefined;
+
+    setServiceToggles((prev) => {
+      const current = prev[id] ?? { visible: true, active: true };
+      const newValue = !current[field];
+      const updated = { ...prev, [id]: { ...current, [field]: newValue } };
+      setServiceToggle(id, field, newValue);
+      return updated;
+    });
+
+    setLocalServices((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id === id) {
+          const toggled = {
+            ...s,
+            [field]: !(s[field] ?? true),
+          };
+          serviceToSync = toggled;
+          return toggled;
+        }
+        return s;
+      });
+      return updated;
+    });
+
+    // Persist active/visible change to database
+    if (serviceToSync) {
+      syncServicesToApi([serviceToSync]).catch((err) => {
+        console.error("Failed to sync service toggle to database:", err);
+      });
+    }
+  }
+
+  const [eCommerceExpanded, setECommerceExpanded] = useState(false);
+  const [inventoryExpanded, setInventoryExpanded] = useState(false);
+
+
+  // Inventory Products State — productsTabRef stays in page.tsx for useCustomerProfile's refreshProductSalesHistory wrapper
+  const productsTabRef = useRef<InventoryProductsTabRef>(null);
+
+  // ── System Test Suite State & Diagnostics Engine ──
+  interface SystemTestCase {
+    id: string;
+    name: string;
+    category: string;
+    endpoint: string;
+    description: string;
+    status: 'idle' | 'running' | 'pass' | 'fail';
+    durationMs?: number;
+    statusCode?: number;
+    responseDetails?: any;
+    errorMsg?: string;
+  }
+
+  const INITIAL_SYSTEM_TEST_SUITES: SystemTestCase[] = [
+    { id: 'TC-001', name: 'Supabase Database & Auth Health', category: 'Database & Auth', endpoint: '/api/health/supabase', description: 'Verifies live database connection, response latency, and env configurations.', status: 'idle' },
+    { id: 'TC-002', name: 'Current User Session & RBAC Permissions', category: 'Database & Auth', endpoint: '/api/auth/me', description: 'Checks staff session authentication and user profile authorization.', status: 'idle' },
+    { id: 'TC-003', name: 'Clinic Branches API Integrity', category: 'Services & Bookings', endpoint: '/api/branches', description: 'Verifies clinic branches data, operating hours, and location IDs.', status: 'idle' },
+    { id: 'TC-004', name: 'Services Catalog & Category Mapping', category: 'Services & Bookings', endpoint: '/api/services', description: 'Validates service catalog pricing, durations, and category tags.', status: 'idle' },
+    { id: 'TC-005', name: 'Dynamic Service Categories Store', category: 'Services & Bookings', endpoint: '/api/categories', description: 'Checks service category definitions and branch customization.', status: 'idle' },
+    { id: 'TC-006', name: 'Inventory Products & Stock Levels', category: 'Inventory & Equipment', endpoint: '/api/inventory/products', description: 'Tests product stock levels, pricing, roles (retail/consumable), and SKUs.', status: 'idle' },
+    { id: 'TC-007', name: 'Clinic Equipment Devices & Pulse Limits', category: 'Inventory & Equipment', endpoint: '/api/inventory/devices', description: 'Verifies laser pulse counters, threshold limits, and replacement costs.', status: 'idle' },
+    { id: 'TC-008', name: 'Device Audit Logs System', category: 'Inventory & Equipment', endpoint: '/api/inventory/devices/audit-logs', description: 'Tests equipment maintenance history and pulse reset logs.', status: 'idle' },
+    { id: 'TC-009', name: 'Provider Schedule Audit Logs', category: 'Inventory & Equipment', endpoint: '/api/providers/schedule-audit-logs', description: 'Validates doctor schedule modification logs and shift audit history.', status: 'idle' },
+    { id: 'TC-010', name: 'Employee Roster & Accounts', category: 'HR & Payroll', endpoint: '/api/employees', description: 'Verifies employee list, departments, positions, and accounts.', status: 'idle' },
+    { id: 'TC-011', name: 'Employee Role & Access Control Rules', category: 'HR & Payroll', endpoint: '/api/roles', description: 'Tests system role definitions and view/edit permission matrices.', status: 'idle' },
+    { id: 'TC-012', name: 'Regular Staff Payroll Calculation Engine', category: 'HR & Payroll', endpoint: '/api/hr/payroll', description: 'Tests monthly staff salary, bonuses, deductions, and net pay calculations.', status: 'idle' },
+    { id: 'TC-013', name: 'Doctor Payroll & Commission Engine', category: 'HR & Payroll', endpoint: '/api/hr/doctor-payroll', description: 'Validates doctor fixed salaries, commission tiers, and reservation pay.', status: 'idle' },
+    { id: 'TC-014', name: 'Leave Requests Management', category: 'HR & Payroll', endpoint: '/api/hr/leaves', description: 'Tests employee leave request submissions and approval statuses.', status: 'idle' },
+    { id: 'TC-015', name: 'GPS Attendance Check-in Engine', category: 'HR & Payroll', endpoint: '/api/hr/attendance', description: 'Tests geofenced attendance logs and shift duration calculations.', status: 'idle' },
+    { id: 'TC-016', name: 'Patient Medical Records & Intake Reports', category: 'Medical & Patients', endpoint: '/api/medical-records', description: 'Validates intake form submission, medical history, and clinical notes.', status: 'idle' },
+    { id: 'TC-017', name: 'Customer Product Purchase Balances', category: 'Medical & Patients', endpoint: '/api/customers/products', description: 'Tests customer retail package balances and product usage tracking.', status: 'idle' },
+    { id: 'TC-018', name: 'Patient Prescriptions Register', category: 'Medical & Patients', endpoint: '/api/prescriptions', description: 'Verifies doctor prescription generation and dosage records.', status: 'idle' },
+    { id: 'TC-019', name: 'Clinic Expense Categories & Ledger', category: 'Expenses & Assets', endpoint: '/api/expenses', description: 'Tests expense items, payment methods, and recurring expense rules.', status: 'idle' },
+    { id: 'TC-020', name: 'Clinic Asset Depreciation Engine', category: 'Expenses & Assets', endpoint: '/api/assets', description: 'Validates capital asset valuation and straight-line depreciation.', status: 'idle' },
+    { id: 'TC-021', name: 'Clinic Loans & Repayment Schedules', category: 'Expenses & Assets', endpoint: '/api/loans', description: 'Tests financial loans, interest schedules, and repayment logs.', status: 'idle' },
+    { id: 'TC-022', name: 'Terms & Conditions Policy Config', category: 'System & Settings', endpoint: '/api/terms', description: 'Verifies deposit terms, cancellation policies, and clinic terms.', status: 'idle' },
+    { id: 'TC-023', name: 'HR Missing Check-in Warning Alerts', category: 'HR & Payroll', endpoint: '/api/hr/alerts', description: 'Tests missing clock-in detection and automated HR warning alerts.', status: 'idle' },
+    { id: 'TC-024', name: 'Customer Balances & Ledger Reconciliation', category: 'Medical & Patients', endpoint: '/api/customers/reconcile', description: 'Reconciles stored customer scalar balances against ledger transaction history.', status: 'idle' },
+    { id: 'TC-025', name: 'Booking Products & Consumables Invoice Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies attached products & session consumables price recalculation and session left updates.', status: 'idle' },
+    { id: 'TC-026', name: 'Doctor Schedule & Calendar View Data Pipeline', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies doctor schedule reservations data pipeline and month/day calendar timeline structure.', status: 'idle' },
+    { id: 'TC-027', name: 'Doctor Portal Bilingual & RTL Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies Doctor Portal English View and Arabic View toggle, localized dictionary copy, and RTL layout engine.', status: 'idle' },
+    { id: 'TC-028', name: 'Doctor Portal Right Session Drawer & Notes Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies Right Slide-Over Session Drawer, clean doctor-written notes isolation, and structured payment/consumables callout cards.', status: 'idle' },
+    { id: 'TC-029', name: 'Doctor Portal Patient Full Visit History Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies Patient Full Visit History Right Drawer, listing all historical visits, dates, services, and doctor clinical notes.', status: 'idle' },
+    { id: 'TC-030', name: 'Admin Bookings View & Schedule UI Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies the redesigned Admin Bookings View, 4 analytic cards (without percentages), mini calendar date grid, and today schedule table.', status: 'idle' },
+    { id: 'TC-031', name: 'Reception Dashboard & Shift Metrics Engine', category: 'HR & Payroll', endpoint: '/api/reception/dashboard', description: 'Verifies receptionist shift tracking, personal target calculations, and today bookings summary.', status: 'idle' },
+    { id: 'TC-032', name: 'Employee Shift Start & Geofence Verification Engine', category: 'HR & Payroll', endpoint: '/api/reception/dashboard', description: 'Verifies employee shift start geolocation verification, branch radius check, and attendance clock-in.', status: 'idle' },
+    { id: 'TC-033', name: 'Dashboard Notifications & Inventory Alerts Engine', category: 'Inventory & Equipment', endpoint: '/api/reception/dashboard', description: 'Verifies real-time system alerts for low stock, expired items, maintenance due, and overdue devices.', status: 'idle' },
+    { id: 'TC-034', name: 'Medical Record Intake Templates Engine', category: 'Medical & Patients', endpoint: '/api/medical-records/templates', description: 'Verifies customizable medical record intake templates, multi-service assignments, and dynamic field schema.', status: 'idle' },
+    { id: 'TC-035', name: 'Patient Profile Edit & Customer Intake Engine', category: 'Medical & Patients', endpoint: '/api/customers', description: 'Verifies customer profile records, phone/WhatsApp validation, address structure (City, Street, Building, Floor), and balances.', status: 'idle' },
+    { id: 'TC-036', name: 'Doctor Status Management & Availability Lifecycle Engine', category: 'Services & Bookings', endpoint: '/api/providers', description: 'Verifies doctor status modal dialog, Active/Inactive status changes, and real-time synchronization across providers and linked employee accounts.', status: 'idle' },
+    { id: 'TC-037', name: 'Financial Transactions & Daily Ledger Engine', category: 'Finance & Accounting', endpoint: '/api/transactions', description: 'Verifies the clinic financial transactions dashboard, daily net payments, outstanding debts, wallet balances, and manual transaction logging.', status: 'idle' },
+    { id: 'TC-038', name: 'Historical & Previous Bookings Intake & Superadmin Editing Engine', category: 'Services & Bookings', endpoint: '/api/reservations/previous', description: 'Verifies recording of previous historical clinic bookings, superadmin booking edits, patient matching/creation, and ledger synchronization.', status: 'idle' },
+    { id: 'TC-039', name: 'Granular Role Permissions & Action-Level Access Control Engine', category: 'HR & Payroll', endpoint: '/api/roles', description: 'Validates system roles retrieval, permission structure integrity, and granular action-level access control matrix.', status: 'idle' },
+    { id: 'TC-040', name: 'Availability Doctor & Inactive Status Filtering Engine', category: 'Services & Bookings', endpoint: '/api/availability', description: 'Verifies doctor slot availability engine, service name resolution, and inactive doctor exclusions.', status: 'idle' },
+    { id: 'TC-041', name: 'Prescription Deduplication & Clinical Intake Engine', category: 'Medical & Patients', endpoint: '/api/prescriptions', description: 'Verifies doctor prescription generation, duplicate prevention on repeated saves, and intake templates.', status: 'idle' },
+    { id: 'TC-042', name: 'Shift Location Verification & Geofence Guard Engine', category: 'HR & Payroll', endpoint: '/api/reception/dashboard', description: 'Verifies strict geolocation boundary checks preventing out-of-location shift starts.', status: 'idle' },
+    { id: 'TC-043', name: 'Staff Shift & GPS Geofence Settings Engine', category: 'System & Settings', endpoint: '/api/page-settings', description: 'Verifies GPS shift check enable/disable setting configuration and reception dashboard GPS requirement toggle.', status: 'idle' },
+    { id: 'TC-044', name: 'Multi-Shift Daily Cycle & Interval Tracking Engine', category: 'HR & Payroll', endpoint: '/api/reception/dashboard', description: 'Verifies starting, ending, and restarting multiple shifts in the same day with cumulative worked interval tracking.', status: 'idle' },
+    { id: 'TC-045', name: 'Role-Based URL Routing & Account Navigation Engine', category: 'Database & Auth', endpoint: '/api/auth/me', description: 'Verifies dynamic role slug generation, direct role portal routing (/reception, /doctor, /superadmin, /admin), and login portal isolation.', status: 'idle' },
+    { id: 'TC-046', name: 'Customer Portal Header Login Settings Engine', category: 'System & Settings', endpoint: '/api/page-settings', description: 'Verifies header customer login button toggle activation/deactivation in Page Settings and public navbar.', status: 'idle' },
+    { id: 'TC-048', name: 'Superadmin Dual Delete (Soft vs Hard) & Core System Role Locking Engine', category: 'System & Settings', endpoint: '/api/roles', description: 'Validates system locking for superadmin role and dual deletion modes (soft/hard) for administrative management.', status: 'idle' },
+    { id: 'TC-049', name: 'New Booking Multi-Slot Selection & Financial Calculation Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Validates multi-slot time selection, duration aggregation, side-by-side Booking Value and Amount Paid Now inputs, and remaining value calculation.', status: 'idle' },
+    { id: 'TC-050', name: 'Reception Dashboard Shift State & Performance Metrics Engine', category: 'HR & Payroll', endpoint: '/api/reception/dashboard', description: 'Verifies 3 shift states (Not Started, In Progress, Completed), live performance counters (completed, cancelled, no-shows), and payment breakdown aggregation.', status: 'idle' },
+    { id: 'TC-051', name: 'Unified Staff Login & Customer Dropdown Real-Time Sync Engine', category: 'Database & Auth', endpoint: '/api/auth/me', description: 'Verifies unified staff portal routing (/login -> /doctor, /reception, /admin), shaded customer login state persistence, and instant multi-tab sync.', status: 'idle' },
+    { id: 'TC-052', name: 'Optional Email Booking & Patient Creation Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies optional email support for staff booking creation and patient profile registration without validation blockers.', status: 'idle' },
+    { id: 'TC-053', name: 'Reception & Staff Weekly Shift Configuration Engine', category: 'HR & Payroll', endpoint: '/api/employees', description: 'Verifies employee profile creation, weekly shift schedule configuration for non-doctor staff, and department/role synchronization.', status: 'idle' },
+    { id: 'TC-054', name: 'Responsive Staff Views & Mobile Layout Engine', category: 'System & Settings', endpoint: '/api/health/supabase', description: 'Verifies mobile responsiveness, horizontal scroll containers (min-w), adaptive padding, and auto-dismiss navigation for all staff views.', status: 'idle' },
+    { id: 'TC-055', name: 'Global Ending Session & Receptionist Clinical Finalization Engine', category: 'Services & Bookings', endpoint: '/api/page-settings', description: 'Verifies global session ending toggle activation, receptionist clinical intake & prescription synchronization, and instant doctor exit.', status: 'idle' },
+    { id: 'TC-057', name: 'Receptionist Booking Control & Service Editing Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies receptionist booking status lifecycle transitions, booked service replacement on arrival, branch price resolution, and paid amount preservation.', status: 'idle' },
+    { id: 'TC-058', name: 'User Profile Working Details & Schedule Visualization Engine', category: 'HR & Payroll', endpoint: '/api/employees', description: 'Verifies employee profile schedule extraction, multi-branch weekly matrix normalization, 12h time formatting, and dynamic fallback resolution.', status: 'idle' },
+    { id: 'TC-059', name: 'Doctor View Real-time Started Session Detection & Synchronization Engine', category: 'Doctor & Clinical', endpoint: '/api/reservations', description: 'Verifies reservation doctor query filtering with provider_id and doctor_name, starting session status transitions, and real-time active session propagation.', status: 'idle' },
+    { id: 'TC-060', name: 'Doctor Prescription Follow-Up & Reception Reminders Engine', category: 'Doctor & Clinical', endpoint: '/api/prescriptions', description: 'Verifies prescription follow-up date and clinical instructions recording, reception calendar follow-up reminders aggregation, WhatsApp reminder deep link generation, and 1-click booking conversion.', status: 'idle' },
+    { id: 'TC-061', name: 'Reception Follow-Up Lead Time, Rescheduling & Action Suite Engine', category: 'Services & Bookings', endpoint: '/api/page-settings', description: 'Verifies configurable follow-up reminder lead days in booking settings, early alert banner rendering, 1-click pre-filled booking conversion, and follow-up management modal with reminder date rescheduling and atomic cancellation.', status: 'idle' },
+    { id: 'TC-062', name: 'Doctor Portal Clinical Session & Data Isolation Verification Engine', category: 'Doctor & Clinical', endpoint: '/api/reservations', description: 'Verifies strict doctor reservation matching, provider UUID resolution, real-time ongoing session status management, queue-based treatment activation, and prescription deduplication.', status: 'idle' },
+    { id: 'TC-063', name: 'Patient Profile Financial Summary & Staff Shifts Resolution Engine', category: 'Medical & Patients', endpoint: '/api/customers', description: 'Verifies the redesigned patient profile header card with 3-metric financial summary (total spend, wallet, outstanding) and dynamic employee shift resolution without 9-5 hardcoding.', status: 'idle' },
+    { id: 'TC-064', name: 'Receptionist Clinical Records & Prescription Access Engine', category: 'Doctor & Clinical', endpoint: '/api/prescriptions', description: 'Verifies receptionist role permission access to issue/edit digital prescriptions, upload/delete clinical reports, and complete patient medical intake records.', status: 'idle' },
+    { id: 'TC-065', name: 'New Booking Customer Packages & Session Redemption Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies customer active packages inspection, per-service session balance detection, and package redemption checkout integration in New Booking creation.', status: 'idle' },
+    { id: 'TC-066', name: 'Staff Weekly Shift Schedule & Working Days Persistence Engine', category: 'HR & Payroll', endpoint: '/api/employees', description: 'Verifies employee shift and working schedule persistence across employee_accounts and page_settings, multi-branch schedule mapping, multi-shift arrays, and 12h AM/PM time sync.', status: 'idle' },
+    { id: 'TC-067', name: 'Laser Pulse Counter & Unified Laser History Engine', category: 'Medical & Patients', endpoint: '/api/laser-pulses', description: 'Verifies Type 1 fixed service pulses & extra charges, Type 2 FIFO retail pulse active balances & deductions, Type 3 package included pulses, and unified lifetime laser history logs.', status: 'idle' },
+    { id: 'TC-068', name: 'Service Equipment Connector & Pulse Pricing Engine', category: 'Services & Bookings', endpoint: '/api/service-devices', description: 'Verifies service-to-device equipment connections without pulse limits, and booking settings default pulse pricing configuration.', status: 'idle' },
+    { id: 'TC-069', name: 'Laser Services Multi-Payment Mode & Deficit Spillover Engine', category: 'Services & Bookings', endpoint: '/api/services', description: 'Verifies islaser service flag persistence, 3 laser payment options (Fixed Service, Pay per Pulse, Package), doctor session live math, package deficit spillover choices, and unified laser history logging.', status: 'idle' },
+    { id: 'TC-070', name: 'Package Types & Laser Pulses Package Engine', category: 'Services & Bookings', endpoint: '/api/packages', description: 'Verifies package_type (services vs pulses) selection, total_pulses configuration in PackageAdminPanel, /api/packages CRUD validation, and package selling integration.', status: 'idle' },
+    { id: 'TC-071', name: 'Laser Per-Pulse Dynamic Calculation & Invoice Settlement Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies per-pulse mode rate calculation (delivered_pulses × price_per_pulse) across primary and additional laser services, session line item writing, settlement note persistence, and invoice settlement display.', status: 'idle' },
+    { id: 'TC-072', name: 'Laser Pulses Package Redemption & Session Completion Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies package pulse deduction, UUID-guarded package querying, schema-resilient session completion, 0 EGP base package redemption pricing, and zero duplicate invoice line generation.', status: 'idle' },
+    { id: 'TC-073', name: 'Multi-Scenario Laser Pulses Package Settlement Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies Scenario 1 (initial package purchase + deduction), Scenario 2 (deficit spillover to new package or per pulse), Scenario 3 (standard redemption), and mixed session add-on pricing.', status: 'idle' },
+    { id: 'TC-074', name: 'New Booking Laser Pulses Package Selection & Catalog Purchase Engine', category: 'Services & Bookings', endpoint: '/api/packages', description: 'Verifies pulses package detection in New Booking modal, pulse balance badge rendering, laser service quota coverage, and in-booking new pulses package catalog purchase integration.', status: 'idle' },
+    { id: 'TC-075', name: 'Laser Option 3 Multi-Package & Non-Laser Add-on Pricing Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies laser packages isolation to Option 3, patient multi-package selection, catalog package purchase, and package price + non-laser service total calculation.', status: 'idle' },
+    { id: 'TC-076', name: 'Laser Package Pulses Deduction & Cross-Workflow Synchronization Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies accurate deduction of delivered laser pulses from customer pulses packages across doctor portal session finalization, reception session completion, and checkout settlement workflows with DB synchronization and idempotency.', status: 'idle' },
+    { id: 'TC-077', name: 'In-Booking Package Selling & Integrated Patient Search Engine', category: 'Services & Bookings', endpoint: '/api/packages/sell', description: 'Verifies selling catalog packages directly during new booking creation with customer_packages persistence and instant patient profile appearance, as well as integrated patient search dropdown rendering.', status: 'idle' },
+    { id: 'TC-080', name: 'Laser Pulses Package Excess Deficit & Dual Interactive Settlement Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies package deficit detection when delivered pulses exceed remaining balance, automatic payment status transition to Partially Paid, and dual interactive settlement choices (Option 1: Buy New Package with deficit deduction vs Option 2: Pay per Pulse with customizable rate) at checkout.', status: 'idle' },
+    { id: 'TC-092', name: 'Historical Patient Packages Intake & Multi-Session Tracking Engine', category: 'Services & Bookings', endpoint: '/api/customers/packages', description: 'Verifies detection of patient existing packages in historical booking intake, auto-fetching active/historical quota, 1-click package linking, 0 EGP default pricing on session consumption, and updating customer_packages usage balances.', status: 'idle' },
+    { id: 'TC-093', name: 'Superadmin Patient Financial Overrides & Ledger Security Engine', category: 'Medical & Patients', endpoint: '/api/customers', description: 'Verifies superadmin authority to adjust patient wallet balances, outstanding debt balances, and lifetime total spent with automatic ledger logging, role-gated input protection, and in-profile multi-metric adjustment modal.', status: 'idle' },
+    { id: 'TC-094', name: 'Multi-Service Booking & Intake Session Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies multi-service selection, duration aggregation, cumulative pricing, and reservation line items generation across new and previous booking intake.', status: 'idle' },
+    { id: 'TC-095', name: 'Previous Booking Multi-Product Selection & Inventory Sales Engine', category: 'Services & Bookings', endpoint: '/api/reservations/previous', description: 'Verifies selecting multiple retail products in previous bookings, invoice value auto-calculation, itemized reservation line items, and product sales recording.', status: 'idle' },
+    { id: 'TC-096', name: 'Patient Directory Total Spend & Name Sorting Engine', category: 'Medical & Patients', endpoint: '/api/customers', description: 'Verifies the Total Spend column in the patients directory table, alphabetical A-Z / Z-A name sorting, and dynamic financial spend sorting.', status: 'idle' },
+    { id: 'TC-098', name: 'Transactions & Till Financial Ledger Engine', category: 'Finance & Accounting', endpoint: '/api/transactions', description: 'Verifies financial transactions retrieval, Cairo calendar timezone bounds, today net payments, outstanding debt, wallet balances, and manual transaction operations.', status: 'idle' },
+    { id: 'TC-099', name: 'Superadmin Booking Status Override Control Engine', category: 'Services & Bookings', endpoint: '/api/reservations', description: 'Verifies that interactive booking status overriding is restricted to superadmin role and validates reservation lifecycle transitions.', status: 'idle' },
+    { id: 'TC-100', name: 'Clinical Session Financial Isolation & Privacy Engine', category: 'Doctor & Clinical', endpoint: '/api/reservations', description: 'Verifies complete removal of pricing, rate, and monetary settlement details from doctor ongoing session views and receptionist ending session clinical intake, isolating financial calculations to checkout.', status: 'idle' },
+    { id: 'TC-101', name: 'Financial Ledger Integrity, Payment Methods & Interactive Till Engine', category: 'Finance & Accounting', endpoint: '/api/transactions', description: 'Verifies Cairo calendar timezone bounds, precision rounding of wallet balances, breakdown lists for today payments, debt, and wallet, automatic reference generation, and checkout payment methods.', status: 'idle' },
+    { id: 'TC-102', name: 'Booking Creation & Checkout Financial Ledger Dual-Write Engine', category: 'Finance & Accounting', endpoint: '/api/reservations', description: 'Verifies service catalog cat schema query, automatic booking payment ledger recording, debt settlement transactions, and cash till reconciliation.', status: 'idle' },
+    { id: 'TC-103', name: 'Unique Payment Sequence Numbering & Manual Booking Invoice Generation', category: 'Finance & Accounting', endpoint: '/api/invoices?action=next_no', description: 'Verifies sequential atomic invoice/payment reference generation (INV-XXXXXX), preventing duplicated reference numbers across payments and debt settlements, and guaranteeing standard invoice creation for manual bookings.', status: 'idle' },
+    { id: 'TC-104', name: 'Payment Status Calculation & Multi-Session Debt Settlement Engine', category: 'Finance & Accounting', endpoint: '/api/customers/settle-debt', description: 'Verifies strict payment status calculation (Unpaid when 0 EGP paid, Partially Paid strictly when >= 1 EGP paid with remaining balance), zero-debt settlement gating, per-session itemized unpaid breakdown, and targeted session balance settlement.', status: 'idle' },
+    { id: 'TC-105', name: 'Doctor Prescription & Booking Details Real-Time Sync Engine', category: 'Medical & Patients', endpoint: '/api/prescriptions', description: 'Verifies real-time synchronization of doctor-written digital prescriptions with Booking Details, non-UUID booking ID safety, customer fallback querying, and end-session prefilling.', status: 'idle' }
+  ];
+
+  const [systemTestSuites, setSystemTestSuites] = useState<SystemTestCase[]>(INITIAL_SYSTEM_TEST_SUITES);
+  const [transactionsSubView, setTransactionsSubView] = useState<'list' | 'new' | 'previous_booking'>('list');
+  const [previousBookingCustomer, setPreviousBookingCustomer] = useState<any>(null);
+  const [transactionPreSelectedPatient, setTransactionPreSelectedPatient] = useState<{ id: string; name: string } | null>(null);
+  const [runningAllDiagnostics, setRunningAllDiagnostics] = useState(false);
+  const [testCategoryFilter, setTestCategoryFilter] = useState<string>('all');
+  const [testSuiteSearch, setTestSuiteSearch] = useState<string>('');
+  const [expandedDiagnosticId, setExpandedDiagnosticId] = useState<string | null>(null);
+
+  // RISK-066: shape-only summary (top-level key names, item count) — never field values, so a
+  // diagnostics run never displays another patient's/staff member's actual data.
+  function summarizeDiagnosticResponse(data: any): any {
+    if (Array.isArray(data)) {
+      return {
+        type: 'array',
+        itemCount: data.length,
+        sampleItemKeys: data[0] && typeof data[0] === 'object' ? Object.keys(data[0]) : []
+      };
+    }
+    if (data && typeof data === 'object') {
+      return { type: 'object', keys: Object.keys(data) };
+    }
+    return { type: typeof data };
+  }
+
+  const runSingleDiagnosticTest = async (testId: string) => {
+    setSystemTestSuites((prev) =>
+      prev.map((t) => (t.id === testId ? { ...t, status: 'running', errorMsg: undefined } : t))
+    );
+
+    const targetTest = systemTestSuites.find((t) => t.id === testId);
+    if (!targetTest) return;
+
+    const startTime = performance.now();
+    try {
+      const res = await fetch(targetTest.endpoint, {
+        headers: authenticatedJsonHeaders,
+        cache: 'no-store'
+      });
+      const endTime = performance.now();
+      const durationMs = Math.round(endTime - startTime);
+
+      if (res.ok) {
+        let data: any = {};
+        try {
+          data = await res.json();
+        } catch {
+          data = { message: 'OK (non-JSON response)' };
+        }
+        setSystemTestSuites((prev) =>
+          prev.map((t) =>
+            t.id === testId
+              ? {
+                  ...t,
+                  status: 'pass',
+                  durationMs,
+                  statusCode: res.status,
+                  // RISK-066: never store the raw response body — it can contain other
+                  // patients'/staff's medical records, prescriptions, or payroll data.
+                  // Keep only a shape summary (no field values) for diagnostic purposes.
+                  responseDetails: summarizeDiagnosticResponse(data)
+                }
+              : t
+          )
+        );
+      } else {
+        const errText = await res.text();
+        setSystemTestSuites((prev) =>
+          prev.map((t) =>
+            t.id === testId
+              ? {
+                  ...t,
+                  status: 'fail',
+                  durationMs,
+                  statusCode: res.status,
+                  errorMsg: `HTTP ${res.status}: ${errText.slice(0, 300)}`
+                }
+              : t
+          )
+        );
+      }
+    } catch (err: any) {
+      const endTime = performance.now();
+      setSystemTestSuites((prev) =>
+        prev.map((t) =>
+          t.id === testId
+            ? {
+                ...t,
+                status: 'fail',
+                durationMs: Math.round(endTime - startTime),
+                errorMsg: err.message || 'Network error'
+              }
+            : t
+        )
+      );
+    }
+  };
+
+  const runAllDiagnosticTests = async () => {
+    setRunningAllDiagnostics(true);
+    for (const test of systemTestSuites) {
+      await runSingleDiagnosticTest(test.id);
+    }
+    setRunningAllDiagnostics(false);
+  };
+
+  // Inventory Products State
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
+  const [inventoryProductsLoading, setInventoryProductsLoading] = useState(false);
+  const inventoryProductsRef = useRef<any[]>([]);
+  inventoryProductsRef.current = inventoryProducts;
+  const fetchInventoryProducts = useCallback(async () => {
+    try {
+      if (inventoryProductsRef.current.length === 0) setInventoryProductsLoading(true);
+      if (!session?.access_token) return;
+      const res = await fetch("/api/inventory/products", {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInventoryProducts(data.products || []);
+      }
+    } catch (err) {
+      console.error("Error fetching inventory products:", err);
+    } finally {
+      setInventoryProductsLoading(false);
+    }
+  }, [session]);
+
+  // Also load once session is ready regardless of tab — the notification bell's low-stock
+  // alerts need inventoryProducts populated even if the admin never visits the Inventory tab.
+  useEffect(() => {
+    fetchInventoryProducts();
+  }, [fetchInventoryProducts]);
+
+  // Synchronize dynamic bookings and low-stock alerts into the notifications list.
+  // No early-return guard on reservations alone — a clinic with stock but no bookings yet still
+  // needs to see low-stock alerts, so this must run even when allReservations is empty.
+  useEffect(() => {
+    const latestReservations = [...(allReservations || [])]
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
+      })
+      .slice(0, 5);
+
+    const generatedNotifications = latestReservations.map((res) => {
+      const isCancelled = res.status === "cancelled";
+      const serviceName = localServices.find((s) => s.id === res.serviceId)?.en || `Service #${res.serviceId}`;
+      const timeString = res.timeSlot || res.requestedTime || "unspecified time";
+      return {
+        id: res.id || String(Math.random()),
+        title: isCancelled ? "Appointment Cancelled" : "New Booking Received",
+        message: `${res.name || "A patient"} reserved ${serviceName} on ${res.date} at ${timeString}.`,
+        time: res.createdAt ? new Date(res.createdAt).toLocaleDateString() : "Just now",
+        read: false,
+        type: isCancelled ? "cancelled" : "booking"
+      };
+    });
+
+    // Low-stock alerts, worst-depleted first — same list the Inventory page's "Low Stock Alerts"
+    // card counts, just surfaced somewhere staff will actually see it without visiting that page.
+    const lowStockNotifications = (inventoryProducts || [])
+      .filter((p) => Number(p.stock_quantity) <= Number(p.min_reorder_quantity))
+      .sort((a, b) => Number(a.stock_quantity) - Number(b.stock_quantity))
+      .slice(0, 5)
+      .map((p) => ({
+        id: `low-stock-${p.id}`,
+        title: "Low Stock Alert",
+        message: `${p.name} has ${p.stock_quantity} ${p.unit}${Number(p.stock_quantity) === 1 ? "" : "s"} left (reorder at ${p.min_reorder_quantity}).`,
+        time: "Live",
+        read: false,
+        type: "low_stock"
+      }));
+
+    setNotifications([
+      {
+        id: "system-1",
+        title: "Clinic System Active",
+        message: "Twilio SMS integration and Supabase auth are fully operational.",
+        time: "Active",
+        read: false,
+        type: "system"
+      },
+      ...lowStockNotifications,
+      ...generatedNotifications
+    ]);
+  }, [allReservations, localServices, inventoryProducts]);
+
+  // Shared fetch for a customer's purchased packages (customer_packages + items), reused across
+  // the profile's Packages tab, the booking detail drawer, checkout, and manual booking creation —
+  // each keeps its own state so switching which booking/profile is in view never shows stale data.
+  const fetchCustomerPackagesInto = useCallback(async (customerId: string, setter: (data: any[]) => void) => {
+    try {
+      if (!session?.access_token) return;
+      const res = await fetch(`/api/customers/packages?customer_id=${encodeURIComponent(customerId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setter(data.packages || []);
+      }
+    } catch (err) {
+      console.error("Error fetching customer packages:", err);
+    }
+  }, [session]);
+
+  // Product sales history — kept here because CustomerProfileDrawer needs it as a prop.
+  // InventoryProductsTab owns its own copy; this one feeds the customer profile drawer.
+  const [productSalesHistory, setProductSalesHistory] = useState<any[]>([]);
+  const [productSalesLoading, setProductSalesLoading] = useState(false);
+
+  const fetchProductSalesHistory = useCallback(async () => {
+    try {
+      setProductSalesLoading(true);
+      if (!session?.access_token) return;
+      const res = await fetch("/api/inventory/products/sales", {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProductSalesHistory(data.sales || []);
+      }
+    } catch (err) {
+      console.error("Error fetching product sales history:", err);
+    } finally {
+      setProductSalesLoading(false);
+    }
+  }, [session]);
+
+  const refreshProductSalesHistory = useCallback(async () => {
+    productsTabRef.current?.refreshSalesHistory();
+    await fetchProductSalesHistory();
+  }, [productsTabRef, fetchProductSalesHistory]);
+
+  const {
+    viewingCustomerProfile,
+    setViewingCustomerProfile,
+    setPrescriptionBookingContext,
+    medicalRecordForm,
+    setMedicalRecordForm,
+    medicalReports,
+    setMedicalReports,
+    loadingMedicalRecords,
+    showMedicalFormModal,
+    setShowMedicalFormModal,
+    showMedicalReportModal,
+    setShowMedicalReportModal,
+    customerProfileTab,
+    setCustomerProfileTab,
+    customerRecordsSubTab,
+    setCustomerRecordsSubTab,
+    customerPrescriptions,
+    loadingPrescriptions,
+    prescriptionEditMode,
+    setPrescriptionEditMode,
+    editingPrescription,
+    customerProductsSubTab,
+    setCustomerProductsSubTab,
+    customerProductBalances,
+    loadingCustomerProducts,
+    logUsageModalBalance,
+    setLogUsageModalBalance,
+    logUsageQty,
+    setLogUsageQty,
+    logUsageNotes,
+    setLogUsageNotes,
+    savingUsageLog,
+    showAddPatientProductModal,
+    setShowAddPatientProductModal,
+    selectedAddProductId,
+    setSelectedAddProductId,
+    selectedAddProductName,
+    setSelectedAddProductName,
+    selectedAddProductQty,
+    setSelectedAddProductQty,
+    selectedAddProductUnitPrice,
+    setSelectedAddProductUnitPrice,
+    addingProductToPatient,
+    customerPackagesSubTab,
+    setCustomerPackagesSubTab,
+    customerProfilePackages,
+    loadingCustomerPackages,
+    showSellPackageModal,
+    setShowSellPackageModal,
+    availablePackageOffers,
+    selectedSellPackageId,
+    setSelectedSellPackageId,
+    sellPackagePaymentMethod,
+    setSellPackagePaymentMethod,
+    sellingPackage,
+    customerPackageRedemptions,
+    rxDiagnosis,
+    setRxDiagnosis,
+    rxMedications,
+    setRxMedications,
+    rxMedInput,
+    setRxMedInput,
+    rxMedDropdown,
+    setRxMedDropdown,
+    rxGeneralNotes,
+    setRxGeneralNotes,
+    rxDocNotes,
+    setRxDocNotes,
+    rxFollowUpDate,
+    setRxFollowUpDate,
+    savingPrescription,
+    historyModalOpen,
+    setHistoryModalOpen,
+    historyPrescriptions,
+    loadingHistory,
+    selectedHistoryRx,
+    fetchCustomerProductBalances,
+    fetchAvailablePackageOffers,
+    handleSellPackageToCustomer,
+    fetchCustomerProfilePackages,
+    handleSaveUsageLog,
+    handleAddProductToPatient,
+    handleStartCreatePrescription,
+    handleStartEditPrescription,
+    handleOpenPrescriptionHistory,
+    handleClosePrescriptionHistory,
+    handleAddMedication,
+    handleRemoveMedication,
+    handleSavePrescription,
+    handleDeletePrescription,
+    handleOpenMedicalFormModal,
+    handleOpenMedicalReportModal,
+    handleDeleteMedicalReport,
+    handlePrintPrescription,
+  } = useCustomerProfile({
+    session,
+    authenticatedJsonHeaders,
+    fetchInventoryProducts,
+    fetchProductSalesHistory: refreshProductSalesHistory,
+    fetchCustomerPackagesInto,
+    showConfirm,
+  });
+
+  // NOTE (DEC-127): the open profile's money fields are synced by exactly ONE writer, the
+  // useOpenProfileFinancialSync call placed after the derived `customers` memo below. An earlier
+  // effect here copied the raw stored `dbCustomers` record into the same state and fought it,
+  // making Total Spend / Outstanding flicker. Do not add another writer.
+
+  useEffect(() => {
+    if (activeNav === "Inventory" || activeNav === "Products" || activeNav === "Patients" || viewingCustomerProfile) {
+      fetchInventoryProducts();
+    }
+  }, [activeNav, viewingCustomerProfile, fetchInventoryProducts]);
+
+  useEffect(() => {
+    const custId = viewingBooking?.customerId || (viewingBooking as any)?.customer_id || (viewingBooking?.phone ? dbCustomers.find(c => c.phone && c.phone.trim().replace(/\D/g, '') === (viewingBooking.phone || '').trim().replace(/\D/g, ''))?.id : null);
+    if (custId) {
+      fetchCustomerPackagesInto(custId, setBookingCustomerPackages);
+    } else {
+      setBookingCustomerPackages([]);
+    }
+  }, [viewingBooking?.customerId, (viewingBooking as any)?.customer_id, viewingBooking?.phone, dbCustomers, fetchCustomerPackagesInto]);
+
+  useEffect(() => {
+    const custId = checkoutBooking?.customerId || (checkoutBooking as any)?.customer_id || (checkoutBooking?.phone ? dbCustomers.find(c => c.phone && c.phone.trim().replace(/\D/g, '') === (checkoutBooking.phone || '').trim().replace(/\D/g, ''))?.id : null);
+    if (custId) {
+      fetchCustomerPackagesInto(custId, setCheckoutCustomerPackages);
+    } else {
+      setCheckoutCustomerPackages([]);
+      setRedeemedPackageItems({});
+    }
+  }, [checkoutBooking?.customerId, (checkoutBooking as any)?.customer_id, checkoutBooking?.phone, dbCustomers, fetchCustomerPackagesInto]);
+
+  useEffect(() => {
+    if (matchedCustomerId) {
+      fetchCustomerPackagesInto(matchedCustomerId, setManualBookingCustomerPackages);
+    } else {
+      setManualBookingCustomerPackages([]);
+    }
+  }, [matchedCustomerId, fetchCustomerPackagesInto]);
+
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [marketingExpanded, setMarketingExpanded] = useState(false);
+  const [pagesSettingsTab, setPagesSettingsTab] = useState<"Home" | "About Us" | "Services">("Home");
+  const [termsText, setTermsText] = useState("");
+  const [homeHeroSlides, setHomeHeroSlides] = useState<any[]>(DEFAULT_HERO_SLIDES);
+  const [homeHeroSlidesAr, setHomeHeroSlidesAr] = useState<any[]>(() =>
+    translations.ar.hero.slides.map((slide, index) => ({
+      ...slide,
+      image: DEFAULT_HERO_SLIDES[index]?.image,
+    })),
+  );
+
+  const isDoctorAvailableAdmin = useCallback((
+    doctor: any,
+    branchId: string | null,
+    dateStr: string | null,
+    timeSlotStr: string | null,
+    serviceId: number | null,
+    sessionType?: string | null
+  ): boolean => {
+    if (!dateStr || !timeSlotStr || !serviceId) return true;
+ 
+    if (branchId) {
+      const wdh = doctor.workingDaysHours;
+      if (wdh && typeof wdh === 'object' && Array.isArray(wdh.branch_ids)) {
+        if (!wdh.branch_ids.includes(branchId)) {
+          return false;
+        }
+      } else if (doctor.branchId && doctor.branchId !== branchId) {
+        return false;
+      }
+    }
+ 
+    const targetService = localServices.find(s => s.id === serviceId);
+    if (targetService) {
+      if (doctor.services && doctor.services.length > 0) {
+        if (!doctor.services.includes(targetService.en)) {
+          return false;
+        }
+      }
+    }
+ 
+    const timeToMinutes = (timeStr: string): number => {
+      const norm = normaliseTo24hSlot(timeStr);
+      if (!norm) return 0;
+      const [hh, mm] = norm.split(":").map(Number);
+      return hh * 60 + mm;
+    };
+ 
+    const startNew = timeToMinutes(timeSlotStr);
+    const durationNew = getServiceDurationMinutes(targetService);
+    const endNew = startNew + durationNew;
+ 
+    if (doctor.workingDaysHours) {
+      const dateObj = new Date(dateStr);
+      if (!isNaN(dateObj.getTime())) {
+        const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const weekdayName = weekdays[dateObj.getDay()];
+        
+        const wdh = doctor.workingDaysHours;
+        let config = wdh;
+        if (wdh.branch_schedules && branchId && wdh.branch_schedules[branchId]) {
+          config = wdh.branch_schedules[branchId];
+        }
+
+        let dayConfig = config[weekdayName];
+        if (!dayConfig) {
+          const typeKey = sessionType === 'online' ? 'online' : 'in_person';
+          dayConfig = config[typeKey]?.[weekdayName] || 
+                      config.in_person?.[weekdayName] || 
+                      config.online?.[weekdayName];
+        }
+ 
+        if (!dayConfig || !dayConfig.isOpen) {
+          return false;
+        }
+        if (dayConfig.shifts && Array.isArray(dayConfig.shifts) && dayConfig.shifts.length > 0) {
+          const slotFitsAnyShift = dayConfig.shifts.some((shft: any) => {
+            if (!shft.start || !shft.end) return false;
+            const [sh, sm] = shft.start.split(":").map(Number);
+            const [eh, em] = shft.end.split(":").map(Number);
+            const shiftStart = sh * 60 + sm;
+            const shiftEnd = eh * 60 + em;
+            return startNew >= shiftStart && endNew <= shiftEnd;
+          });
+          if (!slotFitsAnyShift) {
+            return false;
+          }
+        } else {
+          const [sh, sm] = dayConfig.start.split(":").map(Number);
+          const [eh, em] = dayConfig.end.split(":").map(Number);
+          const shiftStart = sh * 60 + sm;
+          const shiftEnd = eh * 60 + em;
+   
+          if (startNew < shiftStart || endNew > shiftEnd) {
+            return false;
+          }
+        }
+      }
+    }
+
+    const hasOverlap = allReservations.some((res) => {
+      if (res.doctorName && res.doctorName === doctor.name && res.status !== "rejected") {
+        if (res.date === dateStr && res.timeSlot) {
+          const startRes = timeToMinutes(res.timeSlot);
+          const resService = localServices.find((s) => s.id === res.serviceId);
+          const durationRes = getServiceDurationMinutes(resService);
+          const endRes = startRes + durationRes;
+
+          if (startNew < endRes && startRes < endNew) {
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+
+    return !hasOverlap;
+  }, [localServices, allReservations]);
+
+  // ── Branches state (moved before provider hook so hook can use branches) ──
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [branchModal, setBranchModal] = useState<{ open: boolean; mode: "add" | "edit"; branch: Partial<Branch> }>({
+    open: false, mode: "add", branch: {}
+  });
+  const [savingBranch, setSavingBranch] = useState(false);
+  const [deletingBranchId, setDeletingBranchId] = useState<string | null>(null);
+  const [selectedBranchForHoursId, setSelectedBranchForHoursId] = useState<string>("");
+  const [savingBranchHours, setSavingBranchHours] = useState(false);
+
+  // ── Provider form hook (extracted from inline state — see Brief 15 Sub-PR 2) ──
+  const providerForm = useProviderForm({
+    branches,
+    session,
+    authenticatedJsonHeaders,
+    showConfirm,
+    showDeleteConfirm,
+    fetchRolesAndEmployees,
+    getDoctorFirstReservationDate,
+    allReservations,
+    activeNav,
+    adminRole,
+    hasPermission,
+  });
+  const {
+    providers,
+    setProviders,
+    fetchProviders,
+    editingDoctorInline,
+    setEditingDoctorInline,
+    viewingDoctorDetails,
+    setViewingDoctorDetails,
+    showProviderModal,
+    setShowProviderModal,
+    providerModalMode,
+    setProviderModalMode,
+    providerEditingId,
+    setProviderEditingId,
+    savingProvider,
+    providerFormName,
+    setProviderFormName,
+    providerFormRating,
+    setProviderFormRating,
+    providerFormMore,
+    setProviderFormMore,
+    providerFormFixedSalary,
+    setProviderFormFixedSalary,
+    providerFormCommissionType,
+    setProviderFormCommissionType,
+    providerFormCommissionValue,
+    setProviderFormCommissionValue,
+    providerFormCommissionBase,
+    setProviderFormCommissionBase,
+    providerFormCommissionFixedComponent,
+    setProviderFormCommissionFixedComponent,
+    providerFormServiceCommissions,
+    setProviderFormServiceCommissions,
+    providerFormSelectedServices,
+    setProviderFormSelectedServices,
+    providerFormImage,
+    setProviderFormImage,
+    providerFormPhone,
+    setProviderFormPhone,
+    providerFormGender,
+    setProviderFormGender,
+    providerFormAge,
+    setProviderFormAge,
+    providerFormSpecialty,
+    setProviderFormSpecialty,
+    providerFormNationalId,
+    setProviderFormNationalId,
+    providerFormBranchId,
+    setProviderFormBranchId,
+    providerFormBranchIds,
+    setProviderFormBranchIds,
+    providerFormBranchSchedules,
+    setProviderFormBranchSchedules,
+    providerFormSelectedScheduleBranchId,
+    setProviderFormSelectedScheduleBranchId,
+    providerFormStartDate,
+    setProviderFormStartDate,
+    providerFormWorkingDaysHours,
+    setProviderFormWorkingDaysHours,
+    providerFormOnlineWorkingDaysHours,
+    setProviderFormOnlineWorkingDaysHours,
+    providerFormScheduleTab,
+    setProviderFormScheduleTab,
+    handleScheduleBranchChange,
+    openAddProviderModal,
+    openEditProviderModal,
+    handleSaveProvider,
+    handleDeleteProvider,
+    providerTab,
+    setProviderTab,
+    attendanceDate,
+    setAttendanceDate,
+    attendanceRecords,
+    loadingProviderAttendance,
+    savingAttendanceId,
+    fetchAttendance,
+    handleToggleAttendance,
+    showProviderFilterPanel,
+    setShowProviderFilterPanel,
+    providerFilterBranchId,
+    setProviderFilterBranchId,
+    providerFilterSpecialty,
+    setProviderFilterSpecialty,
+    providerFilterGender,
+    setProviderFilterGender,
+    providerSearchQuery,
+    setProviderSearchQuery,
+  } = providerForm;
+
+  const availableDoctorsNewPatient = useMemo(() => {
+    return providers.filter(p => isDoctorAvailableAdmin(p, newPatientBranch, newPatientDate, newPatientTimeSlot, newPatientService, newPatientSessionType));
+  }, [providers, newPatientBranch, newPatientDate, newPatientTimeSlot, newPatientService, newPatientSessionType, isDoctorAvailableAdmin]);
+
+  const availableDoctorsApprove = useMemo(() => {
+    if (!selected) return [];
+    return providers.filter(p => isDoctorAvailableAdmin(p, selected.branchId ?? null, selected.date, slot, selected.serviceId, selected.sessionType));
+  }, [providers, selected, slot, isDoctorAvailableAdmin]);
+
+  useEffect(() => {
+    if (availableDoctorsNewPatient.length > 0) {
+      if (!availableDoctorsNewPatient.some(d => d.name === newPatientDoctor)) {
+        setNewPatientDoctor(availableDoctorsNewPatient[0].name);
+      }
+    } else {
+      setNewPatientDoctor("");
+    }
+  }, [availableDoctorsNewPatient, newPatientDoctor]);
+
+  useEffect(() => {
+    if (selected && availableDoctorsApprove.length > 0) {
+      if (!availableDoctorsApprove.some(d => d.name === doctorName)) {
+        setDoctorName(availableDoctorsApprove[0].name);
+      }
+    } else if (selected) {
+      setDoctorName("");
+    }
+  }, [availableDoctorsApprove, doctorName, selected]);
+
+
+  // Custom provider inline & modal states
+  const [expandedDoctorServices, setExpandedDoctorServices] = useState<Record<string, boolean>>({});
+  const toggleExpandedDoctorServices = (docKey: string) => {
+    setExpandedDoctorServices(prev => ({ ...prev, [docKey]: !prev[docKey] }));
+  };
+  const [departmentsList, setDepartmentsList] = useState<string[]>(["Receptionist", "Doctors"]);
+  const [showAuditLogsModal, setShowAuditLogsModal] = useState(false);
+
+  const [loadingPageSettings, setLoadingPageSettings] = useState(false);
+  const [savingPageSettings, setSavingPageSettings] = useState(false);
+  const [showCustomerLogin, setShowCustomerLogin] = useState<boolean>(false);
+
+  const [serviceHours, setServiceHours] = useState<Array<{ day: string; dayAr: string; isOpen: boolean; openTime: string; closeTime: string }>>([
+    { day: "Sunday", dayAr: "الأحد", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Monday", dayAr: "الإثنين", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Tuesday", dayAr: "الثلاثاء", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Wednesday", dayAr: "الأربعاء", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Thursday", dayAr: "الخميس", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Friday", dayAr: "الجمعة", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+    { day: "Saturday", dayAr: "السبت", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+  ]);  const [pageSettingsLangTab, setPageSettingsLangTab] = useState<"en" | "ar">("en");
+  const [aboutImage1, setAboutImage1] = useState<string>("");
+  const [aboutImage2, setAboutImage2] = useState<string>("");
+  const [aboutImage3, setAboutImage3] = useState<string>("");
+  const [beforeAfterPairs, setBeforeAfterPairs] = useState<any[]>([]);
+  const [whatWeDoImage1, setWhatWeDoImage1] = useState<string>("");
+  const [whatWeDoImage2, setWhatWeDoImage2] = useState<string>("");
+  const [whatWeDoList, setWhatWeDoList] = useState<string[]>(["", "", "", ""]);
+  const [whatWeDoListAr, setWhatWeDoListAr] = useState<string[]>(["", "", "", ""]);
+  const [howItWorksHeading, setHowItWorksHeading] = useState<string>("");
+  const [howItWorksDescription, setHowItWorksDescription] = useState<string>("");
+  const [howItWorksHeadingAr, setHowItWorksHeadingAr] = useState<string>("");
+  const [howItWorksDescriptionAr, setHowItWorksDescriptionAr] = useState<string>("");
+  
+  // Why Choose Us Section
+  const [wcuYearsLabel, setWcuYearsLabel] = useState<string>("");
+  const [wcuHeading, setWcuHeading] = useState<string>("");
+  const [wcuDescription, setWcuDescription] = useState<string>("");
+  const [wcuQuote, setWcuQuote] = useState<string>("");
+  const [wcuContactLabel, setWcuContactLabel] = useState<string>("");
+  const [wcuPhone, setWcuPhone] = useState<string>("");
+  const [wcuYearsLabelAr, setWcuYearsLabelAr] = useState<string>("");
+  const [wcuHeadingAr, setWcuHeadingAr] = useState<string>("");
+  const [wcuDescriptionAr, setWcuDescriptionAr] = useState<string>("");
+  const [wcuQuoteAr, setWcuQuoteAr] = useState<string>("");
+  const [wcuContactLabelAr, setWcuContactLabelAr] = useState<string>("");
+  const [wcuPhoneAr, setWcuPhoneAr] = useState<string>("");
+  const [wcuImage1, setWcuImage1] = useState<string>("");
+  const [wcuImage2, setWcuImage2] = useState<string>("");
+
+  // FAQ Section
+  const [faqTag, setFaqTag] = useState<string>("");
+  const [faqTagAr, setFaqTagAr] = useState<string>("");
+  const [faqHeading, setFaqHeading] = useState<string>("");
+  const [faqHeadingAr, setFaqHeadingAr] = useState<string>("");
+  const [faqImage1, setFaqImage1] = useState<string>("");
+  const [faqImage2, setFaqImage2] = useState<string>("");
+  const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>([]);
+  const [faqsAr, setFaqsAr] = useState<Array<{ question: string; answer: string }>>([]);
+  const [translatingField, setTranslatingField] = useState<string | null>(null);
+
+  const [reportsCustomerSearch, setReportsCustomerSearch] = useState("");
+  const [smsTemplateSearch, setSmsTemplateSearch] = useState("");
+  const [smsLogSearch, setSmsLogSearch] = useState("");
+  const [settingsUserSearch, setSettingsUserSearch] = useState("");
+
+  const [bookingMinAdvance, setBookingMinAdvance] = useState(2);
+  const [bookingMaxAdvance, setBookingMaxAdvance] = useState(30);
+  const [bookingCancelWindow, setBookingCancelWindow] = useState(4);
+  const [bookingMaxPerSlot, setBookingMaxPerSlot] = useState(3);
+  const [bookingInstantApproval, setBookingInstantApproval] = useState(false);
+  const [bookingShowDoctorNotes, setBookingShowDoctorNotes] = useState(true);
+  const [enableGpsShift, setEnableGpsShift] = useState(true);
+  const [bookingDepositPercentage, setBookingDepositPercentage] = useState(20);
+  const [savingBookingSettings, setSavingBookingSettings] = useState(false);
+  
+  // Deposit Settings State
+  const [instapayName, setInstapayName] = useState(`${CLIENT.nameShort} Clinic`);
+  const [instapayAddress, setInstapayAddress] = useState("revera@instapay");
+  const [instapayLink, setInstapayLink] = useState("https://www.instapay.eg");
+  const [walletEnabled, setWalletEnabled] = useState(true);
+  const [walletName, setWalletName] = useState(`${CLIENT.name} Cash`);
+  const [walletNumber, setWalletNumber] = useState("01012345678");
+  const [walletLink, setWalletLink] = useState("");
+  const [savingDepositSettings, setSavingDepositSettings] = useState(false);
+
+
+
+  // ── Notification Settings State ──
+  const [notifSmsOtp, setNotifSmsOtp] = useState(true);
+  const [notifWhatsApp, setNotifWhatsApp] = useState(true);
+  const [notifEmailConfirm, setNotifEmailConfirm] = useState(false);
+  const [notifSmsTemplate, setNotifSmsTemplate] = useState(`Hello {name}, your appointment for {service} is confirmed on {date} at {time}. See you at ${CLIENT.name}!`);
+  const [notifSmsTemplateAr, setNotifSmsTemplateAr] = useState("مرحباً {name}، تم تأكيد موعدك لخدمة {service} بتاريخ {date} الساعة {time}. نراك في ريفيرا كلينيك!");
+  const [notifReminderHours, setNotifReminderHours] = useState(24);
+  const [notifStaffEmail, setNotifStaffEmail] = useState("admin@reveraclinics.com");
+  const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
+
+  // ── Queue Settings State ──
+  const [queueVirtualRoom, setQueueVirtualRoom] = useState(false);
+  const [queueShowOnScreens, setQueueShowOnScreens] = useState(true);
+  const [queueAutoCheckIn, setQueueAutoCheckIn] = useState(false);
+  const [queueAlertThreshold, setQueueAlertThreshold] = useState(2);
+  const [queueAvgSessionDuration, setQueueAvgSessionDuration] = useState(20);
+  const [savingQueueSettings, setSavingQueueSettings] = useState(false);
+  const getDayOperatingHoursAdmin = useCallback((dateStr: string | null) => {
+    if (!dateStr || !newPatientService) return { start: "09:00", end: "20:00" };
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) return { start: "09:00", end: "20:00" };
+
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekdayName = weekdays[dateObj.getDay()];
+
+    const selectedBranch = branches.find(b => b.id === newPatientBranch);
+    const activeBranchHours = selectedBranch && Array.isArray(selectedBranch.service_hours) && selectedBranch.service_hours.length > 0
+      ? selectedBranch.service_hours
+      : serviceHours;
+
+    const clinicDay = activeBranchHours.find(
+      (sh) => sh.day?.toLowerCase() === weekdayName.toLowerCase()
+    );
+
+    let clinicStartMins = 9 * 60; // 09:00 default
+    let clinicEndMins = 20 * 60;  // 20:00 default
+    let clinicClosed = false;
+
+    if (clinicDay) {
+      if (!clinicDay.isOpen) {
+        clinicClosed = true;
+      } else {
+        const [csh, csm] = clinicDay.openTime.split(":").map(Number);
+        const [ceh, cem] = clinicDay.closeTime.split(":").map(Number);
+        clinicStartMins = csh * 60 + csm;
+        clinicEndMins = ceh * 60 + cem;
+      }
+    }
+
+    if (clinicClosed) {
+      return { start: "23:59", end: "23:59" };
+    }
+    
+    const targetService = localServices.find(s => s.id === newPatientService);
+    if (!targetService) return { start: "09:00", end: "20:00" };
+
+    let minStart = 24 * 60; // in minutes
+    let maxEnd = 0; // in minutes
+    let found = false;
+
+    providers.forEach((doc) => {
+      // Check branch
+      if (newPatientBranch) {
+        const wdh = doc.workingDaysHours;
+        if (wdh && typeof wdh === 'object' && Array.isArray(wdh.branch_ids)) {
+          if (!wdh.branch_ids.includes(newPatientBranch)) return;
+        } else if (doc.branchId && doc.branchId !== newPatientBranch) {
+          return;
+        }
+      }
+      
+      // Check service
+      if (doc.services && doc.services.length > 0) {
+        if (!doc.services.includes(targetService.en)) return;
+      }
+ 
+      // Check working days & hours
+      if (doc.workingDaysHours) {
+        const wdh = doc.workingDaysHours;
+        let config = wdh;
+        if (wdh.branch_schedules && newPatientBranch && wdh.branch_schedules[newPatientBranch]) {
+          config = wdh.branch_schedules[newPatientBranch];
+        }
+
+        let dayConfig = config[weekdayName];
+        if (!dayConfig) {
+          const typeKey = newPatientSessionType === 'online' ? 'online' : 'in_person';
+          dayConfig = config[typeKey]?.[weekdayName] || 
+                      config.in_person?.[weekdayName] || 
+                      config.online?.[weekdayName];
+        }
+        if (dayConfig && dayConfig.isOpen) {
+          if (dayConfig.shifts && Array.isArray(dayConfig.shifts) && dayConfig.shifts.length > 0) {
+            dayConfig.shifts.forEach((shft: any) => {
+              if (shft.start && shft.end) {
+                const [sh, sm] = shft.start.split(":").map(Number);
+                const [eh, em] = shft.end.split(":").map(Number);
+                const startMins = sh * 60 + sm;
+                const endMins = eh * 60 + em;
+                if (startMins < minStart) minStart = startMins;
+                if (endMins > maxEnd) maxEnd = endMins;
+                found = true;
+              }
+            });
+          } else {
+            const [sh, sm] = dayConfig.start.split(":").map(Number);
+            const [eh, em] = dayConfig.end.split(":").map(Number);
+            const startMins = sh * 60 + sm;
+            const endMins = eh * 60 + em;
+            if (startMins < minStart) minStart = startMins;
+            if (endMins > maxEnd) maxEnd = endMins;
+            found = true;
+          }
+        }
+      } else {
+        if (clinicStartMins < minStart) minStart = clinicStartMins;
+        if (clinicEndMins > maxEnd) maxEnd = clinicEndMins;
+        found = true;
+      }
+    });
+
+    if (found) {
+      if (minStart < clinicStartMins) minStart = clinicStartMins;
+      if (maxEnd > clinicEndMins) maxEnd = clinicEndMins;
+    } else {
+      minStart = clinicStartMins;
+      maxEnd = clinicEndMins;
+    }
+
+    const formatMins = (totalMins: number) => {
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    return {
+      start: formatMins(minStart),
+      end: formatMins(maxEnd)
+    };
+  }, [providers, newPatientBranch, newPatientService, newPatientSessionType, localServices, serviceHours, branches]);
+
+  const getDayOperatingHoursApprove = useCallback((selectedReq: Req | null) => {
+    if (!selectedReq) return { start: "09:00", end: "20:00" };
+    const dateStr = selectedReq.date;
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) return { start: "09:00", end: "20:00" };
+
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekdayName = weekdays[dateObj.getDay()];
+
+    const selectedBranch = branches.find(b => b.id === selectedReq?.branchId);
+    const activeBranchHours = selectedBranch && Array.isArray(selectedBranch.service_hours) && selectedBranch.service_hours.length > 0
+      ? selectedBranch.service_hours
+      : serviceHours;
+
+    const clinicDay = activeBranchHours.find(
+      (sh) => sh.day?.toLowerCase() === weekdayName.toLowerCase()
+    );
+
+    let clinicStartMins = 9 * 60; // 09:00 default
+    let clinicEndMins = 20 * 60;  // 20:00 default
+    let clinicClosed = false;
+
+    if (clinicDay) {
+      if (!clinicDay.isOpen) {
+        clinicClosed = true;
+      } else {
+        const [csh, csm] = clinicDay.openTime.split(":").map(Number);
+        const [ceh, cem] = clinicDay.closeTime.split(":").map(Number);
+        clinicStartMins = csh * 60 + csm;
+        clinicEndMins = ceh * 60 + cem;
+      }
+    }
+
+    if (clinicClosed) {
+      return { start: "23:59", end: "23:59" };
+    }
+    
+    const targetService = localServices.find(s => s.id === selectedReq.serviceId);
+    if (!targetService) return { start: "09:00", end: "20:00" };
+
+    let minStart = 24 * 60; // in minutes
+    let maxEnd = 0; // in minutes
+    let found = false;
+
+    providers.forEach((doc) => {
+      // Check branch
+      if (selectedReq.branchId) {
+        const wdh = doc.workingDaysHours;
+        if (wdh && typeof wdh === 'object' && Array.isArray(wdh.branch_ids)) {
+          if (!wdh.branch_ids.includes(selectedReq.branchId)) return;
+        } else if (doc.branchId && doc.branchId !== selectedReq.branchId) {
+          return;
+        }
+      }
+      
+      // Check service
+      if (doc.services && doc.services.length > 0) {
+        if (!doc.services.includes(targetService.en)) return;
+      }
+ 
+      // Check working days & hours
+      if (doc.workingDaysHours) {
+        const wdh = doc.workingDaysHours;
+        let config = wdh;
+        if (wdh.branch_schedules && selectedReq.branchId && wdh.branch_schedules[selectedReq.branchId]) {
+          config = wdh.branch_schedules[selectedReq.branchId];
+        }
+
+        let dayConfig = config[weekdayName];
+        if (!dayConfig) {
+          const typeKey = selectedReq.sessionType === 'online' ? 'online' : 'in_person';
+          dayConfig = config[typeKey]?.[weekdayName] || 
+                      config.in_person?.[weekdayName] || 
+                      config.online?.[weekdayName];
+        }
+        if (dayConfig && dayConfig.isOpen) {
+          if (dayConfig.shifts && Array.isArray(dayConfig.shifts) && dayConfig.shifts.length > 0) {
+            dayConfig.shifts.forEach((shft: any) => {
+              if (shft.start && shft.end) {
+                const [sh, sm] = shft.start.split(":").map(Number);
+                const [eh, em] = shft.end.split(":").map(Number);
+                const startMins = sh * 60 + sm;
+                const endMins = eh * 60 + em;
+                if (startMins < minStart) minStart = startMins;
+                if (endMins > maxEnd) maxEnd = endMins;
+                found = true;
+              }
+            });
+          } else {
+            const [sh, sm] = dayConfig.start.split(":").map(Number);
+            const [eh, em] = dayConfig.end.split(":").map(Number);
+            const startMins = sh * 60 + sm;
+            const endMins = eh * 60 + em;
+            if (startMins < minStart) minStart = startMins;
+            if (endMins > maxEnd) maxEnd = endMins;
+            found = true;
+          }
+        }
+      } else {
+        if (clinicStartMins < minStart) minStart = clinicStartMins;
+        if (clinicEndMins > maxEnd) maxEnd = clinicEndMins;
+        found = true;
+      }
+    });
+
+    if (found) {
+      if (minStart < clinicStartMins) minStart = clinicStartMins;
+      if (maxEnd > clinicEndMins) maxEnd = clinicEndMins;
+    } else {
+      minStart = clinicStartMins;
+      maxEnd = clinicEndMins;
+    }
+
+    const formatMins = (totalMins: number) => {
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    return {
+      start: formatMins(minStart),
+      end: formatMins(maxEnd)
+    };
+  }, [providers, localServices, serviceHours, branches]);
+
+
+  // Derive unique customers from database AND reservations
+  const customers = useMemo<Customer[]>(() => {
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const dbList = Array.isArray(dbCustomers) ? dbCustomers : [];
+
+    const normalizePhone = (p: string | null | undefined): string => {
+      if (!p) return "";
+      let digits = String(p).replace(/\D/g, "");
+      if (digits.startsWith("0020")) digits = digits.slice(4);
+      else if (digits.startsWith("20")) digits = digits.slice(2);
+      if (digits.length === 10 && (digits.startsWith("10") || digits.startsWith("11") || digits.startsWith("12") || digits.startsWith("15"))) {
+        digits = "0" + digits;
+      }
+      return digits;
+    };
+
+    const processedDbCustomers = dbList.map((c) => {
+      const cPhoneClean = normalizePhone(c.mobile || c.phone);
+      const customerReservations = allReservations.filter((r: any) => {
+        if (r.customerId && c.id && String(r.customerId) === String(c.id)) return true;
+        const rPhoneClean = normalizePhone(r.phone || r.mobile || r.customerPhone);
+        if (cPhoneClean && rPhoneClean && cPhoneClean === rPhoneClean) return true;
+        return false;
+      });
+
+      const hasRecentBooking = customerReservations.some((r: any) => {
+        if (!r.date) return false;
+        const bookingDate = new Date(String(r.date).slice(0, 10) + 'T00:00:00');
+        return bookingDate >= twoWeeksAgo;
+      });
+
+      const totalBookingsCount = customerReservations.length > 0
+        ? customerReservations.length
+        : Number(c.number_of_bookings || 0);
+
+      // DEC-121: money actually paid on delivered bookings. The old sum of `price`/`totalPrice` was always 0
+      // (reservations have neither), so a patient who paid showed 0 unless customers.spent_amount was filled.
+      const totalSpentCalculated = totalPaidFromBookings(customerReservations);
+
+      // Extract real last booking date and time from reservations
+      let lastBookingDateVal: string | null = null;
+      let lastBookingTimeVal: string | null = null;
+      if (customerReservations.length > 0) {
+        const sortedRes = [...customerReservations].sort((a: any, b: any) => {
+          const dateA = a.date ? String(a.date).slice(0, 10) : (a.createdAt ? String(a.createdAt).slice(0, 10) : "");
+          const timeA = a.timeSlot || a.requestedTime || "00:00";
+          const dateB = b.date ? String(b.date).slice(0, 10) : (b.createdAt ? String(b.createdAt).slice(0, 10) : "");
+          const timeB = b.timeSlot || b.requestedTime || "00:00";
+          return `${dateB} ${timeB}`.localeCompare(`${dateA} ${timeA}`);
+        });
+        const latest = sortedRes[0];
+        if (latest) {
+          lastBookingDateVal = latest.date || latest.createdAt || null;
+          lastBookingTimeVal = latest.timeSlot || latest.requestedTime || null;
+        }
+      }
+
+      const regDateStr = c.registration_date || c.created_at || now.toISOString();
+      const regDate = new Date(regDateStr);
+      const registeredRecently = regDate >= twoWeeksAgo;
+      const isActive = c.active !== false && (hasRecentBooking || registeredRecently || customerReservations.length > 0);
+
+      return {
+        ...c,
+        id: c.id,
+        email: c.email || "",
+        name: c.name,
+        phone: c.mobile || c.phone || "",
+        createdAt: regDateStr,
+        lastBookingDate: lastBookingDateVal,
+        lastBookingTime: lastBookingTimeVal,
+        bookings: totalBookingsCount,
+        spent: Math.max(Number(c.spent_amount || 0), totalSpentCalculated),
+        // DEC-121: never less than what the completed bookings say is still owed (the stored total drifts)
+        outstanding: Math.max(Number(c.outstanding || 0), totalOutstandingFromBookings(customerReservations)),
+        wallet: Number(c.wallet_balance || 0),
+        active: isActive,
+      };
+    });
+
+    // Synthesize entries for any patients in allReservations who aren't in dbCustomers
+    const existingIds = new Set(processedDbCustomers.map((c) => c.id).filter(Boolean));
+    const existingPhones = new Set(processedDbCustomers.map((c) => normalizePhone(c.phone || c.mobile)).filter(Boolean));
+
+    const reservationDerivedCustomers: Customer[] = [];
+    allReservations.forEach((r: any) => {
+      // A reservation linked to a real customer record is always covered by that record
+      if (r.customerId && existingIds.has(r.customerId)) return;
+
+      const name = r.name || r.patient_name || r.customerName;
+      const rawPhone = r.phone || r.mobile || r.customerPhone || "";
+      const phoneClean = normalizePhone(rawPhone);
+      const email = r.email || r.customerEmail || "";
+
+      if (!name && !rawPhone) return;
+
+      if (phoneClean && existingPhones.has(phoneClean)) {
+        return; // already covered
+      }
+
+      if (phoneClean) existingPhones.add(phoneClean);
+
+      const patientReservations = allReservations.filter((otherR: any) => {
+        if (r.customerId && otherR.customerId && String(otherR.customerId) === String(r.customerId)) return true;
+        const otherPhoneClean = normalizePhone(otherR.phone || otherR.mobile || otherR.customerPhone);
+        if (phoneClean && otherPhoneClean && phoneClean === otherPhoneClean) return true;
+        return false;
+      });
+
+      const totalSpent = totalPaidFromBookings(patientReservations);
+
+      // Extract real last booking date and time for reservation-derived customers
+      let lastBookingDateVal: string | null = null;
+      let lastBookingTimeVal: string | null = null;
+      if (patientReservations.length > 0) {
+        const sortedRes = [...patientReservations].sort((a: any, b: any) => {
+          const dateA = a.date ? String(a.date).slice(0, 10) : (a.createdAt ? String(a.createdAt).slice(0, 10) : "");
+          const timeA = a.timeSlot || a.requestedTime || "00:00";
+          const dateB = b.date ? String(b.date).slice(0, 10) : (b.createdAt ? String(b.createdAt).slice(0, 10) : "");
+          const timeB = b.timeSlot || b.requestedTime || "00:00";
+          return `${dateB} ${timeB}`.localeCompare(`${dateA} ${timeA}`);
+        });
+        const latest = sortedRes[0];
+        if (latest) {
+          lastBookingDateVal = latest.date || latest.createdAt || null;
+          lastBookingTimeVal = latest.timeSlot || latest.requestedTime || null;
+        }
+      }
+
+      const regDateStr = r.createdAt || r.date || now.toISOString();
+
+      reservationDerivedCustomers.push({
+        id: r.customerId || `res-cust-${phoneClean || Math.random().toString(36).slice(2, 9)}`,
+        name,
+        phone: rawPhone,
+        email,
+        createdAt: regDateStr,
+        lastBookingDate: lastBookingDateVal,
+        lastBookingTime: lastBookingTimeVal,
+        bookings: patientReservations.length,
+        spent: totalSpent,
+        outstanding: totalOutstandingFromBookings(patientReservations),
+        wallet: 0,
+        active: true,
+      } as any);
+    });
+
+    return [...processedDbCustomers, ...reservationDerivedCustomers];
+  }, [dbCustomers, allReservations]);
+
+  // The profile drawer's Financial Summary banner (Total Spend/Wallet/Outstanding) reads from the local
+  // `viewingCustomerProfile` object, set once when the drawer opens. Actions taken while it stays open
+  // (Add Previous Booking, package sales, wallet adjustments) only refresh the master lists, so the banner
+  // kept showing stale totals until the drawer was closed and reopened. Re-sync its financial fields
+  // whenever this customer's numbers change.
+  //
+  // DEC-121: the numbers come from the derived `customers` list (stored value combined with what the
+  // bookings say was paid and is still owed), NOT from the raw `dbCustomers` record. Copying the raw
+  // spent_amount / outstanding here overwrote the calculated figures with the stored ones on every open,
+  // so a patient who had paid showed Total Spend 0 on the card while the list showed the right number.
+  //
+  // DEC-127: this is the ONLY writer of those fields (see useOpenProfileFinancialSync.ts).
+  useOpenProfileFinancialSync(customers, viewingCustomerProfile, setViewingCustomerProfile);
+
+  const todaysBookingsCount = useMemo(() => {
+    const getLocalDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const todayStr = getLocalDateString(new Date());
+    const ALL_ACTIVE = ['approved', 'confirmed', 'started', 'completed', 'pending'];
+    const todays = allReservations.filter(
+      r => String(r.date).slice(0, 10) === todayStr && ALL_ACTIVE.includes(r.status)
+    );
+    console.log('[Today Bookings] todayStr:', todayStr, '| all reservation dates:', allReservations.map(r => `${String(r.date).slice(0,10)}(${r.status})`));
+    return todays.length;
+  }, [allReservations]);
+
+  const comingAppointmentsCount = useMemo(() => {
+    const getLocalDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    const todayStr = getLocalDateString(new Date());
+    return allReservations.filter(
+      r => ['approved', 'confirmed', 'started', 'completed'].includes(r.status) && String(r.date).slice(0, 10) >= todayStr
+    ).length;
+  }, [allReservations]);
+
+  const dynamicOverviewCards = useMemo(() => {
+    const activeBookings = allReservations.filter((r) => ['approved', 'confirmed', 'started', 'completed'].includes(r.status));
+    const activeBookingsCount = activeBookings.length;
+    const newCustomersCount = customers.length;
+    const openRequestsCount = requests.length;
+
+    // Map serviceId to price values in USD
+    const prices: Record<number, number> = {
+      1: 100, 2: 120, 3: 80, 4: 90, 5: 150, 6: 110, 7: 250,
+      11: 150, 12: 130, 13: 200, 14: 180, 15: 220, 16: 190, 17: 100,
+      21: 70, 22: 80, 23: 75,
+      31: 90, 32: 85, 33: 95, 34: 110
+    };
+    
+    const revenueSum = activeBookings.reduce((sum, r) => {
+      const price = prices[r.serviceId] ?? 100;
+      return sum + price;
+    }, 0);
+
+    const formattedRevenue = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(revenueSum);
+
+    return [
+      { label: "Active bookings", value: String(activeBookingsCount), accent: "bg-[var(--cr-accent)]/10", icon: CalendarDays },
+      { label: "New patients", value: String(newCustomersCount), accent: "bg-[var(--cr-accent)]/10", icon: Users },
+      { label: "Revenue", value: formattedRevenue, accent: "bg-[var(--cr-accent)]/10", icon: DollarSign },
+      { label: "Open requests", value: String(openRequestsCount), accent: "bg-[var(--cr-accent)]/10", icon: FileText },
+    ];
+  }, [allReservations, customers.length, requests.length]);
+
+  const filteredCustomers = useMemo(() => {
+    let list = customers;
+
+    if (customerFilterGender !== "All") {
+      list = list.filter((c) => c.gender === customerFilterGender);
+    }
+
+    if (customerFilterStatus !== "All") {
+      const wantActive = customerFilterStatus === "Active";
+      list = list.filter((c) => (c.active !== undefined ? c.active : true) === wantActive);
+    }
+
+    if (customerFilterReferral !== "All") {
+      list = list.filter((c) => c.referral === customerFilterReferral);
+    }
+
+    if (customerSearch.trim()) {
+      const q = customerSearch.toLowerCase();
+      list = list.filter((c) => {
+        const nameMatch = (c.name || "").toLowerCase().includes(q);
+        const emailMatch = (c.email || "").toLowerCase().includes(q);
+        const phoneMatch = (c.mobile || c.phone || "").toLowerCase().includes(q);
+        const nationalIdMatch = (c.national_id || "").toLowerCase().includes(q);
+        return nameMatch || emailMatch || phoneMatch || nationalIdMatch;
+      });
+    }
+
+    return list;
+  }, [customers, customerSearch, customerFilterGender, customerFilterStatus, customerFilterReferral]);
+
+  useEffect(() => {
+    fetchPageSettings();
+    fetchProviders();
+    fetchRooms();
+    // Fetch branches and set default branch
+    setLoadingBranches(true);
+    cachedFetch("/api/branches", 30000)
+      .then(data => {
+        const list: Branch[] = Array.isArray(data) ? data : [];
+        setBranches(list);
+        if (list.length > 0) {
+          setBranch((prev) => prev || list[0].id);
+          setSelectedBranchForHoursId((prev) => prev || list[0].id);
+        }
+      })
+      .catch(() => setBranches([]))
+      .finally(() => setLoadingBranches(false));
+  }, []);
+
+  // Sync serviceHours state with active branch selection
+  useEffect(() => {
+    if (!selectedBranchForHoursId) return;
+    const branchRecord = branches.find(b => b.id === selectedBranchForHoursId);
+    if (branchRecord && Array.isArray(branchRecord.service_hours) && branchRecord.service_hours.length > 0) {
+      setServiceHours(branchRecord.service_hours);
+    } else {
+      setServiceHours([
+        { day: "Sunday", dayAr: "الأحد", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+        { day: "Monday", dayAr: "الإثنين", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+        { day: "Tuesday", dayAr: "الثلاثاء", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+        { day: "Wednesday", dayAr: "الأربعاء", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+        { day: "Thursday", dayAr: "الخميس", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+        { day: "Friday", dayAr: "الجمعة", isOpen: false, openTime: "09:00", closeTime: "20:00" },
+        { day: "Saturday", dayAr: "السبت", isOpen: true, openTime: "09:00", closeTime: "20:00" },
+      ]);
+    }
+  }, [selectedBranchForHoursId, branches]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setSidebarOpen(false);
+    });
+  }, [activeNav]);
+
+  // Re-fetch bookings whenever branch selection changes and poll every 15 seconds for new requests.
+  // The poll runs only while the tab is visible (a hidden tab is refreshed once when shown again) and
+  // not at all while the doctor screens are displayed, which load their own reservations (DEC-132).
+  useEffect(() => {
+    if (!branch) return; // wait until branches are loaded
+    if (showDoctorWorkspace) return;
+
+    // Spinner only for the first load or a branch switch. This effect also re-runs when the login
+    // token rotates, which must not flash the booking tables.
+    const branchChanged = pollBranchRef.current !== branch;
+    pollBranchRef.current = branch;
+    fetchRequests(branchChanged);
+    fetchAllReservations(false, !branchChanged);
+
+    const poll = async () => {
+      try {
+        // Clear specific endpoints cache entries to force fresh server response
+        clearFetchCache(`/api/reservations?status=pending&branchId=${branch}`);
+        clearFetchCache(`/api/reservations?branchId=${branch}`);
+        
+        await Promise.all([
+          fetchRequests(false) || Promise.resolve(),
+          fetchAllReservations(false, true) || Promise.resolve()
+        ]);
+      } catch (err) {
+        if (err instanceof TypeError || String(err).includes("Failed to fetch")) {
+          console.warn("Polling network connection lost (Failed to fetch)");
+        } else {
+          console.error("Polling error:", err);
+        }
+      }
+    };
+
+    // First background poll 15 seconds from now, then 15 seconds after each one finished.
+    return startVisiblePoll(poll, 15000);
+  // RISK-053: this effect closes over fetchRequests/fetchAllReservations, which close over
+  // authenticatedJsonHeaders/session. Without session?.access_token in the deps, the poll loop
+  // keeps calling the closures captured whenever this effect last ran (i.e. whenever `branch`
+  // last changed) for its entire lifetime. If Supabase silently rotates the access token later
+  // (background refresh, or simply resolving async after `branch` was already set), the poll
+  // keeps sending the stale token forever, every 401 ("Invalid or expired session") lands in
+  // fetchRequests'/fetchAllReservations' .catch and overwrites requests/allReservations with []
+  // — wiping Pending Approvals and every patient's Booking History even though a fully valid
+  // session exists in state and localStorage. Re-creating the poll when the token value changes
+  // keeps it on the live token going forward.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branch, session?.access_token, showDoctorWorkspace]);
+
+  // Fetch ALL reservations (no branch filter) for the schedule view whenever the date or view changes
+  useEffect(() => {
+    if (calendarView === "Schedule") {
+      fetchScheduleReservations();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarView, scheduleDate]);
+
+  // Set default manual booking branch to the currently active branch filter
+  useEffect(() => {
+    if (showAddBookingModal) {
+      setNewPatientBranch(branch);
+    }
+  }, [showAddBookingModal, branch]);
+
+  // Update unavailable time slots for manual booking based on selected date, service, and branch
+  useEffect(() => {
+    if (!showAddBookingModal || !newPatientService || !newPatientDate) {
+      setManualUnavailableSlots([]);
+      return;
+    }
+    const branchQuery = newPatientBranch ? `&branchId=${newPatientBranch}` : "";
+    fetch(`/api/availability?date=${newPatientDate}&serviceId=${newPatientService}${branchQuery}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => {
+        if (data && Array.isArray(data.unavailableSlots)) {
+          const { start, end } = getDayOperatingHoursAdmin(newPatientDate);
+          const unavailable = data.unavailableSlots;
+          setManualUnavailableSlots(unavailable);
+          // Auto-select first available slot if current is unavailable, empty, or outside operating hours
+          const filteredSlots = SLOTS.filter((s) => {
+            const norm = normaliseTo24hSlot(s) ?? "";
+            return norm >= start && norm < end;
+          });
+          const isCurrentInvalid = !newPatientTimeSlot || 
+            unavailable.includes(newPatientTimeSlot) ||
+            !filteredSlots.includes(newPatientTimeSlot);
+
+          if (isCurrentInvalid) {
+            const first = filteredSlots.find((s) => !unavailable.includes(s)) || filteredSlots[0] || SLOTS[0];
+            setNewPatientTimeSlot(first);
+          }
+        }
+      })
+      .catch(() => setManualUnavailableSlots([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddBookingModal, newPatientService, newPatientDate, newPatientBranch]);
+
+  function fetchPageSettings() {
+    setLoadingPageSettings(true);
+    cachedFetch("/api/page-settings", 15000, authenticatedJsonHeaders)
+      .then((data) => {
+        if (data) {
+          setHomeHeroSlides(
+            data.hero?.slides && data.hero.slides.length > 0
+              ? data.hero.slides
+              : DEFAULT_HERO_SLIDES
+          );
+          setHomeHeroSlidesAr(
+            data.hero?.slides_ar &&
+            data.hero.slides_ar.length > 0 &&
+            !data.hero.slides_ar.some((slide: Record<string, unknown>) =>
+              Object.values(slide).some(
+                (value) => typeof value === "string" && value.includes("\u00C3"),
+              ),
+            )
+              ? data.hero.slides_ar
+              : translations.ar.hero.slides.map((slide, index) => ({
+                  ...slide,
+                  image: DEFAULT_HERO_SLIDES[index]?.image,
+                }))
+          );
+          setAboutImage1(data.about?.image1 || "");
+          setAboutImage2(data.about?.image2 || "");
+          setAboutImage3(data.about?.image3 || "");
+          setShowCustomerLogin(data.header?.showCustomerLogin === true || data.showCustomerLogin === true);
+          setBeforeAfterPairs(data.results?.pairs || [
+            { id: 1, before: "/images/before-after/1-before.jpeg", after: "/images/before-after/1-after.jpeg" },
+            { id: 2, before: "/images/before-after/2-before.jpeg", after: "/images/before-after/2-after.jpeg" },
+            { id: 3, before: "/images/before-after/3-before.jpeg", after: "/images/before-after/3-after.jpeg" },
+            { id: 4, before: "/images/before-after/4-before.jpg",  after: "/images/before-after/4-after.jpg" },
+            { id: 5, before: "/images/before-after/5-before.jpg",  after: "/images/before-after/5-after.jpg" },
+            { id: 6, before: "/images/before-after/6-before.jpg",  after: "/images/before-after/6-after.jpg" },
+          ]);
+          setWhatWeDoImage1(data.aboutPage?.whatWeDoImage1 || "");
+          setWhatWeDoImage2(data.aboutPage?.whatWeDoImage2 || "");
+          setWhatWeDoList(data.aboutPage?.whatWeDoList || [
+            "Dermatology & Aesthetic Treatments",
+            "Gynecology & Women's Health",
+            "Physical Therapy & Rehabilitation",
+            "Osteopathy & Therapeutic Nutrition",
+          ]);
+          setWhatWeDoListAr(data.aboutPage?.whatWeDoListAr || [
+            "علاجات الجلدية والتجميل",
+            "النساء والتوليد وصحة المرأة",
+            "العلاج الطبيعي وإعادة التأهيل",
+            "تقويم العظام والتغذية العلاجية",
+          ]);
+
+          // Load FAQ Section Settings
+          setFaqTag(data.aboutPage?.faqTag || "frequently asked questions");
+          setFaqTagAr(data.aboutPage?.faqTagAr || "أسئلة شائعة");
+          setFaqHeading(data.aboutPage?.faqHeading || "Questions? We have answers.");
+          setFaqHeadingAr(data.aboutPage?.faqHeadingAr || "أسئلة؟ لدينا إجابات.");
+          setFaqImage1(data.aboutPage?.faqImage1 || "");
+          setFaqImage2(data.aboutPage?.faqImage2 || "");
+          setFaqs(data.aboutPage?.faqs || [
+            {
+              question: `1. What services does ${CLIENT.nameShort} offer?`,
+              answer: `${CLIENT.nameShort} is a premium polyclinic specializing in dermatology and aesthetic treatments, gynecology and women's health, physical therapy and rehabilitation, and osteopathy and therapeutic nutrition. Every service is delivered with medical precision and a luxury experience tailored to you.`
+            },
+            {
+              question: `2. Who is ${CLIENT.nameShort} designed for?`,
+              answer: `${CLIENT.nameShort} is designed for women who value elegance, privacy, and visible results. Our clients seek the best — not the cheapest — and expect a medical experience that matches their standards.`
+            },
+            {
+              question: "3. How does my treatment plan work?",
+              answer: "Your journey begins with a comprehensive consultation where we assess your health, aesthetic goals, and lifestyle. From this, our doctors build a fully personalized treatment plan — never a template — that evolves with your progress and needs."
+            },
+            {
+              question: `4. What makes ${CLIENT.nameShort} different from other clinics?`,
+              answer: `${CLIENT.nameShort} is a destination, not a clinic. The difference is in the feeling: a private, unhurried environment, doctors who listen, and a standard of care that you can see and feel at every touchpoint — from your first appointment to your last follow-up.`
+            }
+          ]);
+          setFaqsAr(data.aboutPage?.faqsAr || [
+            {
+              question: "١. ما الخدمات التي تقدمها ريفيرا؟",
+              answer: "ريفيرا عيادة متميزة متخصصة في علاجات الجلدية والتجميل، وصحة المرأة والنساء والتوليد، والعلاج الطبيعي وإعادة التأهيل، وتقويم العظام والتغذية العلاجية. كل خدمة تُقدَّم بدقة طبية وتجربة فاخرة مصممة لكِ."
+            },
+            {
+              question: "٢. لمن صُمِّمت ريفيرا؟",
+              answer: "ريفيرا مصممة للمرأة التي تقدّر الأناقة والخصوصية والنتائج الحقيقية. عميلاتنا يبحثن عن الأفضل — لا الأرخص — ويتوقعن تجربة طبية تليق بمعاييرهن."
+            },
+            {
+              question: "٣. كيف تعمل خطة علاجي؟",
+              answer: "تبدأ رحلتكِ باستشارة شاملة نُقيّم فيها صحتكِ وأهدافكِ الجمالية وأسلوب حياتكِ. بناءً على ذلك، يضع أطباؤنا خطة علاج شخصية متكاملة — لا نموذجاً جاهزاً — تتطور مع تقدمكِ واحتياجاتكِ."
+            },
+            {
+              question: "٤. ما الذي يجعل ريفيرا مختلفة؟",
+              answer: "ريفيرا وجهة، لا مجرد عيادة. الفرق في الإحساس: بيئة خاصة وهادئة، وأطباء يستمعون، ومستوى رعاية يمكنكِ رؤيته والشعور به في كل لحظة — من موعدكِ الأول إلى متابعتكِ الأخيرة."
+            }
+          ]);
+          setHowItWorksHeading(data.howItWorks?.heading || "Simple steps to beauty transformations");
+          setHowItWorksDescription(data.howItWorks?.description || "Discover a seamless process designed to enhance your beauty and health through personalized consultations, customized treatment plans, and dedicated medical support. We guide you every step toward achieving your beauty and wellness goals.");
+          setHowItWorksHeadingAr(data.howItWorks?.headingAr || "خطوات بسيطة لتحولات الجمال");
+          setHowItWorksDescriptionAr(data.howItWorks?.descriptionAr || "اكتشف عملية سلسة مصممة لتعزيز جمالك وصحتك من خلال استشارات شخصية وخطط علاجية مخصصة ودعم طبي متخصص. نرشدك في كل خطوة نحو تحقيق أهداف الجمال والعافية.");
+
+          // Load Why Choose Us Settings
+          setWcuYearsLabel(data.whyChooseUs?.yearsLabel || "15+ years excellence");
+          setWcuHeading(data.whyChooseUs?.heading || "Where medical expertise meets a luxury experience");
+          setWcuDescription(data.whyChooseUs?.description || `At ${CLIENT.nameShort}, every detail is intentional — from your first consultation to the moment you walk out transformed. We deliver science-backed care with the calm confidence of a private medical destination.`);
+          setWcuQuote(data.whyChooseUs?.quote || `"We don't treat conditions — we transform confidence. Every session at ${CLIENT.nameShort} is designed around you: your goals, your skin, your journey."`);
+          setWcuContactLabel(data.whyChooseUs?.contactLabel || "Reach us:");
+          setWcuPhone(data.whyChooseUs?.phone || CLIENT.phoneDisplay);
+
+          setWcuYearsLabelAr(data.whyChooseUs?.yearsLabelAr || "١٥+ عاماً من التميز");
+          setWcuHeadingAr(data.whyChooseUs?.headingAr || "حيث تلتقي الخبرة الطبية بتجربة فاخرة");
+          setWcuDescriptionAr(data.whyChooseUs?.descriptionAr || "في ريفيرا، كل تفصيل مقصود — بدءاً من استشارتك الأولى وحتى لحظة خروجك متحوّلة. نقدم رعاية مدعومة بالعلم مع الثقة الهادئة لوجهة طبية خاصة.");
+          setWcuQuoteAr(data.whyChooseUs?.quoteAr || '"نحن لا نعالج فقط — بل نُحوّل الثقة. كل جلسة في ريفيرا مصممة حولكِ: أهدافكِ، بشرتكِ، رحلتكِ."');
+          setWcuContactLabelAr(data.whyChooseUs?.contactLabelAr || "تواصلي معنا:");
+          setWcuPhoneAr(data.whyChooseUs?.phoneAr || CLIENT.phoneDisplay);
+
+          setWcuImage1(data.whyChooseUs?.image1 || "");
+          setWcuImage2(data.whyChooseUs?.image2 || "");
+
+           if (data.booking) {
+            setBookingMinAdvance(data.booking.minAdvance ?? 2);
+            setBookingMaxAdvance(data.booking.maxAdvance ?? 30);
+            setBookingCancelWindow(data.booking.cancelWindow ?? 4);
+            setBookingMaxPerSlot(data.booking.maxPerSlot ?? 3);
+            setBookingInstantApproval(data.booking.instantApproval ?? false);
+            setBookingShowDoctorNotes(data.booking.showDoctorNotes ?? true);
+            setBookingDepositPercentage(data.booking.depositPercentage ?? 20);
+            setBookingStaleSessionHours(data.booking.staleSessionHours ?? 2);
+            setBookingFollowUpLeadDays(data.booking.followUpLeadDays ?? 2);
+            setBookingDefaultPricePerPulse(data.booking.defaultPricePerPulse ?? 5);
+          }
+          if (data.deposit) {
+            setInstapayName(data.deposit.instapayName || `${CLIENT.nameShort} Clinic`);
+            setInstapayAddress(data.deposit.instapayAddress || "revera@instapay");
+            setInstapayLink(data.deposit.instapayLink || "https://www.instapay.eg");
+            setWalletEnabled(data.deposit.walletEnabled ?? true);
+            setWalletName(data.deposit.walletName || `${CLIENT.name} Cash`);
+            setWalletNumber(data.deposit.walletNumber || "01012345678");
+            setWalletLink(data.deposit.walletLink || "");
+            if (data.deposit.depositPercentage !== undefined) {
+              setBookingDepositPercentage(Number(data.deposit.depositPercentage));
+            }
+          } else {
+            setInstapayName(`${CLIENT.nameShort} Clinic`);
+            setInstapayAddress("revera@instapay");
+            setInstapayLink("https://www.instapay.eg");
+            setWalletEnabled(true);
+            setWalletName(`${CLIENT.name} Cash`);
+            setWalletNumber("01012345678");
+            setWalletLink("");
+          }
+
+          if (data.footer && data.footer.serviceHours) {
+            setServiceHours(data.footer.serviceHours);
+          }
+
+          if (data.booking) {
+            setTermsText(data.booking.termsText || "");
+          }
+
+          if (data.inactivity) {
+            setInactivityThreshold(data.inactivity.threshold ?? 30);
+            setInactivityCountdown(data.inactivity.countdown ?? 10);
+            if (data.inactivity.enableGpsShift !== undefined) {
+              setEnableGpsShift(Boolean(data.inactivity.enableGpsShift));
+            }
+            if (data.inactivity.globalEndingSession !== undefined) {
+              setGlobalEndingSession(Boolean(data.inactivity.globalEndingSession));
+            }
+          }
+
+          // Fallback resolution for enableGpsShift if not set in inactivity
+          if (data.inactivity?.enableGpsShift === undefined) {
+            setEnableGpsShift(data.booking?.enableGpsShift ?? data.shift?.gpsShiftEnabled ?? true);
+          }
+          if (data.inactivity?.globalEndingSession === undefined && data.booking?.globalEndingSession !== undefined) {
+            setGlobalEndingSession(Boolean(data.booking.globalEndingSession));
+          }
+
+          if (data.notifications) {
+            if (data.notifications.smsOtp !== undefined) setNotifSmsOtp(Boolean(data.notifications.smsOtp));
+            if (data.notifications.whatsapp !== undefined) setNotifWhatsApp(Boolean(data.notifications.whatsapp));
+            if (data.notifications.email !== undefined) setNotifEmailConfirm(Boolean(data.notifications.email));
+            if (data.notifications.smsTemplate) setNotifSmsTemplate(String(data.notifications.smsTemplate));
+            if (data.notifications.smsTemplateAr) setNotifSmsTemplateAr(String(data.notifications.smsTemplateAr));
+            if (data.notifications.reminderHours !== undefined) setNotifReminderHours(Number(data.notifications.reminderHours));
+            if (data.notifications.staffEmail) setNotifStaffEmail(String(data.notifications.staffEmail));
+          }
+
+          if (data.queue) {
+            if (data.queue.virtualRoom !== undefined) setQueueVirtualRoom(Boolean(data.queue.virtualRoom));
+            if (data.queue.showOnScreens !== undefined) setQueueShowOnScreens(Boolean(data.queue.showOnScreens));
+            if (data.queue.autoCheckIn !== undefined) setQueueAutoCheckIn(Boolean(data.queue.autoCheckIn));
+            if (data.queue.alertThreshold !== undefined) setQueueAlertThreshold(Number(data.queue.alertThreshold));
+            if (data.queue.avgSessionDuration !== undefined) setQueueAvgSessionDuration(Number(data.queue.avgSessionDuration));
+          }
+
+          if (data.departments && Array.isArray(data.departments) && data.departments.length > 0) {
+            setDepartmentsList(data.departments);
+          } else {
+            setDepartmentsList(["Receptionist", "Doctors"]);
+          }
+        }
+      })
+      .catch((err) => console.error("fetchPageSettings error:", err))
+      .finally(() => setLoadingPageSettings(false));
+  }
+
+  const handleProfileImageUpload = async (file: File, side: 'front' | 'back') => {
+    try {
+      const compressed = await compressImage(file, 1000, 1000, 0.75);
+      if (side === 'front') {
+        setProfileNatIdFront(compressed);
+      } else {
+        setProfileNatIdBack(compressed);
+      }
+    } catch (error) {
+      console.error("Error compressing profile image:", error);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (side === 'front') {
+          setProfileNatIdFront(reader.result as string);
+        } else {
+          setProfileNatIdBack(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  async function handleSavePersonalProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setUpdatingProfile(true);
+    setProfileUpdateError("");
+    setProfileUpdateSuccess("");
+    try {
+      const profileEmployee = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail?.toLowerCase());
+      if (!profileEmployee) {
+        throw new Error("Could not locate employee account profile to update.");
+      }
+
+      // Check National ID format if entered
+      if (profileNatId.trim() && profileNatId.trim().length !== 14) {
+        throw new Error("Egyptian National ID must be exactly 14 digits.");
+      }
+
+      const res = await fetch("/api/employees", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({
+          id: profileEmployee.id,
+          name: profileName.trim(),
+          phone: profilePhone.trim(),
+          address: profileAddress.trim(),
+          nationalId: profileNatId.trim() || null,
+          nationalIdFront: profileNatIdFront || null,
+          nationalIdBack: profileNatIdBack || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to update profile details.");
+      }
+
+      setProfileUpdateSuccess("Profile updated successfully!");
+      fetchRolesAndEmployees();
+    } catch (err: any) {
+      console.error("handleSavePersonalProfile error:", err);
+      setProfileUpdateError(err.message || "Something went wrong.");
+    } finally {
+      setUpdatingProfile(false);
+    }
+  }
+
+  async function handleSaveDepositSettings() {
+    setSavingDepositSettings(true);
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          deposit: {
+            instapayName: instapayName.trim(),
+            instapayAddress: instapayAddress.trim(),
+            instapayLink: instapayLink.trim(),
+            walletEnabled,
+            walletName: walletName.trim(),
+            walletNumber: walletNumber.trim(),
+            walletLink: walletLink.trim(),
+            depositPercentage: bookingDepositPercentage
+          }
+        }),
+      });
+      if (res.ok) {
+        alert("Deposit & InstaPay settings saved successfully!");
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save deposit settings.");
+      }
+    } catch (err) {
+      console.error("handleSaveDepositSettings error:", err);
+      alert("Error saving deposit settings.");
+    } finally {
+      setSavingDepositSettings(false);
+    }
+  }
+
+  async function handleSaveInactivitySettings() {
+    setSavingInactivitySettings(true);
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          inactivity: {
+            threshold: Number(inactivityThreshold),
+            countdown: Number(inactivityCountdown),
+            enableGpsShift: enableGpsShift,
+            globalEndingSession: globalEndingSession
+          }
+        }),
+      });
+      if (res.ok) {
+        alert("Inactivity settings saved successfully!");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("revera-settings-change", {
+              detail: { globalEndingSession }
+            })
+          );
+        }
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save inactivity settings.");
+      }
+    } catch (err) {
+      console.error("handleSaveInactivitySettings error:", err);
+      alert("Error saving inactivity settings.");
+    } finally {
+      setSavingInactivitySettings(false);
+    }
+  }
+
+  async function handleSaveBookingSettings() {
+    setSavingBookingSettings(true);
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          booking: {
+            minAdvance: bookingMinAdvance,
+            maxAdvance: bookingMaxAdvance,
+            cancelWindow: bookingCancelWindow,
+            maxPerSlot: bookingMaxPerSlot,
+            instantApproval: bookingInstantApproval,
+            showDoctorNotes: bookingShowDoctorNotes,
+            depositPercentage: bookingDepositPercentage,
+            staleSessionHours: bookingStaleSessionHours,
+            followUpLeadDays: bookingFollowUpLeadDays,
+            defaultPricePerPulse: bookingDefaultPricePerPulse,
+            termsText: termsText,
+            globalEndingSession: globalEndingSession
+          },
+          inactivity: {
+            globalEndingSession: globalEndingSession
+          }
+        }),
+      });
+      if (res.ok) {
+        alert("Booking settings saved successfully!");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("revera-settings-change", {
+              detail: { globalEndingSession }
+            })
+          );
+        }
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save booking settings.");
+      }
+    } catch (err) {
+      console.error("handleSaveBookingSettings error:", err);
+      alert("Error saving booking settings.");
+    } finally {
+      setSavingBookingSettings(false);
+    }
+  }
+
+  async function handleSaveNotificationSettings() {
+    setSavingNotificationSettings(true);
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          notifications: {
+            smsOtp: notifSmsOtp,
+            whatsapp: notifWhatsApp,
+            email: notifEmailConfirm,
+            smsTemplate: notifSmsTemplate,
+            smsTemplateAr: notifSmsTemplateAr,
+            reminderHours: notifReminderHours,
+            staffEmail: notifStaffEmail
+          }
+        }),
+      });
+      if (res.ok) {
+        alert("Notification settings saved successfully!");
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save notification settings.");
+      }
+    } catch (err) {
+      console.error("handleSaveNotificationSettings error:", err);
+      alert("Error saving notification settings.");
+    } finally {
+      setSavingNotificationSettings(false);
+    }
+  }
+
+  async function handleSaveQueueSettings() {
+    setSavingQueueSettings(true);
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          queue: {
+            virtualRoom: queueVirtualRoom,
+            showOnScreens: queueShowOnScreens,
+            autoCheckIn: queueAutoCheckIn,
+            alertThreshold: queueAlertThreshold,
+            avgSessionDuration: queueAvgSessionDuration
+          }
+        }),
+      });
+      if (res.ok) {
+        alert("Queue settings saved successfully!");
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save queue settings.");
+      }
+    } catch (err) {
+      console.error("handleSaveQueueSettings error:", err);
+      alert("Error saving queue settings.");
+    } finally {
+      setSavingQueueSettings(false);
+    }
+  }
+
+  async function handleAutoTranslate(
+    text: string,
+    from: "en" | "ar",
+    to: "en" | "ar",
+    setter: (val: any) => void,
+    fieldKey: string
+  ) {
+    if (!text || !text.trim()) return;
+    setTranslatingField(fieldKey);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ text, from, to }),
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        setter(data.translatedText);
+      }
+    } catch (err) {
+      console.error("Translation error:", err);
+    } finally {
+      setTranslatingField(null);
+    }
+  }
+
+  async function savePageSettings(overrideData?: any) {
+    setSavingPageSettings(true);
+    
+    // Construct the full payload merging current states and any overrides
+    const heroSlides = overrideData?.hero?.slides || homeHeroSlides;
+    const heroSlidesAr = overrideData?.hero?.slides_ar || homeHeroSlidesAr;
+    const img1 = overrideData?.about?.image1 !== undefined ? overrideData.about.image1 : aboutImage1;
+    const img2 = overrideData?.about?.image2 !== undefined ? overrideData.about.image2 : aboutImage2;
+    const img3 = overrideData?.about?.image3 !== undefined ? overrideData.about.image3 : aboutImage3;
+    const pairs = overrideData?.results?.pairs || beforeAfterPairs;
+    
+    const wwdImage1 = overrideData?.aboutPage?.whatWeDoImage1 !== undefined ? overrideData.aboutPage.whatWeDoImage1 : whatWeDoImage1;
+    const wwdImage2 = overrideData?.aboutPage?.whatWeDoImage2 !== undefined ? overrideData.aboutPage.whatWeDoImage2 : whatWeDoImage2;
+    const wwdList = overrideData?.aboutPage?.whatWeDoList !== undefined ? overrideData.aboutPage.whatWeDoList : whatWeDoList;
+    const wwdListAr = overrideData?.aboutPage?.whatWeDoListAr !== undefined ? overrideData.aboutPage.whatWeDoListAr : whatWeDoListAr;
+
+    const fTag = overrideData?.aboutPage?.faqTag !== undefined ? overrideData.aboutPage.faqTag : faqTag;
+    const fTagAr = overrideData?.aboutPage?.faqTagAr !== undefined ? overrideData.aboutPage.faqTagAr : faqTagAr;
+    const fHeading = overrideData?.aboutPage?.faqHeading !== undefined ? overrideData.aboutPage.faqHeading : faqHeading;
+    const fHeadingAr = overrideData?.aboutPage?.faqHeadingAr !== undefined ? overrideData.aboutPage.faqHeadingAr : faqHeadingAr;
+    const fImage1 = overrideData?.aboutPage?.faqImage1 !== undefined ? overrideData.aboutPage.faqImage1 : faqImage1;
+    const fImage2 = overrideData?.aboutPage?.faqImage2 !== undefined ? overrideData.aboutPage.faqImage2 : faqImage2;
+    const fList = overrideData?.aboutPage?.faqs !== undefined ? overrideData.aboutPage.faqs : faqs;
+    const fListAr = overrideData?.aboutPage?.faqsAr !== undefined ? overrideData.aboutPage.faqsAr : faqsAr;
+
+    const hiwHeading = overrideData?.howItWorks?.heading !== undefined ? overrideData.howItWorks.heading : howItWorksHeading;
+    const hiwDescription = overrideData?.howItWorks?.description !== undefined ? overrideData.howItWorks.description : howItWorksDescription;
+    const hiwHeadingAr = overrideData?.howItWorks?.headingAr !== undefined ? overrideData.howItWorks.headingAr : howItWorksHeadingAr;
+    const hiwDescriptionAr = overrideData?.howItWorks?.descriptionAr !== undefined ? overrideData.howItWorks.descriptionAr : howItWorksDescriptionAr;
+
+    const wcuYearsLabelVal = overrideData?.whyChooseUs?.yearsLabel !== undefined ? overrideData.whyChooseUs.yearsLabel : wcuYearsLabel;
+    const wcuHeadingVal = overrideData?.whyChooseUs?.heading !== undefined ? overrideData.whyChooseUs.heading : wcuHeading;
+    const wcuDescriptionVal = overrideData?.whyChooseUs?.description !== undefined ? overrideData.whyChooseUs.description : wcuDescription;
+    const wcuQuoteVal = overrideData?.whyChooseUs?.quote !== undefined ? overrideData.whyChooseUs.quote : wcuQuote;
+    const wcuContactLabelVal = overrideData?.whyChooseUs?.contactLabel !== undefined ? overrideData.whyChooseUs.contactLabel : wcuContactLabel;
+    const wcuPhoneVal = overrideData?.whyChooseUs?.phone !== undefined ? overrideData.whyChooseUs.phone : wcuPhone;
+
+    const wcuYearsLabelArVal = overrideData?.whyChooseUs?.yearsLabelAr !== undefined ? overrideData.whyChooseUs.yearsLabelAr : wcuYearsLabelAr;
+    const wcuHeadingArVal = overrideData?.whyChooseUs?.headingAr !== undefined ? overrideData.whyChooseUs.headingAr : wcuHeadingAr;
+    const wcuDescriptionArVal = overrideData?.whyChooseUs?.descriptionAr !== undefined ? overrideData.whyChooseUs.descriptionAr : wcuDescriptionAr;
+    const wcuQuoteArVal = overrideData?.whyChooseUs?.quoteAr !== undefined ? overrideData.whyChooseUs.quoteAr : wcuQuoteAr;
+    const wcuContactLabelArVal = overrideData?.whyChooseUs?.contactLabelAr !== undefined ? overrideData.whyChooseUs.contactLabelAr : wcuContactLabelAr;
+    const wcuPhoneArVal = overrideData?.whyChooseUs?.phoneAr !== undefined ? overrideData.whyChooseUs.phoneAr : wcuPhoneAr;
+
+    const wcuImage1Val = overrideData?.whyChooseUs?.image1 !== undefined ? overrideData.whyChooseUs.image1 : wcuImage1;
+    const wcuImage2Val = overrideData?.whyChooseUs?.image2 !== undefined ? overrideData.whyChooseUs.image2 : wcuImage2;
+
+    const sHours = overrideData?.footer?.serviceHours !== undefined ? overrideData.footer.serviceHours : serviceHours;
+    const showCustomerLoginVal = overrideData?.header?.showCustomerLogin !== undefined ? overrideData.header.showCustomerLogin : showCustomerLogin;
+
+    const fullPayload = {
+      header: {
+        showCustomerLogin: showCustomerLoginVal
+      },
+      hero: {
+        slides: heroSlides,
+        slides_ar: heroSlidesAr
+      },
+      about: {
+        image1: img1,
+        image2: img2,
+        image3: img3
+      },
+      results: {
+        pairs: pairs
+      },
+      aboutPage: {
+        whatWeDoImage1: wwdImage1,
+        whatWeDoImage2: wwdImage2,
+        whatWeDoList: wwdList,
+        whatWeDoListAr: wwdListAr,
+        faqTag: fTag,
+        faqTagAr: fTagAr,
+        faqHeading: fHeading,
+        faqHeadingAr: fHeadingAr,
+        faqImage1: fImage1,
+        faqImage2: fImage2,
+        faqs: fList,
+        faqsAr: fListAr
+      },
+      howItWorks: {
+        heading: hiwHeading,
+        description: hiwDescription,
+        headingAr: hiwHeadingAr,
+        descriptionAr: hiwDescriptionAr
+      },
+      whyChooseUs: {
+        yearsLabel: wcuYearsLabelVal,
+        heading: wcuHeadingVal,
+        description: wcuDescriptionVal,
+        quote: wcuQuoteVal,
+        contactLabel: wcuContactLabelVal,
+        phone: wcuPhoneVal,
+        yearsLabelAr: wcuYearsLabelArVal,
+        headingAr: wcuHeadingArVal,
+        descriptionAr: wcuDescriptionArVal,
+        quoteAr: wcuQuoteArVal,
+        contactLabelAr: wcuContactLabelArVal,
+        phoneAr: wcuPhoneArVal,
+        image1: wcuImage1Val,
+        image2: wcuImage2Val
+      },
+      footer: {
+        serviceHours: sHours
+      },
+      inactivity: {
+        threshold: Number(inactivityThreshold),
+        countdown: Number(inactivityCountdown),
+        enableGpsShift: enableGpsShift
+      },
+      booking: {
+        minAdvance: bookingMinAdvance,
+        maxAdvance: bookingMaxAdvance,
+        cancelWindow: bookingCancelWindow,
+        maxPerSlot: bookingMaxPerSlot,
+        instantApproval: bookingInstantApproval,
+        showDoctorNotes: bookingShowDoctorNotes,
+        depositPercentage: bookingDepositPercentage,
+        termsText: overrideData?.booking?.termsText !== undefined ? overrideData.booking.termsText : termsText,
+      }
+    };
+
+    try {
+      const res = await fetch("/api/page-settings", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify(fullPayload),
+      });
+      if (res.ok) {
+        alert("Homepage settings saved successfully! Check the public website homepage to see changes.");
+        clearFetchCache();
+        fetchPageSettings();
+      } else {
+        alert("Failed to save settings. Please try again.");
+      }
+    } catch (err) {
+      console.error("savePageSettings error:", err);
+      alert("Error saving settings.");
+    } finally {
+      setSavingPageSettings(false);
+    }
+  }
+
+  async function handleSaveBranchServiceHours() {
+    if (!selectedBranchForHoursId) return;
+    setSavingBranchHours(true);
+    try {
+      const res = await fetch("/api/branches", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({
+          id: selectedBranchForHoursId,
+          service_hours: serviceHours
+        })
+      });
+      if (res.ok) {
+        const updatedBranch = await res.json();
+        setBranches(prev => prev.map(b => (b.id === updatedBranch.id || b.id === selectedBranchForHoursId) ? { ...b, ...updatedBranch, service_hours: serviceHours } : b));
+        alert("Branch service hours saved successfully!");
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        alert(`Failed to save branch service hours: ${errJson.error || res.statusText || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error("handleSaveBranchServiceHours error:", err);
+      alert("Error saving branch service hours.");
+    } finally {
+      setSavingBranchHours(false);
+    }
+  }
+
+  const handleMoveSlide = (index: number, dir: "up" | "down") => {
+    const newIndex = dir === "up" ? index - 1 : index + 1;
+    const slidesList = pageSettingsLangTab === "en" ? homeHeroSlides : homeHeroSlidesAr;
+    if (newIndex < 0 || newIndex >= slidesList.length) return;
+    
+    // Swap in English
+    const enList = [...homeHeroSlides];
+    const tempEn = enList[index];
+    enList[index] = enList[newIndex];
+    enList[newIndex] = tempEn;
+    setHomeHeroSlides(enList);
+
+    // Swap in Arabic
+    const arList = [...homeHeroSlidesAr];
+    const tempAr = arList[index];
+    arList[index] = arList[newIndex];
+    arList[newIndex] = tempAr;
+    setHomeHeroSlidesAr(arList);
+  };
+
+  const handleAddSlide = () => {
+    const newEnSlide = {
+      welcome: `Welcome to ${CLIENT.name}`,
+      heading: "New Slide Title",
+      description: "Expert dermatology and cosmetic surgery services designed for you.",
+      bookBtn: "Book Appointment",
+      rating: "4.5",
+      reviewCount: "(1000+ review)",
+      image: "/images/hero/slide-1.jpg"
+    };
+    const newArSlide = {
+      welcome: "مرحباً بكم في عيادات ريفيرا",
+      heading: "عنوان الشريحة الجديدة",
+      description: "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية.",
+      bookBtn: "احجز موعدًا",
+      rating: "4.5",
+      reviewCount: "(1000+ تقييم)",
+      image: "/images/hero/slide-1.jpg"
+    };
+    setHomeHeroSlides([...homeHeroSlides, newEnSlide]);
+    setHomeHeroSlidesAr([...homeHeroSlidesAr, newArSlide]);
+  };
+
+  const handleDeleteSlide = async (index: number) => {
+    console.log("handleDeleteSlide called for index:", index);
+    console.log("Current English slides count:", homeHeroSlides.length);
+    console.log("Current Arabic slides count:", homeHeroSlidesAr.length);
+    
+    if (await showConfirm("Are you sure you want to delete this slide?")) {
+      const newEn = homeHeroSlides.filter((_, i) => i !== index);
+      const newAr = homeHeroSlidesAr.filter((_, i) => i !== index);
+      
+      console.log("New English slides count after delete:", newEn.length);
+      console.log("New Arabic slides count after delete:", newAr.length);
+      
+      setHomeHeroSlides(newEn);
+      setHomeHeroSlidesAr(newAr);
+      
+      // Auto-save changes immediately to keep DB and UI in sync
+      savePageSettings({ hero: { slides: newEn, slides_ar: newAr } });
+    }
+  };
+
+  const handleUpdateField = (index: number, field: string, val: string) => {
+    if (pageSettingsLangTab === "en") {
+      const enList = [...homeHeroSlides];
+      enList[index] = { ...enList[index], [field]: val };
+      setHomeHeroSlides(enList);
+      // Sync image to Arabic list
+      if (field === "image" && homeHeroSlidesAr[index]) {
+        const arList = [...homeHeroSlidesAr];
+        arList[index] = { ...arList[index], image: val };
+        setHomeHeroSlidesAr(arList);
+      }
+    } else {
+      const arList = [...homeHeroSlidesAr];
+      arList[index] = { ...arList[index], [field]: val };
+      setHomeHeroSlidesAr(arList);
+      // Sync image to English list
+      if (field === "image" && homeHeroSlides[index]) {
+        const enList = [...homeHeroSlides];
+        enList[index] = { ...enList[index], image: val };
+        setHomeHeroSlides(enList);
+      }
+    }
+  };
+
+  const handleTranslateSlideField = async (index: number, field: string, text: string, from: "en" | "ar", to: "en" | "ar") => {
+    if (!text || !text.trim()) return;
+    const fieldKey = `slide-${index}-${field}-${from}`;
+    setTranslatingField(fieldKey);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ text, from, to }),
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        if (to === "ar") {
+          const arList = [...homeHeroSlidesAr];
+          if (!arList[index]) arList[index] = {};
+          arList[index] = { ...arList[index], [field]: data.translatedText };
+          setHomeHeroSlidesAr(arList);
+        } else {
+          const enList = [...homeHeroSlides];
+          if (!enList[index]) enList[index] = {};
+          enList[index] = { ...enList[index], [field]: data.translatedText };
+          setHomeHeroSlides(enList);
+        }
+      }
+    } catch (err) {
+      console.error("Slide translation error:", err);
+    } finally {
+      setTranslatingField(null);
+    }
+  };
+
+  const handleTranslateChecklistItem = async (index: number, text: string, from: "en" | "ar", to: "en" | "ar") => {
+    if (!text || !text.trim()) return;
+    const fieldKey = `whatwedo-${index}-${from}`;
+    setTranslatingField(fieldKey);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ text, from, to }),
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        if (to === "ar") {
+          const newList = [...whatWeDoListAr];
+          newList[index] = data.translatedText;
+          setWhatWeDoListAr(newList);
+        } else {
+          const newList = [...whatWeDoList];
+          newList[index] = data.translatedText;
+          setWhatWeDoList(newList);
+        }
+      }
+    } catch (err) {
+      console.error("Checklist translation error:", err);
+    } finally {
+      setTranslatingField(null);
+    }
+  };
+
+  const handleTranslateFaqItem = async (
+    index: number,
+    field: "question" | "answer",
+    text: string,
+    from: "en" | "ar",
+    to: "en" | "ar"
+  ) => {
+    if (!text || !text.trim()) return;
+    const fieldKey = `faq-${index}-${field}-${from}`;
+    setTranslatingField(fieldKey);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ text, from, to }),
+      });
+      const data = await res.json();
+      if (data.translatedText) {
+        if (to === "ar") {
+          const newList = [...faqsAr];
+          if (!newList[index]) newList[index] = { question: "", answer: "" };
+          newList[index][field] = data.translatedText;
+          setFaqsAr(newList);
+        } else {
+          const newList = [...faqs];
+          if (!newList[index]) newList[index] = { question: "", answer: "" };
+          newList[index][field] = data.translatedText;
+          setFaqs(newList);
+        }
+      }
+    } catch (err) {
+      console.error("FAQ item translation error:", err);
+    } finally {
+      setTranslatingField(null);
+    }
+  };
+
+  const fetchRequests = useCallback((showSpinner = false) => {
+    if (showSpinner) {
+      setLoading(true);
+    }
+    const branchParam = branch ? `&branchId=${branch}` : "";
+    return cachedFetch(`/api/reservations?status=pending${branchParam}`, 2000, authenticatedJsonHeaders)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          // keep the previous array when the poll found nothing new, so an
+          // identical tick does not re-render the whole shell
+          setRequests(prev => (pollDataEqual(prev, data) ? prev : data));
+        } else {
+          console.error("fetchRequests: expected array, got", data);
+          // a background poll keeps what is on screen; only a first/branch-change load empties it
+          if (showSpinner) setRequests([]);
+        }
+        if (showSpinner) setLoading(false);
+      })
+      .catch((err) => {
+        if (err instanceof TypeError || String(err).includes("Failed to fetch")) {
+          console.warn("fetchRequests: Network connection lost (Failed to fetch)");
+        } else {
+          console.error("fetchRequests error:", err);
+        }
+        if (showSpinner) setRequests([]);
+        if (showSpinner) setLoading(false);
+      });
+  }, [branch, authenticatedJsonHeaders]);
+
+  const fetchScheduleReservations = useCallback(() => {
+    const dateStr = [
+      scheduleDate.getFullYear(),
+      String(scheduleDate.getMonth() + 1).padStart(2, '0'),
+      String(scheduleDate.getDate()).padStart(2, '0'),
+    ].join('-');
+    fetch(`/api/reservations?date=${dateStr}`, { cache: "no-store", headers: authenticatedJsonHeaders })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setScheduleReservations(prev => (pollDataEqual(prev, data) ? prev : data));
+        else setScheduleReservations([]);
+      })
+      .catch(() => setScheduleReservations([]));
+  }, [scheduleDate, authenticatedJsonHeaders]);
+
+  // useCallback keyed on [session]: Supabase's session resolves asynchronously, so a plain
+  // mount-only effect calling this raced it — if the session wasn't ready yet the fetch bailed
+  // out silently and nothing ever retried, leaving the patient list empty for the rest of the
+  // session (surfaced as "Select Patient" showing nothing in the Sell Product modal). Giving this
+  // a stable identity per session, paired with the effect below that depends on it, means the
+  // moment `session` actually resolves, this function's identity changes and the effect re-fires
+  // automatically — same pattern already used by fetchInventoryProducts/fetchInventoryDevices.
+  // A refresh while a list is already on screen runs quietly: no "Loading..." flash, and a failed
+  // attempt keeps the rows that are showing instead of blanking the table.
+  const dbCustomersRef = useRef<Customer[]>([]);
+  dbCustomersRef.current = dbCustomers;
+  const fetchCustomers = useCallback(() => {
+    const hadData = dbCustomersRef.current.length > 0;
+    if (!hadData) setLoadingCustomers(true);
+    fetchCustomerAvatars();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.access_token) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+    fetch("/api/customers", { headers, cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setDbCustomers(data);
+        } else {
+          console.error("fetchCustomers: expected array, got", data);
+          if (!hadData) setDbCustomers([]);
+        }
+      })
+      .catch((err) => {
+        console.error("fetchCustomers error:", err);
+        if (!hadData) setDbCustomers([]);
+      })
+      .finally(() => {
+        setLoadingCustomers(false);
+      });
+  }, [session]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const handleExportBookingsCSV = useCallback(() => {
+    if (allReservations.length === 0) {
+      alert("No reservations to export.");
+      return;
+    }
+    const headers = ["ID", "Patient Name", "Email", "Phone", "Date", "Time Slot", "Session Type", "Doctor", "Status", "Notes"];
+    const rows = allReservations.map(r => [
+      r.id,
+      r.name,
+      r.email,
+      r.phone,
+      r.date,
+      r.timeSlot || r.requestedTime || "",
+      r.sessionType || "in_person",
+      r.doctorName || "",
+      r.status,
+      (r.notes || "").replace(/"/g, '""')
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `reservations_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [allReservations]);
+
+  function handleExportCustomersCSV() {
+    if (customers.length === 0) {
+      alert("No customers available to export.");
+      return;
+    }
+
+    const headers = [
+      "id",
+      "Customer Name",
+      "Mobile",
+      "Gender",
+      "Email",
+      "Number of Bookings",
+      "Registration Date",
+      "Active",
+      "Spent Amount",
+      "Outstanding",
+      "Area",
+      "Location Name",
+      "Street Name",
+      "Building No.",
+      "Floor No.",
+      "Note"
+    ];
+
+    const escapeCSV = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      let str = String(val);
+      str = str.replace(/"/g, '""');
+      if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+        return `"${str}"`;
+      }
+      return `"${str}"`;
+    };
+
+    const rows = customers.map(c => [
+      escapeCSV(c.id || ""),
+      escapeCSV(c.name || ""),
+      escapeCSV(c.mobile || c.phone || ""),
+      escapeCSV(c.gender || ""),
+      escapeCSV(c.email || ""),
+      escapeCSV(c.number_of_bookings !== undefined ? c.number_of_bookings : c.bookings),
+      escapeCSV(c.registration_date ? new Date(c.registration_date).toLocaleDateString("en-GB") : (c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "")),
+      escapeCSV(c.active !== undefined ? (c.active ? "Yes" : "No") : "Yes"),
+      escapeCSV(c.spent_amount !== undefined ? c.spent_amount : c.spent),
+      escapeCSV(c.outstanding || 0),
+      escapeCSV(c.area || ""),
+      escapeCSV(c.location_name || ""),
+      escapeCSV(c.street_name || ""),
+      escapeCSV(c.building_no || ""),
+      escapeCSV(c.floor_no || ""),
+      escapeCSV(c.note || "")
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setShowExportCustomersModal(false);
+  }
+
+  function handleOpenAddCustomer() {
+    setSelectedCustomerForEdit(null);
+    setShowCustomerFormModal(true);
+  }
+
+  function handleOpenEditCustomer(c: Customer) {
+    setSelectedCustomerForEdit(c);
+    setShowCustomerFormModal(true);
+  }
+
+  // CSV Import state and functions
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importProgress, setImportProgress] = useState(0);
+  const [importLog, setImportLog] = useState<{ name: string; status: "success" | "error"; error?: string }[]>([]);
+
+  const parseCSV = (text: string) => {
+    const lines: string[] = [];
+    let currentLine = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        if (currentLine.trim()) {
+          lines.push(currentLine);
+        }
+        currentLine = "";
+        if (char === '\r' && text[i+1] === '\n') {
+          i++;
+        }
+      } else {
+        currentLine += char;
+      }
+    }
+    if (currentLine.trim()) {
+      lines.push(currentLine);
+    }
+    
+    if (lines.length === 0) return { headers: [], rows: [] };
+    
+    const splitCSVLine = (line: string): string[] => {
+      const result: string[] = [];
+      let currentVal = "";
+      let quoteActive = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          quoteActive = !quoteActive;
+        } else if (char === ',' && !quoteActive) {
+          result.push(currentVal.trim());
+          currentVal = "";
+        } else {
+          currentVal += char;
+        }
+      }
+      result.push(currentVal.trim());
+      return result;
+    };
+    
+    const headers = splitCSVLine(lines[0]);
+    const headersClean = headers.map(h => h.toLowerCase().replace(/[\s_]+/g, ''));
+    const rows: Record<string, string>[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = splitCSVLine(lines[i]);
+      const row: Record<string, string> = {};
+      headersClean.forEach((header, idx) => {
+        row[header] = values[idx] || "";
+      });
+      rows.push(row);
+    }
+    
+    return { headers, rows };
+  };
+
+  const mapRowToCustomer = (row: Record<string, string>) => {
+    const keys = Object.keys(row);
+    const getVal = (possibleHeaders: string[]) => {
+      const match = keys.find(k => possibleHeaders.includes(k.toLowerCase().replace(/[\s_]+/g, '')));
+      return match ? row[match] : "";
+    };
+
+    return {
+      name: getVal(["name", "fullname", "patientname", "patient"]),
+      mobile: getVal(["mobile", "phone", "phonenumber", "mobilephone", "tel"]),
+      email: getVal(["email", "emailaddress"]),
+      gender: getVal(["gender", "sex"]),
+      age: getVal(["age"]),
+      national_id: getVal(["nationalid", "national_id", "idcard"]),
+      address: getVal(["address", "location"]),
+      referral: getVal(["referral", "referralsource"]),
+      occupation: getVal(["occupation", "job"]),
+      note: getVal(["note", "notes", "comments", "description"])
+    };
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFile(file);
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const { headers, rows } = parseCSV(text);
+      if (headers.length === 0 || rows.length === 0) {
+        setImportError("The selected CSV file appears to be empty or invalid.");
+        return;
+      }
+      setImportHeaders(headers);
+      setImportRows(rows);
+      setImportError("");
+    };
+    reader.onerror = () => {
+      setImportError("Error reading the CSV file.");
+    };
+    reader.readAsText(file);
+  };
+
+  const handleStartImport = async () => {
+    if (importRows.length === 0) return;
+    setImportLoading(true);
+    setImportProgress(0);
+    setImportLog([]);
+    
+    const logs: { name: string; status: "success" | "error"; error?: string }[] = [];
+    
+    for (let i = 0; i < importRows.length; i++) {
+      const rawRow = importRows[i];
+      const mapped = mapRowToCustomer(rawRow);
+      
+      if (!mapped.name || !mapped.mobile) {
+        logs.push({
+          name: mapped.name || `Row ${i + 1}`,
+          status: "error",
+          error: "Missing required fields (Name and Mobile are required)."
+        });
+        setImportLog([...logs]);
+        setImportProgress(Math.round(((i + 1) / importRows.length) * 100));
+        continue;
+      }
+      
+      try {
+        const response = await fetch("/api/customers", {
+          method: "POST",
+          headers: authenticatedJsonHeaders,
+          body: JSON.stringify({
+            name: mapped.name,
+            mobile: mapped.mobile,
+            email: mapped.email || null,
+            gender: mapped.gender || null,
+            age: mapped.age ? Number(mapped.age) : null,
+            national_id: mapped.national_id || null,
+            address: mapped.address || null,
+            referral: mapped.referral || null,
+            occupation: mapped.occupation || null,
+            note: mapped.note || null,
+            active: true
+          })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+          logs.push({
+            name: mapped.name,
+            status: "error",
+            error: data.error || "Failed to save to database."
+          });
+        } else {
+          logs.push({
+            name: mapped.name,
+            status: "success"
+          });
+        }
+      } catch (err: any) {
+        logs.push({
+          name: mapped.name,
+          status: "error",
+          error: err.message || "Network error."
+        });
+      }
+      
+      setImportLog([...logs]);
+      setImportProgress(Math.round(((i + 1) / importRows.length) * 100));
+    }
+    
+    setImportLoading(false);
+    fetchCustomers();
+  };
+
+  const handleCloseImportModal = () => {
+    setShowImportCustomersModal(false);
+    setImportFile(null);
+    setImportHeaders([]);
+    setImportRows([]);
+    setImportLoading(false);
+    setImportError("");
+    setImportProgress(0);
+    setImportLog([]);
+  };
+
+  useEffect(() => {
+    setHardDeleteArmed(false);
+    if (!deleteCustomerTarget?.id || adminRole !== "superadmin") {
+      setDeletePreview(null);
+      return;
+    }
+    let cancelled = false;
+    setDeletePreview({ state: "loading" });
+    fetch(`/api/customers?id=${encodeURIComponent(deleteCustomerTarget.id)}&deletePreview=1`, {
+      headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Could not check what will be deleted");
+        return data;
+      })
+      .then((data) => {
+        if (!cancelled) setDeletePreview({ state: "ready", counts: data.counts, keptBookingsOtherName: data.keptBookingsOtherName || 0 });
+      })
+      .catch((err) => {
+        if (!cancelled) setDeletePreview({ state: "error", message: err.message || "Could not check what will be deleted" });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deleteCustomerTarget?.id, adminRole]);
+
+  function handleDeleteCustomer(id: string, mode: 'soft' | 'hard' = 'hard') {
+    setDeletingCustomer(true);
+    fetch(`/api/customers?id=${id}&mode=${mode}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session?.access_token || ""}` }
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to delete customer");
+        }
+        return data;
+      })
+      .then(() => {
+        fetchCustomers();
+        setDeleteCustomerTarget(null);
+        setShowCustomerFormModal(false);
+        setViewingCustomerProfile(null);
+      })
+      .catch((err) => {
+        console.error("handleDeleteCustomer error:", err);
+        alert(err.message || "An error occurred while deleting the customer.");
+      })
+      .finally(() => {
+        setDeletingCustomer(false);
+      });
+  }
+
+  // Defaults to bypassing the cache. Nearly every caller here runs immediately after a write
+  // (approve, reject, cancel, check-in, start/complete session, add product, new booking), and
+  // cachedFetch has a 2s TTL with no write-invalidation — so the default of "reuse the cached
+  // array" reliably returned a list that predated the change that had just been made, which is
+  // why new bookings only appeared after a full page reload. Pass useCache=true only where a
+  // slightly stale list is genuinely acceptable.
+  // keepOnError: the 15s background poll passes true so one failed request does not blank every
+  // booking table until the next poll succeeds.
+  const fetchAllReservations = useCallback((useCache = false, keepOnError = false) => {
+    const branchParam = branch ? `?branchId=${branch}` : "";
+    const url = `/api/reservations${branchParam}`;
+    if (!useCache) clearFetchCache(url);
+    return cachedFetch(url, 2000, authenticatedJsonHeaders)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAllReservations(prev => (pollDataEqual(prev, data) ? prev : data));
+        } else {
+          console.error("fetchAllReservations: expected array, got", data);
+          if (!keepOnError) setAllReservations([]);
+        }
+      })
+      .catch((err) => {
+        if (err instanceof TypeError || String(err).includes("Failed to fetch")) {
+          console.warn("fetchAllReservations: Network connection lost (Failed to fetch)");
+        } else {
+          console.error("fetchAllReservations error:", err);
+        }
+        if (!keepOnError) setAllReservations([]);
+      });
+
+    // Automatically keep schedule view reservations in sync if it's active
+    if (calendarView === "Schedule") {
+      fetchScheduleReservations();
+    }
+  }, [branch, authenticatedJsonHeaders, calendarView, fetchScheduleReservations]);
+
+  function getUnavailableSlots(approvedBookings: Req[], targetServiceId: number, end?: string): string[] {
+    const svc = localServices.find(s => s.id === targetServiceId);
+    const targetDuration = getServiceDurationMinutes(svc);
+    const targetSlotsNeeded = Math.ceil(targetDuration / 15);
+    
+    const occupied = new Array(ALL_15MIN_SLOTS.length).fill(false);
+    
+    for (const b of approvedBookings) {
+      if (b.timeSlot) {
+        const norm = normaliseTo24hSlot(b.timeSlot);
+        if (norm) {
+          const idx = ALL_15MIN_SLOTS.indexOf(norm);
+          if (idx >= 0) {
+            for (let k = 0; k < targetSlotsNeeded; k++) {
+              if (idx + k < occupied.length) {
+                occupied[idx + k] = true;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    const unavailable: string[] = [];
+    for (let i = 0; i < ALL_15MIN_SLOTS.length; i++) {
+      let fit = true;
+      for (let k = 0; k < targetSlotsNeeded; k++) {
+        const slotIdx = i + k;
+        if (slotIdx >= occupied.length || occupied[slotIdx]) {
+          fit = false;
+          break;
+        }
+        if (end && ALL_15MIN_SLOTS[slotIdx] >= end) {
+          fit = false;
+          break;
+        }
+      }
+      if (!fit) {
+        unavailable.push(ALL_15MIN_SLOTS[i]);
+      }
+    }
+    return unavailable;
+  }
+
+  // Shared by the initial open and by changing the date inside the approve modal — recomputes
+  // which time slots are actually pickable for whichever date is currently selected there.
+  // Returns the freshly-computed availability rather than relying on the state it sets —
+  // setApproveUnavailableSlots() does not update the caller's closure within the same tick, so a
+  // caller that read the state variable straight after awaiting this would see the *previous*
+  // booking's list (or [] on first open) and make its decision on stale data.
+  const refreshApproveAvailability = useCallback(async (r: Req, dateStr: string) => {
+    const branchParam = r.branchId ? `&branchId=${r.branchId}` : "";
+    const data = await fetch(`/api/availability?date=${dateStr}&serviceId=${r.serviceId}${branchParam}`).then((res) => res.json());
+    const { start, end } = getDayOperatingHoursApprove({ ...r, date: dateStr });
+    const unavailable = data && Array.isArray(data.unavailableSlots) ? data.unavailableSlots : [];
+    setApproveUnavailableSlots(unavailable);
+    const filteredSlots = SLOTS.filter((s) => {
+      const norm = normaliseTo24hSlot(s) ?? "";
+      return norm >= start && norm < end;
+    });
+    const first = filteredSlots.find((s) => !unavailable.includes(s)) || filteredSlots[0] || SLOTS[0];
+    setSlot(first);
+    return { unavailable, start, end };
+  }, [getDayOperatingHoursApprove]);
+
+  const openApprove = useCallback(async (r: Req) => {
+    setLoadingApproveId(r.id);
+    try {
+      setApproveDate(r.date);
+      setApproveTimeWarning("");
+      const { unavailable, start, end } = await refreshApproveAvailability(r, r.date);
+
+      // Always show the time the patient actually asked for. If it is not bookable, select it
+      // anyway and warn — silently substituting the first free slot (09:00) is how approvals were
+      // being confirmed at a time nobody requested.
+      const requestedSlot = r.requestedTime || r.timeSlot || "";
+      if (requestedSlot) {
+        const norm = normaliseTo24hSlot(requestedSlot) ?? "";
+        const outsideHours = !(norm >= start && norm < end);
+        const taken = unavailable.includes(requestedSlot);
+        setSlot(requestedSlot);
+        if (taken) {
+          setApproveTimeWarning(`Requested time ${requestedSlot} is already taken — pick another slot.`);
+        } else if (outsideHours) {
+          setApproveTimeWarning(`Requested time ${requestedSlot} is outside opening hours — pick another slot.`);
+        }
+      }
+
+      // Pre-select the doctor the patient originally requested, if any.
+      if (r.doctorName) {
+        setDoctorName(r.doctorName);
+      }
+
+      setSelected(r);
+    } catch (err) {
+      console.error("openApprove error:", err);
+    } finally {
+      setLoadingApproveId(null);
+    }
+  }, [refreshApproveAvailability]);
+
+  // Staff picking a different date than originally requested (e.g. the requested day turned out
+  // to be a closed day, or is already fully booked) — re-derives available slots for that date
+  // instead of forcing staff to reject the request just to change the date.
+  async function handleApproveDateChange(newDateStr: string) {
+    setApproveDate(newDateStr);
+    // Staff deliberately moved off the requested date — the requested-time warning no longer
+    // applies, and refreshApproveAvailability picks a fresh slot for the new date.
+    setApproveTimeWarning("");
+    if (!selected) return;
+    await refreshApproveAvailability(selected, newDateStr);
+  }
+
+  async function approve() {
+    if (!selected) return;
+    const res = await fetch(
+      "/api/reservations?id=" + encodeURIComponent(selected.id),
+      {
+        method: "PATCH",
+        body: JSON.stringify({ action: "approve", timeSlot: slot, doctorName, date: approveDate || selected.date }),
+        headers: authenticatedJsonHeaders,
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) alert(json.error || "Failed");
+    setSelected(null);
+    clearFetchCache();
+    fetchRequests();
+    fetchAllReservations();
+  }
+
+  function selectExistingPatientForBooking(customer: any) {
+    setNewPatientName(customer.name || "");
+    setNewPatientEmail(customer.email || "");
+    setNewPatientPhone(customer.mobile || customer.phone || "");
+    setMatchedCustomerId(customer.id || null);
+    setPatientSearchQuery("");
+    setShowPatientSearchResults(false);
+  }
+
+  async function handleManualPhoneChange(val: string) {
+    setNewPatientPhone(val);
+    setMatchedCustomerId(null);
+
+    // Clean and validate Egyptian mobile number
+    let cleaned = val.replace(/[^\d]/g, "");
+    if (cleaned.startsWith("201") && cleaned.length === 12) {
+      cleaned = "0" + cleaned.slice(2);
+    } else if (cleaned.startsWith("1") && cleaned.length === 10) {
+      cleaned = "0" + cleaned;
+    }
+
+    if (/^01[0-9]{9}$/.test(cleaned)) {
+      try {
+        const res = await fetch(`/api/customers?mobile=${cleaned}`, {
+          headers: { Authorization: `Bearer ${session?.access_token || ""}` }
+        });
+        if (res.ok) {
+          const customer = await res.json();
+          if (customer) {
+            if (customer.name) setNewPatientName(customer.name);
+            if (customer.email) setNewPatientEmail(customer.email);
+            if (customer.id) setMatchedCustomerId(customer.id);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching customer by phone:", err);
+      }
+    }
+  }
+
+  async function handleCreateManualBooking() {
+    if (!newPatientName || !newPatientPhone || !newPatientDate) {
+      alert("Please fill in all required fields (Name, Phone, Date).");
+      return;
+    }
+
+    // Validate Egyptian mobile number format
+    const cleanedMobile = newPatientPhone.trim();
+    if (!/^01[0125]\d{8}$/.test(cleanedMobile)) {
+      alert("Please enter a valid Egyptian mobile number (must be 11 digits and start with 010, 011, 012, or 015).");
+      return;
+    }
+    if (!isManualWhatsappSame) {
+      const cleanedWA = newPatientWhatsapp.trim();
+      if (!/^01[0125]\d{8}$/.test(cleanedWA)) {
+        alert("Please enter a valid Egyptian mobile number for WhatsApp (must be 11 digits and start with 010, 011, 012, or 015).");
+        return;
+      }
+    }
+
+    const finalNotes = isManualWhatsappSame 
+      ? newPatientNotes 
+      : `${newPatientNotes ? newPatientNotes + "\n" : ""}[WhatsApp: ${newPatientWhatsapp}]`;
+
+    const payload = {
+      serviceId: Number(newPatientService),
+      date: newPatientDate,
+      requestedTime: newPatientTimeSlot,
+      name: newPatientName,
+      email: newPatientEmail.trim() || null,
+      phone: newPatientPhone,
+      // When staff explicitly picked an existing patient (search picker or a resolved phone
+      // match), link the reservation to that exact customer id directly — bypasses the
+      // phone-string-matching path entirely, so a typo/formatting difference in the phone field
+      // can never fork off a duplicate customer for a patient staff already identified.
+      customerId: matchedCustomerId || undefined,
+      notes: finalNotes,
+      sessionType: newPatientSessionType,
+      status: newPatientStatus,
+      timeSlot: newPatientStatus === 'approved' ? newPatientTimeSlot : null,
+      doctorName: newPatientStatus === 'approved' ? newPatientDoctor : null,
+      branchId: newPatientBranch || null,
+      isManual: true,
+      createdByEmployeeId: newPatientCreatedByEmployeeId || adminDbId || null,
+    };
+
+    const res = await fetch("/api/reservations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const created = await res.json();
+      
+      if (newPatientStatus === 'approved') {
+        await fetch(`/api/reservations?id=${created.id}`, {
+          method: "PATCH",
+          headers: authenticatedJsonHeaders,
+          body: JSON.stringify({
+            action: "approve",
+            timeSlot: newPatientTimeSlot,
+            doctorName: newPatientDoctor,
+          }),
+        });
+      } else if (newPatientStatus === 'rejected') {
+        await fetch(`/api/reservations?id=${created.id}`, {
+          method: "PATCH",
+          headers: authenticatedJsonHeaders,
+          body: JSON.stringify({
+            action: "reject",
+          }),
+        });
+      }
+
+      setNewPatientName("");
+      setNewPatientEmail("");
+      setNewPatientPhone("");
+      setMatchedCustomerId(null);
+      setPatientSearchQuery("");
+      setShowPatientSearchResults(false);
+      setNewPatientDate("");
+      setNewPatientTimeSlot("12:00");
+      setNewPatientService(1);
+      setNewPatientSessionType("in_person");
+      setNewPatientDoctor("Dr. Sara El Gamel");
+      setNewPatientNotes("");
+      setNewPatientStatus("approved");
+      setIsManualWhatsappSame(true);
+      setNewPatientWhatsapp("");
+      setNewPatientCreatedByEmployeeId(adminDbId || "");
+
+      setShowAddBookingModal(false);
+      clearFetchCache();
+      fetchRequests();
+      fetchAllReservations();
+      alert("Manual booking created successfully!");
+    } else {
+      alert("Failed to create manual booking.");
+    }
+  }
+
+  const saveNotes = useCallback(async (newNotes: string) => {
+    if (!viewingBooking) return;
+    const res = await fetch(
+      "/api/reservations?id=" + encodeURIComponent(viewingBooking.id),
+      {
+        method: "PATCH",
+        body: JSON.stringify({ receptionNotes: newNotes }),
+        headers: authenticatedJsonHeaders,
+      }
+    );
+    if (!res.ok) {
+      const json = await res.json();
+      alert(json.error || "Failed to save notes");
+    }
+    fetchRequests();
+    fetchAllReservations();
+  }, [viewingBooking, authenticatedJsonHeaders, fetchRequests, fetchAllReservations]);
+
+  function handlePrintInvoice(booking: any, servicesList: any[], totalCost: number, walletUsed: number, branchName: string, overrideInvoiceNo?: string) {
+    printInvoice(booking, servicesList, totalCost, walletUsed, branchName, overrideInvoiceNo);
+  }
+
+  const calendarDays = useMemo(
+    () => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    []
+  );
+
+  // Stable handlers for the memoized AdminBookingsView / BookingDetailsModal —
+  // an inline arrow in the JSX would be a new prop on every render and defeat
+  // React.memo entirely.
+  const handleBookingsNew = useCallback((data?: any) => {
+    setNewBookingInitialData(data || null);
+    setShowFullViewNewBooking(true);
+  }, []);
+  const handleBookingsAddPrevious = useCallback(() => {
+    setPreviousBookingCustomer(null);
+    setShowAddPreviousBooking(true);
+  }, []);
+  const handleBookingsPendingApprovals = useCallback(() => {
+    const el = document.getElementById("pending-approvals-section");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, []);
+  const handleBookingsFilter = useCallback(() => setShowFilterModal(true), []);
+  // RISK-053: AdminBookingsView normalises status for its own table/badges
+  // ('started' -> 'in_progress', 'approved' -> 'confirmed') and returns that
+  // normalised object here. The shared details modal switches its Session Flow
+  // actions on the *raw* DB status strings, so resolve the untouched record
+  // from allReservations by id instead of passing the normalised copy through.
+  const handleBookingsViewDetails = useCallback((booking: any) => {
+    const raw = allReservations.find((r: any) => String(r.id) === String(booking?.id));
+    setViewingBooking((raw || booking) as any);
+  }, [allReservations]);
+  const handleBookingsPrint = useCallback(() => window.print(), []);
+  const handleBookingsApprove = useCallback((booking: any) => {
+    // RISK-047/052: must go through openApprove() so the modal is pre-filled
+    // from the actual booking rather than leftover modal state.
+    openApprove(booking as any);
+  }, [openApprove]);
+  // RISK-122: the rejection is saved through the API (the browser-side Supabase write is blocked by RLS and
+  // used to fail silently). Local lists change only after the server confirms; the caller learns the outcome.
+  const handleBookingsReject = useCallback(async (booking: any): Promise<boolean> => {
+    if (!booking?.id) return false;
+    try {
+      const res = await fetch(`/api/reservations?id=${encodeURIComponent(String(booking.id))}`, {
+        method: "PATCH",
+        headers: authenticatedJsonHeaders,
+        body: JSON.stringify({ action: "reject" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Reject error:", res.status, err);
+        showAlert(err?.error || "The request could not be rejected. Nothing was changed, please try again.");
+        return false;
+      }
+      setRequests(prev => prev.filter(r => String(r.id) !== String(booking.id)));
+      setAllReservations(prev => prev.map(r => String(r.id) === String(booking.id) ? { ...r, status: "rejected" } : r));
+      return true;
+    } catch (e) {
+      console.error("Reject error:", e);
+      showAlert("The request could not be rejected (connection problem). Nothing was changed, please try again.");
+      return false;
+    }
+  }, [authenticatedJsonHeaders, showAlert]);
+  const handleCloseBookingDetails = useCallback(() => setViewingBooking(null), []);
+  const handleEditPreviousBooking = useCallback((b: any) => {
+    setEditingPreviousBooking(b);
+    setActiveNav("Bookings");
+    setShowAddPreviousBooking(true);
+    setViewingBooking(null);
+  }, []);
+  // Stable callbacks for the memoized DoctorAccountView. handleLogout is a plain function recreated on
+  // every render (it reads the live session), so route it through a ref that always points at the latest.
+  const handleLogoutRef = useRef(handleLogout);
+  handleLogoutRef.current = handleLogout;
+  const handleDoctorLogout = useCallback(() => { void handleLogoutRef.current(); }, []);
+  const switchWorkspaceViewRef = useRef(switchWorkspaceView);
+  switchWorkspaceViewRef.current = switchWorkspaceView;
+  const handleSwitchToAdmin = useCallback(() => switchWorkspaceViewRef.current(false), []);
+
+  if (authChecking) {
+    return (
+      <div id="admin-root" className="admin-view flex min-h-screen items-center justify-center bg-[var(--color-brand-sand)] text-[var(--cr-primary)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 rounded-full border-4 border-[var(--cr-accent)] border-t-transparent"></div>
+          <p className="text-sm font-semibold tracking-wider">Verifying administrator session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (session && !adminRole) {
+    return (
+      <div id="admin-root" className="admin-view flex min-h-screen items-center justify-center bg-[var(--color-brand-sand)] px-4">
+        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.15)] text-center space-y-4">
+          <h2 className="text-xl font-bold text-[var(--cr-dark)]">Could not verify your session right now</h2>
+          <p className="text-xs text-[var(--color-brand-secondary)] font-medium leading-relaxed">
+            You are still signed in. The connection to the server was interrupted, so the page could not load your permissions. It will retry automatically.
+          </p>
+          <button
+            type="button"
+            onClick={() => retryVerifyRef.current?.()}
+            className="mt-2 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+          >
+            Try again
+          </button>
+          <Link href="/login" className="block text-xs font-semibold text-[var(--color-brand-secondary)] underline">
+            Go to Staff Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !adminRole) {
+    return (
+      <div id="admin-root" className="admin-view flex min-h-screen items-center justify-center bg-[var(--color-brand-sand)] px-4">
+        <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.15)] text-center space-y-4">
+          <div className="mx-auto relative h-16 w-16 overflow-hidden rounded-2xl bg-[var(--cr-primary)] p-2.5 shadow-md">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={CLIENT.logoPath}
+              alt={CLIENT.name}
+              className="w-full h-full object-contain brightness-0 invert"
+            />
+          </div>
+          <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-brand-secondary)]/80 font-bold mb-1">
+            {CLIENT.name} Staff Portal
+          </p>
+          <h2 className="text-2xl font-bold text-[var(--cr-dark)]">
+            Staff Authentication Required
+          </h2>
+          <p className="text-xs text-[var(--color-brand-secondary)] font-medium leading-relaxed">
+            All staff, doctors, receptionists, and administrators must authenticate through the unified Staff Login portal. Redirecting...
+          </p>
+          <Link
+            href="/login"
+            className="mt-4 inline-flex items-center justify-center w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+          >
+            Go to Staff Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  const uniqueSpecialties = Array.from(new Set(providers.map((p) => p.specialty).filter(Boolean)));
+  const filteredProviders = providers.filter((p) => {
+    if (providerFilterBranchId !== "All" && p.branchId !== providerFilterBranchId) return false;
+    if (providerFilterSpecialty !== "All" && p.specialty !== providerFilterSpecialty) return false;
+    if (providerFilterGender !== "All" && p.gender !== providerFilterGender) return false;
+    if (providerSearchQuery.trim()) {
+      const q = providerSearchQuery.toLowerCase();
+      const nameMatch = p.name?.toLowerCase().includes(q);
+      const specMatch = p.specialty?.toLowerCase().includes(q);
+      const phoneMatch = p.phone?.toLowerCase().includes(q);
+      if (!nameMatch && !specMatch && !phoneMatch) return false;
+    }
+    return true;
+  });
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  function handleMarkAllAsRead() {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
+  function handleMarkAsRead(id: string) {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  }
+
+  const loggedEmpAccount = employeesList.find(
+    (e) => e.id === adminDbId || e.email?.toLowerCase() === adminEmail.toLowerCase()
+  );
+
+  if (showDoctorWorkspace) {
+    return (
+      <div id="admin-root" className="admin-view flex-1 min-h-screen">
+        <DoctorAccountView
+          doctorDbId={loggedEmpAccount?.id || adminDbId}
+          doctorName={loggedEmpAccount?.name || adminEmail || "Doctor"}
+          doctorEmail={adminEmail}
+          doctorBranch={
+            branches.find((b) => b.id === loggedEmpAccount?.branch_id)?.name_en ||
+            loggedEmpAccount?.branch_id ||
+            "Main Branch"
+          }
+          branches={branches}
+          onLogout={handleDoctorLogout}
+          onSwitchToAdmin={canSwitchWorkspace ? handleSwitchToAdmin : undefined}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div id="admin-root" className="admin-view min-h-screen bg-[var(--color-brand-sand)] text-[var(--cr-dark)]">
+      <div className="grid min-h-screen grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]" dir={lang === "ar" ? "rtl" : "ltr"}>
+        {/* Backdrop for mobile sidebar */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <aside
+          dir={lang === "ar" ? "rtl" : "ltr"}
+          className={`fixed inset-y-0 start-0 z-50 flex w-[280px] max-w-[85vw] md:w-[220px] h-screen max-h-screen flex-col bg-[var(--cr-primary)] px-3.5 py-5 text-[var(--color-brand-light)] shadow-[0_0_70px_rgba(0,0,0,0.08)] transition-transform duration-300 md:static md:z-auto md:h-screen md:sticky md:top-0 md:translate-x-0 ${
+            sidebarOpen
+              ? "translate-x-0"
+              : lang === "ar"
+              ? "translate-x-full md:translate-x-0"
+              : "-translate-x-full md:translate-x-0"
+          }`}
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white shadow-md p-1.5">
+                <Image
+                  src={CLIENT.logoPath}
+                  alt={CLIENT.name}
+                  fill
+                  style={{ objectFit: "contain", padding: "2px" }}
+                />
+              </div>
+              <div className="flex flex-col justify-center">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--color-brand-light)]/60 leading-none mb-0.5">
+                  {CLIENT.name}
+                </p>
+                <h1 className="text-base font-bold leading-tight">Admin</h1>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 text-[var(--color-brand-light)]/80 hover:text-[var(--color-brand-light)] transition text-lg font-bold"
+              title="Close sidebar"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Global Language Toggle Switcher */}
+          <div className="flex items-center rounded-xl bg-black/20 p-1 border border-white/10 shadow-inner w-full mb-6">
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition text-center ${
+                lang === "en"
+                  ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-sm"
+                  : "text-[var(--color-brand-light)]/70 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("ar")}
+              className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition text-center ${
+                lang === "ar"
+                  ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-sm"
+                  : "text-[var(--color-brand-light)]/70 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              العربية
+            </button>
+          </div>
+
+          <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto pe-0.5">
+            {permittedSidebarItems.filter((item) => item.label !== "Logout").map((item) => {
+              if (item.label === "Settings") {
+                const Icon = item.icon;
+                const active = [
+                  "Service Hours",
+                  "Branches",
+                  "Users",
+                  "Booking Settings",
+                  "Terms & Conditions",
+                  "Notification Settings",
+                  "Queue Settings",
+                  "Pages Settings",
+                  "Role Management",
+                  "Deposit Settings",
+                  "Inactivity Settings"
+                ].includes(activeNav);
+                return (
+                  <div key={item.label} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettingsExpanded(!settingsExpanded);
+                      }}
+                      className={`group flex w-full items-center justify-between gap-2.5 rounded-2xl px-3 py-2 text-start text-xs font-semibold transition-all duration-200 ${
+                        active
+                          ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-lg"
+                          : "text-[var(--color-brand-light)]/80 hover:bg-[var(--color-brand-light)]/10 hover:text-[var(--color-brand-light)]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                            active ? "bg-[var(--cr-accent)]/20 text-[var(--cr-primary)]" : "bg-[var(--color-brand-light)]/10 text-[var(--color-brand-light)] group-hover:bg-[var(--cr-accent)]/15"
+                          }`}
+                        >
+                          <Icon size={16} />
+                        </span>
+                        <span className="truncate">{adminTranslations[lang].sidebar[item.label] || item.label}</span>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`text-current transition-transform duration-200 ${
+                          settingsExpanded ? "" : "-rotate-90"
+                        }`}
+                      />
+                    </button>
+                    {settingsExpanded && (
+                      <div className="mt-1 space-y-0.5 overflow-hidden rounded-xl bg-black/15 py-1 ps-2 pe-1">
+                        {[
+                          { label: "Clinic Profile", icon: Store, perm: "settings.profile" },
+                          { label: "Service Hours", icon: Clock, perm: "settings.service_hours" },
+                          { label: "Branches", icon: MapIcon, perm: "settings.branches" },
+                          { label: "Rooms", icon: DoorOpen, perm: "settings.rooms" },
+                          { label: "Booking Settings", icon: CalendarDays, perm: "settings.booking_settings" },
+                          { label: "Terms & Conditions", icon: FileText, perm: "settings.terms" },
+                          { label: "Deposit Settings", icon: CreditCard, perm: "settings.booking_settings" },
+                          { label: "Inactivity Settings", icon: Hourglass, perm: "settings.booking_settings" },
+                          { label: "Notification Settings", icon: Bell, perm: "settings.notification" },
+                          { label: "Queue Settings", icon: ListOrdered, perm: "settings.queue" },
+                          { label: "Pages Settings", icon: FileText, perm: "settings.pages" },
+                          { label: "Medical Records", icon: ClipboardList, perm: "settings.medical_records" },
+                          { label: "Role Management", icon: Shield, perm: "settings.roles" },
+                          { label: "System Test Suite", icon: FlaskConical, perm: "settings.test_suite" }
+                        ].filter(sub => {
+                          // RISK-066: System Test Suite can fetch and display other patients'/
+                          // staff's raw PII across every endpoint — superadmin only, no
+                          // grantable-permission path, unlike every other Settings item.
+                          if (sub.label === "System Test Suite") return adminRole === 'superadmin';
+                          if (!sub.perm) return true;
+                          if (adminRole === 'superadmin') return true;
+                          return hasPermission(sub.perm);
+                        }).map((sub) => {
+                          const SubIcon = sub.icon;
+                          const subActive = activeNav === sub.label;
+                          return (
+                            <button
+                              key={sub.label}
+                              type="button"
+                              onClick={() => {
+                                setActiveNav(sub.label);
+                                setSidebarOpen(false);
+                              }}
+                              className={`group relative flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-[11px] font-medium transition-all duration-200 ${
+                                subActive
+                                  ? "bg-[var(--color-brand-light)]/10 text-[var(--color-brand-light)] border-s-[3px] border-[var(--cr-accent)] ps-2 rounded-s-none"
+                                  : "text-[var(--color-brand-light)]/70 hover:bg-[var(--color-brand-light)]/5 hover:text-[var(--color-brand-light)]"
+                              }`}
+                            >
+                              <SubIcon size={13} className={subActive ? "text-[var(--cr-accent)]" : "text-[var(--color-brand-light)]/60"} />
+                              <span className="truncate">{adminTranslations[lang].sidebar[sub.label] || sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (item.label === "Marketing") {
+                const Icon = item.icon;
+                const active = ["Marketing", "Promotions", "Packages"].includes(activeNav);
+                return (
+                  <div key={item.label} className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMarketingExpanded(!marketingExpanded);
+                        setActiveNav("Promotions");
+                        setSidebarOpen(false);
+                      }}
+                      className={`group flex w-full items-center justify-between gap-2.5 rounded-2xl px-3 py-2 text-start text-xs font-semibold transition-all duration-200 ${
+                        active
+                          ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-lg"
+                          : "text-[var(--color-brand-light)]/80 hover:bg-[var(--color-brand-light)]/10 hover:text-[var(--color-brand-light)]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                            active ? "bg-[var(--cr-accent)]/20 text-[var(--cr-primary)]" : "bg-[var(--color-brand-light)]/10 text-[var(--color-brand-light)] group-hover:bg-[var(--cr-accent)]/15"
+                          }`}
+                        >
+                          <Icon size={16} />
+                        </span>
+                        <span className="truncate">{adminTranslations[lang].sidebar[item.label] || item.label}</span>
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`text-current transition-transform duration-200 ${
+                          marketingExpanded ? "" : "-rotate-90"
+                        }`}
+                      />
+                    </button>
+                    {marketingExpanded && (
+                      <div className="mt-1 space-y-0.5 overflow-hidden rounded-xl bg-black/15 py-1 ps-2 pe-1">
+                        {[
+                          { label: "Promotions", icon: Tag, perm: null },
+                          { label: "Packages", icon: Package, perm: null },
+                        ].map((sub) => {
+                          const SubIcon = sub.icon;
+                          const subActive = activeNav === sub.label;
+                          return (
+                            <button
+                              key={sub.label}
+                              type="button"
+                              onClick={() => {
+                                setActiveNav(sub.label);
+                                setSidebarOpen(false);
+                              }}
+                              className={`group relative flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-[11px] font-medium transition-all duration-200 ${
+                                subActive
+                                  ? "bg-[var(--color-brand-light)]/10 text-[var(--color-brand-light)] border-s-[3px] border-[var(--cr-accent)] ps-2 rounded-s-none"
+                                  : "text-[var(--color-brand-light)]/70 hover:bg-[var(--color-brand-light)]/5 hover:text-[var(--color-brand-light)]"
+                              }`}
+                            >
+                              <SubIcon size={13} className={subActive ? "text-[var(--cr-accent)]" : "text-[var(--color-brand-light)]/60"} />
+                              <span className="truncate">{adminTranslations[lang].sidebar[sub.label] || sub.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const Icon = item.icon;
+              const active = activeNav === item.label;
+              const isComingSoon = Boolean((item as any).comingSoon);
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  disabled={isComingSoon}
+                  aria-disabled={isComingSoon}
+                  title={isComingSoon ? (adminTranslations[lang].sidebar.comingSoon || "Coming Soon") : undefined}
+                  onClick={async () => {
+                    if (isComingSoon) return;
+                    setActiveNav(item.label);
+                    setSidebarOpen(false);
+                  }}
+                  className={`group flex w-full items-center justify-between gap-2.5 rounded-2xl px-3 py-2 text-start text-xs font-semibold transition-all duration-200 ${
+                    isComingSoon
+                      ? "cursor-not-allowed opacity-50 text-[var(--color-brand-light)]/50"
+                      : active
+                      ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-lg"
+                      : "text-[var(--color-brand-light)]/80 hover:bg-[var(--color-brand-light)]/10 hover:text-[var(--color-brand-light)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                        isComingSoon
+                          ? "bg-[var(--color-brand-light)]/5 text-[var(--color-brand-light)]/40"
+                          : active
+                          ? "bg-[var(--cr-accent)]/20 text-[var(--cr-primary)]"
+                          : "bg-[var(--color-brand-light)]/10 text-[var(--color-brand-light)] group-hover:bg-[var(--cr-accent)]/15"
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </span>
+                    <span className="truncate">{adminTranslations[lang].sidebar[item.label] || item.label}</span>
+                  </div>
+                  {isComingSoon || item.submenu ? (
+                    <ChevronRight size={14} className="text-[var(--color-brand-light)]/60" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Account footer: separated from the navigation, pinned outside the scroll area */}
+          {(() => {
+            const me = employeesList.find(
+              (emp) => emp.email && adminEmail && emp.email.toLowerCase() === adminEmail.toLowerCase()
+            );
+            const displayName = profileName || me?.name || adminEmail?.split("@")[0] || "";
+            const roleLabel = adminRole === "superadmin" ? "Superadmin" : (me?.role_name || adminRole || "");
+            const avatarSrc = customerAvatars[me?.id || me?.employee_id || adminEmail || "my-profile"];
+            const initials = displayName.trim().split(/\s+/).slice(0, 2).map((w: string) => w[0]?.toUpperCase() || "").join("") || "?";
+            const profileActive = activeNav === "Profile";
+            return (
+              <div className="mt-3 shrink-0 space-y-1 border-t border-[var(--color-brand-light)]/15 pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveNav("Profile");
+                    setSidebarOpen(false);
+                  }}
+                  aria-current={profileActive ? "page" : undefined}
+                  title={adminTranslations[lang].sidebar.myProfileTitle}
+                  className={`flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-start transition-all duration-200 ${
+                    profileActive
+                      ? "bg-[var(--color-brand-light)] text-[var(--cr-primary)] shadow-lg"
+                      : "text-[var(--color-brand-light)]/90 hover:bg-[var(--color-brand-light)]/10"
+                  }`}
+                >
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--cr-accent)]/25 text-xs font-bold">
+                    {avatarSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-bold">{displayName || adminTranslations[lang].sidebar.myProfile}</span>
+                    <span className="block truncate text-[10px] capitalize opacity-70">{roleLabel}</span>
+                  </span>
+                </button>
+                {canSwitchWorkspace && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchWorkspaceView(true);
+                      setSidebarOpen(false);
+                    }}
+                    title={adminTranslations[lang].sidebar.doctorViewTitle}
+                    className="group flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-start text-xs font-semibold text-[var(--color-brand-light)]/80 transition-all duration-200 hover:bg-[var(--color-brand-light)]/10 hover:text-[var(--color-brand-light)]"
+                  >
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-light)]/10 group-hover:bg-[var(--cr-accent)]/15">
+                      <Stethoscope size={16} />
+                    </span>
+                    <span className="truncate">{adminTranslations[lang].sidebar.doctorView}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    // Logout also records the attendance check-out, so it is never a one-click action.
+                    const ok = await showConfirm(
+                      adminTranslations[lang].sidebar.logoutConfirmMessage,
+                      adminTranslations[lang].sidebar.logoutConfirmTitle
+                    );
+                    if (ok) handleLogout();
+                  }}
+                  className="group flex w-full items-center gap-2.5 rounded-2xl px-2 py-2 text-start text-xs font-semibold text-[var(--color-brand-light)]/80 transition-all duration-200 hover:bg-[var(--color-brand-light)]/10 hover:text-[var(--color-brand-light)]"
+                >
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-light)]/10 group-hover:bg-[var(--cr-accent)]/15">
+                    <LogOut size={16} />
+                  </span>
+                  <span className="truncate">{adminTranslations[lang].sidebar.Logout}</span>
+                </button>
+              </div>
+            );
+          })()}
+        </aside>
+
+        <main dir={lang === "ar" ? "rtl" : "ltr"} className="flex flex-col min-w-0 w-full px-3 sm:px-4 md:px-8 py-0 overflow-x-hidden">
+          <ClockSkewBanner skewMs={clockSkew} lang={lang === "ar" ? "ar" : "en"} />
+          {/* Top Navigation Bar */}
+          <div className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--cr-primary)]/10 bg-[var(--color-brand-sand)]/90 px-2 sm:px-4 py-2.5 sm:py-3 backdrop-blur-md gap-2 sm:gap-3">
+            {/* Left: language toggle + branch selector */}
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white border border-[var(--cr-primary)]/15 text-[var(--cr-primary)] hover:bg-[#F9F9F7] shadow-sm transition"
+                title="Open sidebar"
+              >
+                <Menu size={16} className="sm:w-[18px] sm:h-[18px]" />
+              </button>
+              {adminRole === "superadmin" || adminRole === "admin" || myAssignedBranchIds.length > 1 ? (
+                <div className="relative min-w-0 max-w-[130px] sm:max-w-[200px] md:max-w-none">
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-[var(--cr-primary)]/15 bg-white py-1.5 sm:py-2 pl-2.5 sm:pl-3 pr-7 sm:pr-8 text-xs sm:text-sm font-medium text-[var(--cr-dark)] shadow-sm outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20 cursor-pointer truncate"
+                  >
+                    {(adminRole === "superadmin" || adminRole === "admin"
+                      ? branches
+                      : myAssignedBranchIds
+                          .map((id) => branches.find((b) => b.id === id))
+                          .filter((b): b is Branch => !!b)
+                    ).map((b) => (
+                      <option key={b.id} value={b.id}>{b.name_en}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={13} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-brand-secondary)]" />
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[var(--cr-primary)]/15 bg-white py-1.5 sm:py-2 px-2.5 sm:px-4 text-xs sm:text-sm font-semibold text-[var(--cr-dark)] shadow-sm select-none truncate max-w-[130px] sm:max-w-none">
+                  {branches.find((b) => b.id === branch)?.name_en || "Loading..."}
+                </div>
+              )}
+            </div>
+
+            {/* Right: new entry, notifications, user profile */}
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+              {/* Quick Actions Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowQuickActionMenu(prev => {
+                      const nextState = !prev;
+                      if (nextState) {
+                        window.dispatchEvent(new CustomEvent("close-admin-dropdowns", { detail: "quickAction" }));
+                      }
+                      return nextState;
+                    });
+                    setShowNotificationMenu(false);
+                  }}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--color-brand-light)] shadow-sm transition ${
+                    showQuickActionMenu ? "bg-[#2e3a26]" : "bg-[var(--cr-primary)] hover:bg-[#2e3a26]"
+                  }`}
+                  title="Quick Actions"
+                >
+                  <Plus size={18} className={`transition-transform duration-200 ${showQuickActionMenu ? "rotate-45" : ""}`} />
+                </button>
+                {showQuickActionMenu && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[#E6E9EB] bg-white p-2 shadow-[0_15px_40px_rgba(47,61,41,0.12)] z-50 animate-fadeIn">
+                    <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] border-b border-[#E6E9EB] mb-1">
+                      Quick Creation
+                    </div>
+                    {hasPermission("bookings.create") && (
+                      <button
+                        onClick={() => {
+                          setShowQuickActionMenu(false);
+                          setActiveNav("Bookings");
+                          setShowFullViewNewBooking(true);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] flex items-center gap-2 transition"
+                      >
+                        <Plus size={14} className="text-[var(--cr-accent)]" /> New Appointment
+                      </button>
+                    )}
+                    {hasPermission("customers.create") && (
+                      <button
+                        onClick={() => {
+                          setShowQuickActionMenu(false);
+                          setActiveNav("Patients");
+                          setViewingCustomerProfile(null);
+                          setPrescriptionBookingContext(null);
+                          handleOpenAddCustomer();
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] flex items-center gap-2 transition"
+                      >
+                        <Plus size={14} className="text-[var(--cr-accent)]" /> New Patient
+                      </button>
+                    )}
+                    {(hasPermission("employees.create") || hasPermission("providers.create")) && (
+                      <button
+                        onClick={() => {
+                          setShowQuickActionMenu(false);
+                          setActiveNav("Employees");
+                          setViewingEmployee(null);
+                          setEditingEmployee(null);
+                          setIsEditingEmployeeModalOpen(true);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] flex items-center gap-2 transition"
+                      >
+                        <Plus size={14} className="text-[var(--cr-accent)]" /> New Employee
+                      </button>
+                    )}
+                    {hasPermission("services.create") && (
+                      <button
+                        onClick={() => {
+                          setShowQuickActionMenu(false);
+                          setActiveNav("Services");
+                          setShowAddCategoryModal(true);
+                        }}
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] flex items-center gap-2 transition"
+                      >
+                        <Plus size={14} className="text-[var(--cr-accent)]" /> New Service Category
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Notifications Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowNotificationMenu(prev => {
+                      const nextState = !prev;
+                      if (nextState) {
+                        window.dispatchEvent(new CustomEvent("close-admin-dropdowns", { detail: "notifications" }));
+                      }
+                      return nextState;
+                    });
+                    setShowQuickActionMenu(false);
+                  }}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl transition ${
+                    showNotificationMenu || unreadCount > 0
+                      ? "bg-[var(--cr-accent)]/20 text-[var(--cr-primary)]"
+                      : "bg-[var(--cr-primary)]/8 text-[var(--cr-primary)] hover:bg-[var(--cr-primary)]/15"
+                  }`}
+                  title="Notifications"
+                >
+                  <Bell size={18} />
+                </button>
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white pointer-events-none animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
+                {showNotificationMenu && (
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#E6E9EB] bg-white shadow-[0_15px_40px_rgba(47,61,41,0.12)] z-50 animate-fadeIn overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-[#E6E9EB] bg-[var(--color-brand-light)] px-4 py-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--cr-dark)]">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-[11px] font-semibold text-[var(--cr-accent)] hover:underline"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto divide-y divide-[#E6E9EB]">
+                      {notifications.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-gray-400 italic">No notifications yet.</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            onClick={() => handleMarkAsRead(n.id)}
+                            className={`p-3 text-left transition hover:bg-[var(--color-brand-tint)]/40 cursor-pointer ${
+                              !n.read ? "bg-[#EDE4C8]/10" : ""
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${
+                                n.type === "cancelled"
+                                  ? "bg-red-500"
+                                  : n.type === "low_stock"
+                                    ? "bg-orange-500"
+                                    : n.type === "system"
+                                      ? "bg-amber-500"
+                                      : "bg-green-500"
+                              }`} />
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-semibold text-xs text-[var(--cr-dark)]">{n.title}</span>
+                                  <span className="text-[10px] text-[var(--color-brand-secondary)] whitespace-nowrap">{n.time}</span>
+                                </div>
+                                <p className="text-[11px] text-[var(--cr-primary)] leading-relaxed mt-0.5">{n.message}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="border-t border-[#E6E9EB] bg-[var(--color-brand-light)] px-4 py-2.5 text-center">
+                      <button
+                        onClick={() => {
+                          setShowNotificationMenu(false);
+                          setActiveNav("Bookings");
+                        }}
+                        className="text-xs font-semibold text-[var(--cr-primary)] hover:text-[#2e3a26]"
+                      >
+                        View all bookings
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Removed clinic-name button */}
+            </div>
+          </div>
+
+          <div className="py-8">
+            {/* Active Missing Employee Alerts Banner */}
+            {(adminRole === "superadmin" || adminRole === "admin" || adminRole === "HR") && activeMissingAlerts.length > 0 && (
+              <div className="mb-6 space-y-3">
+                {activeMissingAlerts.map((alertItem: any) => (
+                  <div
+                    key={alertItem.id}
+                    className="flex items-center justify-between gap-4 rounded-3xl border border-rose-200 bg-rose-50 px-6 py-4 text-rose-800 shadow-sm animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">⚠️</span>
+                      <p className="text-sm font-semibold">
+                        Alert: Employee <strong>{alertItem.employee_accounts?.name}</strong> ({alertItem.employee_accounts?.role_name}) went missing at {new Date(alertItem.timestamp).toLocaleTimeString()}!
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/hr/alerts', {
+                            method: 'PATCH',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${session?.access_token}`
+                            },
+                            body: JSON.stringify({ id: alertItem.id, resolved: true })
+                          });
+                          if (res.ok) {
+                            fetchHrAlerts();
+                          }
+                        } catch (err) {
+                          console.error("Failed to resolve alert:", err);
+                        }
+                      }}
+                      className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 transition"
+                    >
+                      Dismiss Alert
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!hasAccessToActiveNav ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center gap-4 bg-white rounded-[40px] shadow-[0_30px_80px_rgba(47,61,41,0.07)] p-8">
+                <div className="h-16 w-16 flex items-center justify-center rounded-full bg-red-50 text-red-600 border border-red-100">
+                  <Shield size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-[var(--cr-dark)]">Access Restrained</h3>
+                <p className="text-sm text-[var(--color-brand-secondary)] max-w-md leading-relaxed">
+                  Your administrator account role does not have authorization to view the <strong>"{activeNav}"</strong> module. Please contact the super admin to request access privileges.
+                </p>
+              </div>
+            ) : (
+              <>
+
+          {/* ── PROVIDERS VIEW ── */}
+          {activeNav === "Doctors" && (
+            <AdminDoctorsView
+              providerForm={providerForm}
+              branches={branches}
+              allReservations={allReservations}
+              localServices={localServices}
+              allServicesList={allServicesList}
+              getDoctorFirstReservationDate={getDoctorFirstReservationDate}
+              parseEgyptianNationalId={parseEgyptianNationalId}
+              uniqueSpecialties={uniqueSpecialties}
+              filteredProviders={filteredProviders}
+              expandedDoctorServices={expandedDoctorServices}
+              toggleExpandedDoctorServices={toggleExpandedDoctorServices}
+              activeDoctorRowMenuId={activeDoctorRowMenuId}
+              setActiveDoctorRowMenuId={setActiveDoctorRowMenuId}
+              showAuditLogsModal={showAuditLogsModal}
+              setShowAuditLogsModal={setShowAuditLogsModal}
+              hasPermission={hasPermission}
+              lang={lang}
+              t={adminTranslations[lang].doctors.adminDoctorsView}
+              tFormFields={adminTranslations[lang].doctors.providerFormFields}
+            />
+          )}
+
+          {/* ── SERVICES VIEW ── */}
+          {activeNav === "Services" && (
+            <AdminServicesView
+              branches={branches}
+              localServices={localServices}
+              setLocalServices={setLocalServices}
+              localCategories={localCategories}
+              setLocalCategories={setLocalCategories}
+              expandedCategories={expandedCategories}
+              setExpandedCategories={setExpandedCategories}
+              showAddCategoryModal={showAddCategoryModal}
+              setShowAddCategoryModal={setShowAddCategoryModal}
+              showAddServiceModal={showAddServiceModal}
+              setShowAddServiceModal={setShowAddServiceModal}
+              addServiceTargetCategory={addServiceTargetCategory}
+              setAddServiceTargetCategory={setAddServiceTargetCategory}
+              newCategoryNameEn={newCategoryNameEn}
+              setNewCategoryNameEn={setNewCategoryNameEn}
+              newCategoryNameAr={newCategoryNameAr}
+              setNewCategoryNameAr={setNewCategoryNameAr}
+              newServiceNameEn={newServiceNameEn}
+              setNewServiceNameEn={setNewServiceNameEn}
+              newServiceNameAr={newServiceNameAr}
+              setNewServiceNameAr={setNewServiceNameAr}
+              newServicePrice={newServicePrice}
+              setNewServicePrice={setNewServicePrice}
+              deleteCategoryTarget={deleteCategoryTarget}
+              setDeleteCategoryTarget={setDeleteCategoryTarget}
+              editingService={editingService}
+              setEditingService={setEditingService}
+              deleteServiceTarget={deleteServiceTarget}
+              setDeleteServiceTarget={setDeleteServiceTarget}
+              serviceNameEn={serviceNameEn}
+              setServiceNameEn={setServiceNameEn}
+              serviceNameAr={serviceNameAr}
+              setServiceNameAr={setServiceNameAr}
+              serviceCategory={serviceCategory}
+              setServiceCategory={setServiceCategory}
+              serviceDuration={serviceDuration}
+              setServiceDuration={setServiceDuration}
+              serviceDurationMinutes={serviceDurationMinutes}
+              setServiceDurationMinutes={setServiceDurationMinutes}
+              serviceUnitType={serviceUnitType}
+              setServiceUnitType={setServiceUnitType}
+              serviceDescEn={serviceDescEn}
+              setServiceDescEn={setServiceDescEn}
+              serviceDescAr={serviceDescAr}
+              setServiceDescAr={setServiceDescAr}
+              serviceSortOrder={serviceSortOrder}
+              setServiceSortOrder={setServiceSortOrder}
+              serviceIsShared={serviceIsShared}
+              setServiceIsShared={setServiceIsShared}
+              serviceIsLaser={serviceIsLaser}
+              setServiceIsLaser={setServiceIsLaser}
+              serviceEnableReminder={serviceEnableReminder}
+              serviceShowOnWebsite={serviceShowOnWebsite}
+              setServiceShowOnWebsite={setServiceShowOnWebsite}
+              setServiceEnableReminder={setServiceEnableReminder}
+              serviceImageUrl={serviceImageUrl}
+              setServiceImageUrl={setServiceImageUrl}
+              servicePrice={servicePrice}
+              setServicePrice={setServicePrice}
+              serviceBranchPricing={serviceBranchPricing}
+              setServiceBranchPricing={setServiceBranchPricing}
+              draggedServiceId={draggedServiceId}
+              setDraggedServiceId={setDraggedServiceId}
+              dragOverServiceId={dragOverServiceId}
+              setDragOverServiceId={setDragOverServiceId}
+              rowDraggable={rowDraggable}
+              setRowDraggable={setRowDraggable}
+              draggedCatKey={draggedCatKey}
+              setDraggedCatKey={setDraggedCatKey}
+              dragOverCatKey={dragOverCatKey}
+              setDragOverCatKey={setDragOverCatKey}
+              catDraggable={catDraggable}
+              setCatDraggable={setCatDraggable}
+              serviceSearch={serviceSearch}
+              setServiceSearch={setServiceSearch}
+              serviceSortBy={serviceSortBy}
+              setServiceSortBy={setServiceSortBy}
+              showServiceFilterPanel={showServiceFilterPanel}
+              setShowServiceFilterPanel={setShowServiceFilterPanel}
+              serviceFilterStatus={serviceFilterStatus}
+              setServiceFilterStatus={setServiceFilterStatus}
+              serviceToggles={serviceToggles}
+              setServiceToggles={setServiceToggles}
+              activeServiceRowMenuId={activeServiceRowMenuId}
+              setActiveServiceRowMenuId={setActiveServiceRowMenuId}
+              filteredServices={filteredServices}
+              groupedServices={groupedServices}
+              handleEditService={handleEditService}
+              handleReorderServices={handleReorderServices}
+              handleReorderCategories={handleReorderCategories}
+              toggleCategoryExpand={toggleCategoryExpand}
+              removeCategory={removeCategory}
+              toggleService={toggleService}
+              syncServicesToApi={syncServicesToApi}
+              loadServicesFromApi={loadServicesFromApi}
+              deleteServiceFromApi={deleteServiceFromApi}
+              syncCategoriesToApi={syncCategoriesToApi}
+              loadCategoriesFromApi={loadCategoriesFromApi}
+              deleteCategoryFromApi={deleteCategoryFromApi}
+              authenticatedJsonHeaders={authenticatedJsonHeaders}
+              hasPermission={hasPermission}
+              lang={lang}
+              t={adminTranslations[lang].services}
+            />
+          )}
+
+          {/* ── MARKETING / PROMOTIONS VIEW ── */}
+          {(activeNav === "Marketing" || activeNav === "Promotions") && (
+            <PromotionsAdminPanel
+              localServices={localServices}
+              setLocalServices={setLocalServices}
+              branches={branches}
+              syncServicesToApi={syncServicesToApi}
+            />
+          )}
+
+          {/* ── PACKAGES VIEW ── */}
+          {activeNav === "Packages" && (
+            <PackageAdminPanel session={session} />
+          )}
+
+          {/* ── CUSTOMER SUPPORT VIEW ── */}
+          {activeNav === "Customer Support" && (
+            <CustomerSupportView
+              lang={lang}
+              hasPermission={hasPermission}
+            />
+          )}
+
+          {/* ── REPORTS & ANALYTICS VIEW ── */}
+          {activeNav === "Reports" && (
+            <ReportsSection
+              accessToken={session?.access_token}
+              branches={branches.map((b) => ({ id: b.id, name_en: b.name_en, name_ar: b.name_ar }))}
+              lang={lang}
+              canViewFinancialReports={hasPermission('reports.view_financial_reports') || hasPermission('finance.view_pnl') || hasPermission('finance.view_margins')}
+              canViewAnalytics={hasPermission('reports.view_analytics') || hasPermission('finance.view_capacity')}
+            />
+          )}
+
+          {/* ── TRANSACTIONS VIEW ── */}
+          {activeNav === "Transactions" && (
+            transactionsSubView === "previous_booking" ? (
+              <AdminAddPreviousBookingView
+                onClose={() => {
+                  setTransactionsSubView("list");
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingCreated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setTransactionsSubView("list");
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingUpdated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setTransactionsSubView("list");
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                editingBooking={editingPreviousBooking}
+                initialCustomer={previousBookingCustomer}
+                services={localServices}
+                providers={providers}
+                customers={dbCustomers}
+                products={inventoryProducts}
+                branches={branches}
+                activeBranchId={branch}
+                lang={lang}
+                t={adminTranslations[lang].bookings.adminAddPreviousBooking}
+              />
+            ) : transactionsSubView === "new" ? (
+              <NewManualTransactionView
+                onBack={() => {
+                  setTransactionsSubView("list");
+                  setTransactionPreSelectedPatient(null);
+                }}
+                onSuccess={() => {
+                  setTransactionsSubView("list");
+                  setTransactionPreSelectedPatient(null);
+                }}
+                preSelectedCustomerId={transactionPreSelectedPatient?.id}
+                preSelectedCustomerName={transactionPreSelectedPatient?.name}
+                staffName={loggedEmpAccount?.name || adminEmail.split("@")[0] || "Staff User"}
+                branches={branches}
+                onAddNewPatient={() => {
+                  setActiveNav("Patients");
+                  setShowCustomerFormModal(true);
+                }}
+                onAddPreviousBooking={() => {
+                  setPreviousBookingCustomer(null);
+                  setTransactionsSubView("previous_booking");
+                }}
+                lang={lang}
+                hasPermission={hasPermission}
+              />
+            ) : (
+              <TransactionsView
+                onNewTransaction={() => {
+                  setTransactionsSubView("new");
+                  setTransactionPreSelectedPatient(null);
+                }}
+                onAddPreviousBooking={() => {
+                  setPreviousBookingCustomer(null);
+                  setTransactionsSubView("previous_booking");
+                }}
+                staffName={loggedEmpAccount?.name || adminEmail.split("@")[0] || "Staff User"}
+                branches={branches}
+                currentBranchId={branch || undefined}
+                hasPermission={hasPermission}
+                lang={lang}
+              />
+            )
+          )}
+
+          {/* ── FINANCE VIEW ── */}
+          {activeNav === "Finance" && (
+            <FinanceSection
+              accessToken={session?.access_token}
+              branches={branches.map((b) => ({ id: b.id, name_en: b.name_en, name_ar: b.name_ar }))}
+              lang={lang}
+            />
+          )}
+
+          {/* ── ALL PRESCRIPTIONS VIEW ── */}
+
+          {/* ── MEDICINE LIBRARY VIEW ── */}
+
+          {/* ── PRODUCTS VIEW ── */}
+
+          {/* ── PRODUCT CATEGORIES VIEW ── */}
+
+          {/* ── POINT OF SALE VIEW ── */}
+
+          {/* ── INSIGHTS VIEW ── */}
+
+          {/* ── SALES DASHBOARD VIEW ── */}
+
+          {/* ── REFUNDS VIEW ── */}
+
+          {/* ── SHIPPING METHODS VIEW ── */}
+
+          {/* ── TARGET BONUSES VIEW ── */}
+
+          {/* ── COUPONS VIEW ── */}
+
+          {/* ── CUSTOMERS VIEW ── */}
+          {activeNav === "Patients" && (
+            showAddPreviousBooking ? (
+              <AdminAddPreviousBookingView
+                onClose={() => {
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingCreated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingUpdated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                editingBooking={editingPreviousBooking}
+                initialCustomer={previousBookingCustomer}
+                services={localServices}
+                providers={providers}
+                customers={dbCustomers}
+                products={inventoryProducts}
+                branches={branches}
+                activeBranchId={branch}
+                lang={lang}
+                t={adminTranslations[lang].bookings.adminAddPreviousBooking}
+              />
+            ) : (
+            <div>
+
+              {/* ── INLINE: View Customer Profile ── */}
+              {viewingCustomerProfile && (
+                <CustomerProfileDrawer
+                  onNavigateToNewTransaction={(patientId, patientName) => {
+                    setActiveNav("Transactions");
+                    setTransactionsSubView("new");
+                    setTransactionPreSelectedPatient({ id: patientId, name: patientName });
+                  }}
+                  onAddPreviousBooking={(patient) => {
+                    setPreviousBookingCustomer(patient);
+                    setShowAddPreviousBooking(true);
+                  }}
+                  onDeleteCustomer={(patient) => setDeleteCustomerTarget(patient)}
+                  viewingCustomerProfile={viewingCustomerProfile}
+                  setViewingCustomerProfile={setViewingCustomerProfile}
+                  setPrescriptionBookingContext={setPrescriptionBookingContext}
+                  medicalRecordForm={medicalRecordForm}
+                  setMedicalRecordForm={setMedicalRecordForm}
+                  medicalReports={medicalReports}
+                  setMedicalReports={setMedicalReports}
+                  showMedicalFormModal={showMedicalFormModal}
+                  setShowMedicalFormModal={setShowMedicalFormModal}
+                  showMedicalReportModal={showMedicalReportModal}
+                  setShowMedicalReportModal={setShowMedicalReportModal}
+                  customerProfileTab={customerProfileTab}
+                  setCustomerProfileTab={setCustomerProfileTab}
+                  customerRecordsSubTab={customerRecordsSubTab}
+                  setCustomerRecordsSubTab={setCustomerRecordsSubTab}
+                  customerPrescriptions={customerPrescriptions}
+                  loadingPrescriptions={loadingPrescriptions}
+                  prescriptionEditMode={prescriptionEditMode}
+                  setPrescriptionEditMode={setPrescriptionEditMode}
+                  editingPrescription={editingPrescription}
+                  customerProductsSubTab={customerProductsSubTab}
+                  setCustomerProductsSubTab={setCustomerProductsSubTab}
+                  customerProductBalances={customerProductBalances}
+                  loadingCustomerProducts={loadingCustomerProducts}
+                  logUsageModalBalance={logUsageModalBalance}
+                  setLogUsageModalBalance={setLogUsageModalBalance}
+                  logUsageQty={logUsageQty}
+                  setLogUsageQty={setLogUsageQty}
+                  logUsageNotes={logUsageNotes}
+                  setLogUsageNotes={setLogUsageNotes}
+                  savingUsageLog={savingUsageLog}
+                  showAddPatientProductModal={showAddPatientProductModal}
+                  setShowAddPatientProductModal={setShowAddPatientProductModal}
+                  selectedAddProductId={selectedAddProductId}
+                  setSelectedAddProductId={setSelectedAddProductId}
+                  selectedAddProductName={selectedAddProductName}
+                  setSelectedAddProductName={setSelectedAddProductName}
+                  selectedAddProductQty={selectedAddProductQty}
+                  setSelectedAddProductQty={setSelectedAddProductQty}
+                  selectedAddProductUnitPrice={selectedAddProductUnitPrice}
+                  setSelectedAddProductUnitPrice={setSelectedAddProductUnitPrice}
+                  addingProductToPatient={addingProductToPatient}
+                  customerPackagesSubTab={customerPackagesSubTab}
+                  setCustomerPackagesSubTab={setCustomerPackagesSubTab}
+                  customerProfilePackages={customerProfilePackages}
+                  loadingCustomerPackages={loadingCustomerPackages}
+                  showSellPackageModal={showSellPackageModal}
+                  setShowSellPackageModal={setShowSellPackageModal}
+                  availablePackageOffers={availablePackageOffers}
+                  selectedSellPackageId={selectedSellPackageId}
+                  setSelectedSellPackageId={setSelectedSellPackageId}
+                  sellPackagePaymentMethod={sellPackagePaymentMethod}
+                  setSellPackagePaymentMethod={setSellPackagePaymentMethod}
+                  sellingPackage={sellingPackage}
+                  customerPackageRedemptions={customerPackageRedemptions}
+                  rxDiagnosis={rxDiagnosis}
+                  setRxDiagnosis={setRxDiagnosis}
+                  rxMedications={rxMedications}
+                  setRxMedications={setRxMedications}
+                  rxMedInput={rxMedInput}
+                  setRxMedInput={setRxMedInput}
+                  rxMedDropdown={rxMedDropdown}
+                  setRxMedDropdown={setRxMedDropdown}
+                  rxGeneralNotes={rxGeneralNotes}
+                  setRxGeneralNotes={setRxGeneralNotes}
+                  rxDocNotes={rxDocNotes}
+                  setRxDocNotes={setRxDocNotes}
+                  rxFollowUpDate={rxFollowUpDate}
+                  setRxFollowUpDate={setRxFollowUpDate}
+                  savingPrescription={savingPrescription}
+                  historyModalOpen={historyModalOpen}
+                  setHistoryModalOpen={setHistoryModalOpen}
+                  historyPrescriptions={historyPrescriptions}
+                  loadingHistory={loadingHistory}
+                  selectedHistoryRx={selectedHistoryRx}
+                  fetchAvailablePackageOffers={fetchAvailablePackageOffers}
+                  handleSellPackageToCustomer={handleSellPackageToCustomer}
+                  fetchCustomerProfilePackages={fetchCustomerProfilePackages}
+                  handleSaveUsageLog={handleSaveUsageLog}
+                  handleAddProductToPatient={handleAddProductToPatient}
+                  handleStartCreatePrescription={handleStartCreatePrescription}
+                  handleStartEditPrescription={handleStartEditPrescription}
+                  handleOpenPrescriptionHistory={handleOpenPrescriptionHistory}
+                  handleClosePrescriptionHistory={handleClosePrescriptionHistory}
+                  handleAddMedication={handleAddMedication}
+                  handleRemoveMedication={handleRemoveMedication}
+                  handleSavePrescription={handleSavePrescription}
+                  handleDeletePrescription={handleDeletePrescription}
+                  handleOpenMedicalFormModal={handleOpenMedicalFormModal}
+                  handleOpenMedicalReportModal={handleOpenMedicalReportModal}
+                  handleDeleteMedicalReport={handleDeleteMedicalReport}
+                  handlePrintPrescription={handlePrintPrescription}
+                  hasPermission={hasPermission}
+                  adminRole={adminRole}
+                  handleOpenEditCustomer={handleOpenEditCustomer}
+                  customerAvatars={customerAvatars}
+                  handleAvatarUpload={handleAvatarUpload}
+                  handleAvatarRemove={handleAvatarRemove}
+                  allReservations={allReservations}
+                  localServices={localServices}
+                  rooms={rooms}
+                  onViewBooking={(booking: any) => setViewingBooking(booking)}
+                  getStatusBadgeClass={getStatusBadgeClass}
+                  productSalesHistory={productSalesHistory}
+                  inventoryProducts={inventoryProducts}
+                  authenticatedJsonHeaders={authenticatedJsonHeaders}
+                  lang={lang}
+                  adminTranslations={adminTranslations}
+                  defaultPricePerPulse={bookingDefaultPricePerPulse}
+                  MOCK_MEDICINES={MOCK_MEDICINES}
+                  fetchCustomers={fetchCustomers}
+                />
+              )}
+
+              {/* ── INLINE: Add/Edit Customer Form ── */}
+              {showCustomerFormModal && !viewingCustomerProfile && (
+                <CustomerFormModal
+                  setShowCustomerFormModal={setShowCustomerFormModal}
+                  selectedCustomerForEdit={selectedCustomerForEdit}
+                  authenticatedJsonHeaders={authenticatedJsonHeaders}
+                  fetchCustomers={fetchCustomers}
+                  lang={lang}
+                  t={adminTranslations[lang].patients.customerFormModal}
+                  adminRole={adminRole}
+                />
+              )}
+
+              {/* ── CUSTOMER TABLE (only when no inline view is active) ── */}
+              {!viewingCustomerProfile && !showCustomerFormModal && (
+              <PatientsDirectoryView
+                filteredCustomers={filteredCustomers}
+                hasPermission={hasPermission}
+                handleOpenAddCustomer={handleOpenAddCustomer}
+                handleOpenEditCustomer={handleOpenEditCustomer}
+                setViewingCustomerProfile={setViewingCustomerProfile}
+                customerSearch={customerSearch}
+                setCustomerSearch={setCustomerSearch}
+                showCustomerFilterPanel={showCustomerFilterPanel}
+                setShowCustomerFilterPanel={setShowCustomerFilterPanel}
+                customerFilterGender={customerFilterGender}
+                setCustomerFilterGender={setCustomerFilterGender}
+                customerFilterStatus={customerFilterStatus}
+                setCustomerFilterStatus={setCustomerFilterStatus}
+                customerFilterReferral={customerFilterReferral}
+                setCustomerFilterReferral={setCustomerFilterReferral}
+                showCustomerMoreMenu={showCustomerMoreMenu}
+                setShowCustomerMoreMenu={setShowCustomerMoreMenu}
+                setShowExportCustomersModal={setShowExportCustomersModal}
+                setShowImportCustomersModal={setShowImportCustomersModal}
+                activeCustomerRowMenuId={activeCustomerRowMenuId}
+                setActiveCustomerRowMenuId={setActiveCustomerRowMenuId}
+                customerMoreMenuRef={customerMoreMenuRef}
+                fetchCustomers={fetchCustomers}
+                lang={lang}
+                t={adminTranslations[lang].patients.patientsDirectoryView}
+              />
+              )}
+            </div>
+            )
+          )}
+
+
+
+
+
+
+          {/* ── SMS MANAGEMENT VIEWS ── */}
+
+
+
+
+
+
+
+          {/* ── PAGES SETTINGS VIEW ── */}
+          {activeNav === "Pages Settings" && (
+            <div className="space-y-6">
+              <div className="mb-2">
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80">Settings</p>
+                <h2 className="mt-2 text-4xl font-semibold text-[var(--cr-dark)]">Pages Settings</h2>
+                <p className="mt-2 text-sm text-[var(--color-brand-secondary)]">Edit the content displayed on each public-facing page of the website.</p>
+              </div>
+
+              {/* Page tabs */}
+              <div className="flex items-center gap-1 p-1 w-fit rounded-full border border-[var(--cr-primary)]/12 bg-white shadow-sm">
+                {(["Home", "About Us", "Services"] as const).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setPagesSettingsTab(page)}
+                    className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                      pagesSettingsTab === page
+                        ? "bg-[var(--cr-primary)] text-[var(--color-brand-light)] shadow-sm"
+                        : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[var(--color-brand-sand)]"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              {/* Home Page */}
+              {pagesSettingsTab === "Home" && (
+                <HomePageSettingsView
+                  homeHeroSlides={homeHeroSlides}
+                  homeHeroSlidesAr={homeHeroSlidesAr}
+                  showCustomerLogin={showCustomerLogin}
+                  setShowCustomerLogin={setShowCustomerLogin}
+                  pageSettingsLangTab={pageSettingsLangTab}
+                  setPageSettingsLangTab={setPageSettingsLangTab}
+                  loadingPageSettings={loadingPageSettings}
+                  savingPageSettings={savingPageSettings}
+                  savePageSettings={savePageSettings}
+                  translatingField={translatingField}
+                  handleTranslateSlideField={handleTranslateSlideField}
+                  handleAddSlide={handleAddSlide}
+                  handleMoveSlide={handleMoveSlide}
+                  handleDeleteSlide={handleDeleteSlide}
+                  handleUpdateField={handleUpdateField}
+                  beforeAfterPairs={beforeAfterPairs}
+                  setBeforeAfterPairs={setBeforeAfterPairs}
+                  showConfirm={showConfirm}
+                />
+              )}
+
+
+              {/* About Us Page */}
+              {pagesSettingsTab === "About Us" && (
+                <AboutUsPageSettingsView
+                  aboutImage1={aboutImage1}
+                  setAboutImage1={setAboutImage1}
+                  aboutImage2={aboutImage2}
+                  setAboutImage2={setAboutImage2}
+                  aboutImage3={aboutImage3}
+                  setAboutImage3={setAboutImage3}
+                  whatWeDoImage1={whatWeDoImage1}
+                  setWhatWeDoImage1={setWhatWeDoImage1}
+                  whatWeDoImage2={whatWeDoImage2}
+                  setWhatWeDoImage2={setWhatWeDoImage2}
+                  whatWeDoList={whatWeDoList}
+                  setWhatWeDoList={setWhatWeDoList}
+                  whatWeDoListAr={whatWeDoListAr}
+                  setWhatWeDoListAr={setWhatWeDoListAr}
+                  faqImage1={faqImage1}
+                  setFaqImage1={setFaqImage1}
+                  faqImage2={faqImage2}
+                  setFaqImage2={setFaqImage2}
+                  faqTag={faqTag}
+                  setFaqTag={setFaqTag}
+                  faqHeading={faqHeading}
+                  setFaqHeading={setFaqHeading}
+                  faqTagAr={faqTagAr}
+                  setFaqTagAr={setFaqTagAr}
+                  faqHeadingAr={faqHeadingAr}
+                  setFaqHeadingAr={setFaqHeadingAr}
+                  faqs={faqs}
+                  setFaqs={setFaqs}
+                  faqsAr={faqsAr}
+                  setFaqsAr={setFaqsAr}
+                  translatingField={translatingField}
+                  handleAutoTranslate={handleAutoTranslate}
+                  handleTranslateChecklistItem={handleTranslateChecklistItem}
+                  handleTranslateFaqItem={handleTranslateFaqItem}
+                  savingPageSettings={savingPageSettings}
+                  savePageSettings={savePageSettings}
+                />
+              )}
+
+              {/* Services Page */}
+              {pagesSettingsTab === "Services" && (
+                <ServicesPageSettingsView
+                  howItWorksHeading={howItWorksHeading}
+                  setHowItWorksHeading={setHowItWorksHeading}
+                  howItWorksDescription={howItWorksDescription}
+                  setHowItWorksDescription={setHowItWorksDescription}
+                  howItWorksHeadingAr={howItWorksHeadingAr}
+                  setHowItWorksHeadingAr={setHowItWorksHeadingAr}
+                  howItWorksDescriptionAr={howItWorksDescriptionAr}
+                  setHowItWorksDescriptionAr={setHowItWorksDescriptionAr}
+                  wcuYearsLabel={wcuYearsLabel}
+                  setWcuYearsLabel={setWcuYearsLabel}
+                  wcuHeading={wcuHeading}
+                  setWcuHeading={setWcuHeading}
+                  wcuDescription={wcuDescription}
+                  setWcuDescription={setWcuDescription}
+                  wcuQuote={wcuQuote}
+                  setWcuQuote={setWcuQuote}
+                  wcuYearsLabelAr={wcuYearsLabelAr}
+                  setWcuYearsLabelAr={setWcuYearsLabelAr}
+                  wcuHeadingAr={wcuHeadingAr}
+                  setWcuHeadingAr={setWcuHeadingAr}
+                  wcuDescriptionAr={wcuDescriptionAr}
+                  setWcuDescriptionAr={setWcuDescriptionAr}
+                  wcuQuoteAr={wcuQuoteAr}
+                  setWcuQuoteAr={setWcuQuoteAr}
+                  wcuImage1={wcuImage1}
+                  setWcuImage1={setWcuImage1}
+                  wcuImage2={wcuImage2}
+                  setWcuImage2={setWcuImage2}
+                  translatingField={translatingField}
+                  handleAutoTranslate={handleAutoTranslate}
+                  savingPageSettings={savingPageSettings}
+                  savePageSettings={savePageSettings}
+                />
+              )}
+
+
+            </div>
+          )}
+
+          {/* ── SETTINGS VIEWS ── */}
+          {activeNav === "Profile" && (() => {
+            const isSuperadminBypass = adminRole === "superadmin";
+            const profileEmployee = employeesList.find(emp => 
+              (emp.email && adminEmail && emp.email.toLowerCase() === adminEmail.toLowerCase()) ||
+              (emp.id && adminDbId && emp.id === adminDbId) ||
+              (emp.employee_id && adminEmployeeId && emp.employee_id === adminEmployeeId) ||
+              (emp.name && profileName && emp.name.trim().toLowerCase() === profileName.trim().toLowerCase())
+            );
+            const matchProv = providers.find(p => 
+              (profileEmployee?.name && p.name && p.name.trim().toLowerCase() === profileEmployee.name.trim().toLowerCase()) ||
+              (profileEmployee?.phone && p.phone && p.phone === profileEmployee.phone) ||
+              (profileEmployee?.id && p.id === profileEmployee.id) ||
+              (profileName && p.name && p.name.trim().toLowerCase() === profileName.trim().toLowerCase()) ||
+              (adminEmail && p.email && p.email.toLowerCase() === adminEmail.toLowerCase())
+            );
+            const currentBranchName = branches.find(b => b.id === branch)?.name_en || "New Cairo Branch";
+            const effectiveWorkingDaysHours = profileEmployee?.working_days_hours || profileEmployee?.workingDaysHours || matchProv?.working_days_hours || matchProv?.workingDaysHours || null;
+            const effectiveShift = profileEmployee?.shift || matchProv?.shift || (effectiveWorkingDaysHours ? "Multi-Shift Schedule" : "Day");
+            const effectiveWorkingHours = profileEmployee?.working_hours || (profileEmployee?.shift && profileEmployee.shift !== "Day" && profileEmployee.shift !== "Night" ? profileEmployee.shift : null);
+
+            return (
+              <UserProfileView
+                user={{
+                  id: profileEmployee?.id || profileEmployee?.employee_id || matchProv?.id || adminEmail || "my-profile",
+                  name: profileName || profileEmployee?.name || matchProv?.name || (adminEmail?.split("@")[0] || "Employee Account"),
+                  email: adminEmail || profileEmployee?.email || "",
+                  phone: profilePhone || profileEmployee?.phone || matchProv?.phone || "",
+                  address: profileAddress || profileEmployee?.address || "",
+                  role: isSuperadminBypass ? "Superadmin" : (profileEmployee?.role_name || (matchProv ? "Doctor" : "Employee")),
+                  branch: currentBranchName,
+                  branchesList: (() => {
+                    // DEC-110: a multi-branch employee's profile lists every branch they work at.
+                    const assignedNames = getEmployeeBranchIds(profileEmployee)
+                      .map((id) => branches.find((b) => b.id === id)?.name_en)
+                      .filter((n): n is string => !!n);
+                    if (assignedNames.length > 1) return assignedNames;
+                    return Array.isArray(profileEmployee?.branches) && profileEmployee.branches.length > 0
+                      ? profileEmployee.branches
+                      : [currentBranchName];
+                  })(),
+                  department: profileEmployee?.department || (matchProv ? "Doctor" : "Reception"),
+                  employeeId: isSuperadminBypass ? "EMP-SUPER" : (profileEmployee?.employee_id || (matchProv?.id ? `DOC-${matchProv.id.slice(0, 5).toUpperCase()}` : "EMP-001")),
+                  employmentType: "Full Time",
+                  joiningDate: profileEmployee?.created_at || matchProv?.created_at
+                    ? new Date(profileEmployee?.created_at || matchProv?.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+                    : "July 21, 2026",
+                  shiftType: effectiveShift,
+                  workingDays: profileEmployee?.working_days || null,
+                  workingHours: effectiveWorkingHours,
+                  workingDaysHours: effectiveWorkingDaysHours,
+                  basicSalary: Number(profileEmployee?.salary || matchProv?.fixed_salary || matchProv?.salary || 0),
+                  bonuses: Number(profileEmployee?.bonus || 0),
+                  deductions: Number(profileEmployee?.deductions || 0),
+                  monthlyTarget: Number(profileEmployee?.required_target_amount || 0),
+                  avatarUrl: customerAvatars[profileEmployee?.id || profileEmployee?.employee_id || adminEmail || "my-profile"] || matchProv?.image || null
+                }}
+                lang={lang}
+                t={adminTranslations[lang].userProfile as UserProfileViewTranslations}
+                onUpdateUser={async (updated) => {
+                  if (updated.email) setAdminEmail(updated.email);
+                  if (updated.phone) setProfilePhone(updated.phone);
+                  if (updated.address) setProfileAddress(updated.address);
+                  
+                  const targetEmp = employeesList.find(emp => emp.email?.toLowerCase() === adminEmail?.toLowerCase());
+                  if (targetEmp?.id) {
+                    try {
+                      await fetch("/api/employees", {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${session?.access_token || ''}`
+                        },
+                        body: JSON.stringify({
+                          id: targetEmp.id,
+                          phone: (updated.phone !== undefined ? updated.phone : profilePhone).trim(),
+                          address: (updated.address !== undefined ? updated.address : profileAddress).trim()
+                        })
+                      });
+                      fetchRolesAndEmployees();
+                    } catch (e) {
+                      console.error("Failed to save profile changes:", e);
+                    }
+                  }
+                }}
+                onAvatarUpload={async (file) => {
+                  const key = profileEmployee?.id || profileEmployee?.employee_id || adminEmail || "my-profile";
+                  if (file && key) handleAvatarUpload(key, file);
+                }}
+                onAvatarRemove={async () => {
+                  const key = profileEmployee?.id || profileEmployee?.employee_id || adminEmail || "my-profile";
+                  if (key) handleAvatarRemove(key);
+                }}
+              />
+            );
+          })()}
+
+          {activeNav === "Clinic Profile" && (
+            <ClinicProfileSettingsView authenticatedJsonHeaders={authenticatedJsonHeaders} />
+          )}
+
+          {activeNav === "Service Hours" && (
+            <ServiceHoursView
+              branches={branches}
+              selectedBranchForHoursId={selectedBranchForHoursId}
+              setSelectedBranchForHoursId={setSelectedBranchForHoursId}
+              serviceHours={serviceHours}
+              setServiceHours={setServiceHours}
+              handleSaveBranchServiceHours={handleSaveBranchServiceHours}
+              savingBranchHours={savingBranchHours}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.serviceHours}
+            />
+          )}
+
+          {activeNav === "Branches" && (
+            <BranchesView
+              branches={branches}
+              loadingBranches={loadingBranches}
+              branchModal={branchModal}
+              setBranchModal={setBranchModal}
+              savingBranch={savingBranch}
+              deletingBranchId={deletingBranchId}
+              toggleBranchStatus={async (br) => {
+                const newStatus = br.status === "active" ? "inactive" : "active";
+                await fetch("/api/branches", {
+                  method: "POST",
+                  headers: authenticatedJsonHeaders,
+                  body: JSON.stringify({ ...br, status: newStatus }),
+                });
+                setBranches(prev => prev.map(b => b.id === br.id ? { ...b, status: newStatus } : b));
+              }}
+              deleteBranch={async (br) => {
+                if (!(await showConfirm(`Delete "${br.name_en}"?`))) return;
+                setDeletingBranchId(br.id);
+                await fetch(`/api/branches?id=${br.id}`, { method: "DELETE", headers: authenticatedJsonHeaders });
+                setBranches(prev => prev.filter(b => b.id !== br.id));
+                setDeletingBranchId(null);
+              }}
+              saveBranchFromModal={async () => {
+                setSavingBranch(true);
+                try {
+                  const res = await fetch("/api/branches", {
+                    method: "POST",
+                    headers: authenticatedJsonHeaders,
+                    body: JSON.stringify(branchModal.branch),
+                  });
+                  const saved = await res.json();
+                  if (branchModal.mode === "edit") {
+                    setBranches(prev => prev.map(b => b.id === saved.id ? saved : b));
+                  } else {
+                    setBranches(prev => [...prev, saved]);
+                  }
+                  setBranchModal({ open: false, mode: "add", branch: {} });
+                  return true;
+                } catch {
+                  return false;
+                } finally {
+                  setSavingBranch(false);
+                }
+              }}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.branches}
+            />
+          )}
+          {activeNav === "Rooms" && (
+            <RoomsManagerView
+              branches={branches}
+              services={localServices}
+              selectedBranchId={branch}
+            />
+          )}
+          {activeNav === "Booking Settings" && (
+            <BookingSettingsView
+              bookingMinAdvance={bookingMinAdvance}
+              setBookingMinAdvance={setBookingMinAdvance}
+              bookingMaxAdvance={bookingMaxAdvance}
+              setBookingMaxAdvance={setBookingMaxAdvance}
+              bookingCancelWindow={bookingCancelWindow}
+              setBookingCancelWindow={setBookingCancelWindow}
+              bookingMaxPerSlot={bookingMaxPerSlot}
+              setBookingMaxPerSlot={setBookingMaxPerSlot}
+              bookingInstantApproval={bookingInstantApproval}
+              setBookingInstantApproval={setBookingInstantApproval}
+              bookingShowDoctorNotes={bookingShowDoctorNotes}
+              setBookingShowDoctorNotes={setBookingShowDoctorNotes}
+              bookingStaleSessionHours={bookingStaleSessionHours}
+              setBookingStaleSessionHours={setBookingStaleSessionHours}
+              bookingFollowUpLeadDays={bookingFollowUpLeadDays}
+              setBookingFollowUpLeadDays={setBookingFollowUpLeadDays}
+              bookingDefaultPricePerPulse={bookingDefaultPricePerPulse}
+              setBookingDefaultPricePerPulse={setBookingDefaultPricePerPulse}
+              globalEndingSession={globalEndingSession}
+              setGlobalEndingSession={setGlobalEndingSession}
+              handleSaveBookingSettings={handleSaveBookingSettings}
+              savingBookingSettings={savingBookingSettings}
+              setActiveInfoFeature={setActiveInfoFeature}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.bookingSettings}
+            />
+          )}
+
+          {activeNav === "Terms & Conditions" && (
+            <TermsManagerView
+              termsText={termsText}
+              setTermsText={setTermsText}
+              handleSaveBookingSettings={handleSaveBookingSettings}
+              savingBookingSettings={savingBookingSettings}
+            />
+          )}
+
+          {activeNav === "Deposit Settings" && (
+            <DepositSettingsView
+              instapayName={instapayName}
+              setInstapayName={setInstapayName}
+              instapayAddress={instapayAddress}
+              setInstapayAddress={setInstapayAddress}
+              instapayLink={instapayLink}
+              setInstapayLink={setInstapayLink}
+              walletEnabled={walletEnabled}
+              setWalletEnabled={setWalletEnabled}
+              walletName={walletName}
+              setWalletName={setWalletName}
+              walletNumber={walletNumber}
+              setWalletNumber={setWalletNumber}
+              walletLink={walletLink}
+              setWalletLink={setWalletLink}
+              bookingDepositPercentage={bookingDepositPercentage}
+              setBookingDepositPercentage={setBookingDepositPercentage}
+              handleSaveDepositSettings={handleSaveDepositSettings}
+              savingDepositSettings={savingDepositSettings}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.depositSettings}
+            />
+          )}
+
+          {activeNav === "Inactivity Settings" && (
+            <InactivitySettingsView
+              inactivityThreshold={inactivityThreshold}
+              setInactivityThreshold={setInactivityThreshold}
+              inactivityCountdown={inactivityCountdown}
+              setInactivityCountdown={setInactivityCountdown}
+              enableGpsShift={enableGpsShift}
+              setEnableGpsShift={setEnableGpsShift}
+              handleSaveInactivitySettings={handleSaveInactivitySettings}
+              savingInactivitySettings={savingInactivitySettings}
+              setActiveInfoFeature={setActiveInfoFeature}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.inactivitySettings}
+            />
+          )}
+
+          {activeNav === "Notification Settings" && (
+            <NotificationSettingsView
+              notifSmsOtp={notifSmsOtp}
+              setNotifSmsOtp={setNotifSmsOtp}
+              notifWhatsApp={notifWhatsApp}
+              setNotifWhatsApp={setNotifWhatsApp}
+              notifEmailConfirm={notifEmailConfirm}
+              setNotifEmailConfirm={setNotifEmailConfirm}
+              notifSmsTemplate={notifSmsTemplate}
+              setNotifSmsTemplate={setNotifSmsTemplate}
+              notifSmsTemplateAr={notifSmsTemplateAr}
+              setNotifSmsTemplateAr={setNotifSmsTemplateAr}
+              notifReminderHours={notifReminderHours}
+              setNotifReminderHours={setNotifReminderHours}
+              notifStaffEmail={notifStaffEmail}
+              setNotifStaffEmail={setNotifStaffEmail}
+              handleSaveNotificationSettings={handleSaveNotificationSettings}
+              savingNotificationSettings={savingNotificationSettings}
+              setActiveInfoFeature={setActiveInfoFeature}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.notificationSettings}
+            />
+          )}
+
+          {activeNav === "Queue Settings" && (
+            <QueueSettingsView
+              queueVirtualRoom={queueVirtualRoom}
+              setQueueVirtualRoom={setQueueVirtualRoom}
+              queueShowOnScreens={queueShowOnScreens}
+              setQueueShowOnScreens={setQueueShowOnScreens}
+              queueAutoCheckIn={queueAutoCheckIn}
+              setQueueAutoCheckIn={setQueueAutoCheckIn}
+              queueAlertThreshold={queueAlertThreshold}
+              setQueueAlertThreshold={setQueueAlertThreshold}
+              queueAvgSessionDuration={queueAvgSessionDuration}
+              setQueueAvgSessionDuration={setQueueAvgSessionDuration}
+              handleSaveQueueSettings={handleSaveQueueSettings}
+              savingQueueSettings={savingQueueSettings}
+              setActiveInfoFeature={setActiveInfoFeature}
+              lang={lang}
+              t={adminTranslations[lang].settingsScreens.queueSettings}
+            />
+          )}
+
+
+
+          {activeNav === "Medical Records" && (
+            <MedicalRecordsSettingsView services={SERVICES as any[]} lang={lang} authenticatedJsonHeaders={authenticatedJsonHeaders} />
+          )}
+
+          {activeNav === "Role Management" && (adminRole === "superadmin" || hasPermission("settings.roles") || hasPermission("settings") || hasPermission("Settings")) && (
+            <RoleManagementView
+              rolesList={rolesList}
+              employeesList={employeesList}
+              loadingRolesAndEmployees={loadingRolesAndEmployees}
+              newEmployeeName={newEmployeeName}
+              setNewEmployeeName={setNewEmployeeName}
+              newEmployeeEmail={newEmployeeEmail}
+              setNewEmployeeEmail={setNewEmployeeEmail}
+              newEmployeeRole={newEmployeeRole}
+              setNewEmployeeRole={setNewEmployeeRole}
+              employeeCreateError={employeeCreateError}
+              setEmployeeCreateError={setEmployeeCreateError}
+              employeeCreateSuccess={employeeCreateSuccess}
+              setEmployeeCreateSuccess={setEmployeeCreateSuccess}
+              departmentsList={departmentsList}
+              setDepartmentsList={setDepartmentsList}
+              adminRole={adminRole}
+              session={session}
+              authenticatedJsonHeaders={authenticatedJsonHeaders}
+              showConfirm={showConfirm}
+              handleDeleteEmployee={handleDeleteEmployee}
+              handleResendInvitation={handleResendInvitation}
+              fetchRolesAndEmployees={fetchRolesAndEmployees}
+              lang={lang}
+              t={adminTranslations[lang].roleManagement}
+            />
+          )}
+
+          {activeNav === "System Test Suite" && (adminRole === "superadmin" || hasPermission("settings.test_suite")) && (
+            <div className="space-y-8 animate-fadeIn">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--cr-primary)]/10 text-[var(--cr-primary)]">
+                      <FlaskConical size={22} />
+                    </div>
+                    <h2 className="text-3xl font-bold text-[var(--cr-dark)]">System Test Suite & Automated Diagnostics</h2>
+                  </div>
+                  <p className="mt-2 text-sm text-[var(--color-brand-secondary)]">
+                    Automated end-to-end testing suite verifying every API endpoint, database query, HR calculation, and inventory process across the system.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={runningAllDiagnostics}
+                    onClick={runAllDiagnosticTests}
+                    className="flex items-center gap-2 rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-xs font-bold text-white shadow-lg shadow-[var(--cr-primary)]/20 transition-all hover:bg-[#343F2B] disabled:opacity-50"
+                  >
+                    {runningAllDiagnostics ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin text-white" />
+                        <span>Running Diagnostics...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play size={16} fill="currentColor" />
+                        <span>Run All Diagnostics</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Statistics Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="rounded-3xl border border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] p-5 shadow-sm">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">Total Tests</span>
+                  <div className="mt-2 text-3xl font-extrabold text-[var(--cr-dark)]">{systemTestSuites.length}</div>
+                </div>
+
+                <div className="rounded-3xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Passed</span>
+                  <div className="mt-2 text-3xl font-extrabold text-emerald-800">
+                    {systemTestSuites.filter(t => t.status === 'pass').length}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-rose-200 bg-rose-50/50 p-5 shadow-sm">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-700">Failed</span>
+                  <div className="mt-2 text-3xl font-extrabold text-rose-800">
+                    {systemTestSuites.filter(t => t.status === 'fail').length}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-slate-50/50 p-5 shadow-sm">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Pending / Idle</span>
+                  <div className="mt-2 text-3xl font-extrabold text-slate-700">
+                    {systemTestSuites.filter(t => t.status === 'idle' || t.status === 'running').length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter & Search Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] p-4 shadow-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-[var(--color-brand-secondary)] mr-1">Category:</span>
+                  {['all', 'Database & Auth', 'Services & Bookings', 'Inventory & Equipment', 'HR & Payroll', 'Medical & Patients', 'Expenses & Assets', 'System & Settings'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setTestCategoryFilter(cat)}
+                      className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                        testCategoryFilter === cat
+                          ? 'bg-[var(--cr-primary)] text-white shadow-sm'
+                          : 'bg-white text-[var(--color-brand-secondary)] border border-[#E6E9EB] hover:border-[var(--cr-primary)]'
+                      }`}
+                    >
+                      {cat === 'all' ? 'All Categories' : cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative w-full max-w-xs">
+                  <Search size={14} className="absolute left-3.5 top-3 text-[var(--color-brand-secondary)]" />
+                  <input
+                    type="text"
+                    placeholder="Search test cases or endpoints..."
+                    value={testSuiteSearch}
+                    onChange={(e) => setTestSuiteSearch(e.target.value)}
+                    className="w-full rounded-2xl border border-[#E6E9EB] bg-white pl-9 pr-4 py-2 text-xs text-[var(--cr-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--cr-primary)]"
+                  />
+                </div>
+              </div>
+
+              {/* Test Cases Table */}
+              <div className="overflow-hidden rounded-[32px] border border-[var(--cr-primary)]/10 bg-white shadow-[0_30px_80px_rgba(47,61,41,0.05)]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="border-b border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] text-xs uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      <tr>
+                        <th className="px-6 py-4 font-bold">ID</th>
+                        <th className="px-6 py-4 font-bold">Test Name & Target Endpoint</th>
+                        <th className="px-6 py-4 font-bold">Category</th>
+                        <th className="px-6 py-4 font-bold text-center">Status</th>
+                        <th className="px-6 py-4 font-bold text-center">Latency</th>
+                        <th className="px-6 py-4 font-bold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--cr-primary)]/05 text-[var(--cr-dark)]">
+                      {systemTestSuites
+                        .filter((tc) => {
+                          const matchesCat = testCategoryFilter === 'all' || tc.category === testCategoryFilter;
+                          const matchesSearch =
+                            tc.name.toLowerCase().includes(testSuiteSearch.toLowerCase()) ||
+                            tc.endpoint.toLowerCase().includes(testSuiteSearch.toLowerCase()) ||
+                            tc.id.toLowerCase().includes(testSuiteSearch.toLowerCase());
+                          return matchesCat && matchesSearch;
+                        })
+                        .map((tc) => {
+                          const isExpanded = expandedDiagnosticId === tc.id;
+                          return (
+                            <Fragment key={tc.id}>
+                              <tr className="hover:bg-[var(--color-brand-light)]/80 transition">
+                                <td className="px-6 py-4 font-mono font-bold text-[var(--cr-primary)]">{tc.id}</td>
+                                <td className="px-6 py-4">
+                                  <div className="font-bold text-sm text-[var(--cr-dark)]">{tc.name}</div>
+                                  <div className="mt-0.5 flex items-center gap-2">
+                                    <span className="font-mono text-[11px] text-[var(--color-brand-secondary)] bg-[var(--color-brand-tint)] px-2 py-0.5 rounded-md">
+                                      {tc.endpoint}
+                                    </span>
+                                    <span className="text-[11px] text-[#8C9A84]">{tc.description}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="inline-block rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-2.5 py-1 text-[11px] font-semibold text-[var(--cr-primary)]">
+                                    {tc.category}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {tc.status === 'pass' && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+                                      <CheckCircle2 size={14} className="text-emerald-600" /> PASS
+                                    </span>
+                                  )}
+                                  {tc.status === 'fail' && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800">
+                                      <XCircle size={14} className="text-rose-600" /> FAIL
+                                    </span>
+                                  )}
+                                  {tc.status === 'running' && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                                      <Loader2 size={14} className="animate-spin text-amber-600" /> RUNNING
+                                    </span>
+                                  )}
+                                  {tc.status === 'idle' && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                                      <span className="h-2 w-2 rounded-full bg-slate-400"></span> IDLE
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center font-mono text-xs font-bold text-[var(--color-brand-secondary)]">
+                                  {tc.durationMs !== undefined ? `${tc.durationMs}ms` : '—'}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={tc.status === 'running'}
+                                      onClick={() => runSingleDiagnosticTest(tc.id)}
+                                      className="rounded-xl border border-[var(--cr-primary)]/20 bg-white px-3 py-1.5 text-xs font-bold text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] transition disabled:opacity-50"
+                                    >
+                                      Run Test
+                                    </button>
+                                    {(tc.responseDetails || tc.errorMsg) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedDiagnosticId(isExpanded ? null : tc.id)}
+                                        className="rounded-xl bg-[var(--color-brand-tint)] p-1.5 text-[var(--cr-primary)] hover:bg-[var(--cr-primary)]/20 transition"
+                                        title="View Details JSON"
+                                      >
+                                        <Terminal size={14} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr className="bg-[var(--cr-dark)]/03">
+                                  <td colSpan={6} className="px-6 py-4">
+                                    <div className="rounded-2xl bg-[var(--cr-dark)] p-4 text-emerald-400 font-mono text-[11px] overflow-x-auto shadow-inner">
+                                      <div className="mb-2 flex items-center justify-between text-slate-400 border-b border-slate-700 pb-2">
+                                        <span>Response Shape Summary ({tc.id}) — field values redacted</span>
+                                        <span>Status Code: {tc.statusCode || 'N/A'}</span>
+                                      </div>
+                                      {tc.errorMsg && (
+                                        <div className="text-rose-400 font-bold mb-2">Error: {tc.errorMsg}</div>
+                                      )}
+                                      {tc.responseDetails && (
+                                        <pre>{JSON.stringify(tc.responseDetails, null, 2)}</pre>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── INVENTORY VIEW ── */}
+          {activeNav === "Inventory" && (
+            <AdminInventoryView
+              authHeaders={authenticatedJsonHeaders}
+              branches={branches}
+              customers={customers}
+              products={inventoryProducts}
+              canManageDevices={hasPermission("inventory.manage_devices")}
+              canManageProducts={hasPermission("inventory.manage_products")}
+              canManageSuppliers={hasPermission("inventory.manage_suppliers")}
+              isSuperadmin={adminRole === "superadmin"}
+              onRefreshProducts={fetchInventoryProducts}
+              onCustomerSpentChange={(customerId, newSpentAmount) => {
+                setDbCustomers((prev) => prev.map((c) => (c.id === customerId ? { ...c, spent_amount: newSpentAmount } : c)));
+              }}
+              productsTabRef={productsTabRef}
+              lang={lang}
+              t={adminTranslations[lang].inventory}
+            />
+          )}
+
+          {/* ===================== EMPLOYEES SECTION ===================== */}
+          {activeNav === "Employees" && (adminRole === "superadmin" || hasPermission("employees.view") || hasPermission("Employees")) && (
+            <AdminEmployeesView
+              newEmployeeName={newEmployeeName}
+              setNewEmployeeName={setNewEmployeeName}
+              newEmployeeEmail={newEmployeeEmail}
+              setNewEmployeeEmail={setNewEmployeeEmail}
+              newEmployeeRole={newEmployeeRole}
+              setNewEmployeeRole={setNewEmployeeRole}
+              viewingEmployee={viewingEmployee}
+              setViewingEmployee={setViewingEmployee}
+              editingEmployee={editingEmployee}
+              setEditingEmployee={setEditingEmployee}
+              isEditingEmployeeModalOpen={isEditingEmployeeModalOpen}
+              setIsEditingEmployeeModalOpen={setIsEditingEmployeeModalOpen}
+              employeeProfileActiveTab={employeeProfileActiveTab}
+              setEmployeeProfileActiveTab={setEmployeeProfileActiveTab}
+              hasPermission={hasPermission}
+              branches={branches}
+              rolesList={adminRole === "superadmin" ? rolesList : rolesList.filter((r: any) => String(r?.name || "").trim().toLowerCase() !== "superadmin")}
+              departmentsList={departmentsList}
+              employeesList={employeesList}
+              loadingRolesAndEmployees={loadingRolesAndEmployees}
+              attendanceList={attendanceList}
+              loadingAttendance={loadingAttendance}
+              providers={providers}
+              fetchProviders={fetchProviders}
+              customerAvatars={customerAvatars}
+              handleAvatarUpload={handleAvatarUpload}
+              handleAvatarRemove={handleAvatarRemove}
+              allServicesList={allServicesList}
+              session={session}
+              adminDbId={adminDbId}
+              adminEmail={adminEmail}
+              adminRole={adminRole}
+              fetchHrAttendance={fetchHrAttendance}
+              handleDeleteEmployee={handleDeleteEmployee}
+              handleToggleEmployeeActive={handleToggleEmployeeActive}
+              handleResendInvitation={handleResendInvitation}
+              fetchRolesAndEmployees={fetchRolesAndEmployees}
+              getDoctorFirstReservationDate={getDoctorFirstReservationDate}
+              allReservations={allReservations}
+              parseEgyptianNationalId={parseEgyptianNationalId}
+              lang={lang}
+              t={adminTranslations[lang].employees}
+            />
+          )}
+          {/* ============================================================= */}
+
+
+
+
+
+
+
+          {/* ── HUMAN RESOURCES (HR) VIEW ── */}
+          {activeNav === "HR" && (
+            <AdminHrView
+              hrActiveSubTab={hrActiveSubTab}
+              setHrActiveSubTab={setHrActiveSubTab}
+              payrollList={payrollList}
+              setPayrollList={setPayrollList}
+              loadingPayroll={loadingPayroll}
+              leavesList={leavesList}
+              loadingLeaves={loadingLeaves}
+              performanceReviews={performanceReviews}
+              loadingPerformance={loadingPerformance}
+              doctorPayrollList={doctorPayrollList}
+              loadingDoctorPayroll={loadingDoctorPayroll}
+              selectedDoctorPayrollMonth={selectedDoctorPayrollMonth}
+              setSelectedDoctorPayrollMonth={setSelectedDoctorPayrollMonth}
+              doctorPayrollSearchQuery={doctorPayrollSearchQuery}
+              setDoctorPayrollSearchQuery={setDoctorPayrollSearchQuery}
+              doctorPayrollFilterStatus={doctorPayrollFilterStatus}
+              setDoctorPayrollFilterStatus={setDoctorPayrollFilterStatus}
+              doctorPayrollCurrentPage={doctorPayrollCurrentPage}
+              setDoctorPayrollCurrentPage={setDoctorPayrollCurrentPage}
+              selectedPayrollMonth={selectedPayrollMonth}
+              setSelectedPayrollMonth={setSelectedPayrollMonth}
+              payrollSearchQuery={payrollSearchQuery}
+              setPayrollSearchQuery={setPayrollSearchQuery}
+              payrollFilterDepartment={payrollFilterDepartment}
+              setPayrollFilterDepartment={setPayrollFilterDepartment}
+              payrollFilterStatus={payrollFilterStatus}
+              setPayrollFilterStatus={setPayrollFilterStatus}
+              payrollCurrentPage={payrollCurrentPage}
+              setPayrollCurrentPage={setPayrollCurrentPage}
+              newLeaveEmployeeId={newLeaveEmployeeId}
+              setNewLeaveEmployeeId={setNewLeaveEmployeeId}
+              newLeaveType={newLeaveType}
+              setNewLeaveType={setNewLeaveType}
+              newLeaveStartDate={newLeaveStartDate}
+              setNewLeaveStartDate={setNewLeaveStartDate}
+              newLeaveEndDate={newLeaveEndDate}
+              setNewLeaveEndDate={setNewLeaveEndDate}
+              newLeaveReason={newLeaveReason}
+              setNewLeaveReason={setNewLeaveReason}
+              newReviewEmployeeId={newReviewEmployeeId}
+              setNewReviewEmployeeId={setNewReviewEmployeeId}
+              newReviewRating={newReviewRating}
+              setNewReviewRating={setNewReviewRating}
+              newReviewComments={newReviewComments}
+              setNewReviewComments={setNewReviewComments}
+              newReviewGoals={newReviewGoals}
+              setNewReviewGoals={setNewReviewGoals}
+              editingTargetEmployee={editingTargetEmployee}
+              setEditingTargetEmployee={setEditingTargetEmployee}
+              targetAmountInput={targetAmountInput}
+              setTargetAmountInput={setTargetAmountInput}
+              bonusPercentageInput={bonusPercentageInput}
+              setBonusPercentageInput={setBonusPercentageInput}
+              targetTypeInput={targetTypeInput}
+              setTargetTypeInput={setTargetTypeInput}
+              bonusTypeInput={bonusTypeInput}
+              setBonusTypeInput={setBonusTypeInput}
+              employeesList={employeesList}
+              attendanceList={attendanceList}
+              loadingAttendance={loadingAttendance}
+              activeMissingAlerts={activeMissingAlerts}
+              setViewingEmployee={setViewingEmployee}
+              session={session}
+              adminEmail={adminEmail}
+              branches={branches}
+              localServices={localServices}
+              allReservations={allReservations}
+              showConfirm={showConfirm}
+              fetchHrPayroll={fetchHrPayroll}
+              fetchDoctorPayroll={fetchDoctorPayroll}
+              fetchHrLeaves={fetchHrLeaves}
+              fetchHrPerformance={fetchHrPerformance}
+              fetchHrAttendance={fetchHrAttendance}
+              fetchHrAlerts={fetchHrAlerts}
+              fetchRolesAndEmployees={fetchRolesAndEmployees}
+              lang={lang}
+              t={adminTranslations[lang].hr}
+            />
+          )}
+
+          {/* Presence Activity Check Overlay Modal */}
+          {presenceModalOpen && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+              <div className="w-full max-w-md rounded-[32px] bg-white border border-[var(--cr-primary)]/10 p-8 shadow-2xl text-center space-y-6 mx-4">
+                <div className="h-16 w-16 mx-auto flex items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                  <Clock size={32} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-[var(--cr-dark)]">Activity Verification</h3>
+                  <p className="text-sm text-[var(--color-brand-secondary)] leading-relaxed">
+                    Please verify that you are active at your workstation. If you do not click the button below within the next:
+                  </p>
+                  <div className={`text-5xl font-bold ${presenceCountdown <= 3 ? 'text-rose-600' : presenceCountdown <= 6 ? 'text-amber-500' : 'text-[var(--cr-primary)]'} transition-colors`}>
+                    {presenceCountdown}s
+                  </div>
+                  <p className="text-xs text-[var(--color-brand-secondary)]">An inactivity alert will be sent to the administrator.</p>
+                </div>
+                <button
+                  onClick={() => setPresenceModalOpen(false)}
+                  className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+                >
+                  ✓ I am Present &amp; Working
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Location Warning Modal */}
+          {locationWarningOpen && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur-md">
+              <div className="w-full max-w-md rounded-[32px] bg-white border border-rose-100 p-8 shadow-2xl text-center space-y-6 mx-4">
+                <div className="h-16 w-16 mx-auto flex items-center justify-center rounded-full bg-rose-50 text-rose-600 border border-rose-100 animate-pulse">
+                  <MapPin size={32} />
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold text-[var(--cr-dark)]">Account Access Locked</h3>
+                  <p className="text-sm text-[var(--color-brand-secondary)] leading-relaxed whitespace-pre-line">
+                    {locationWarningMsg}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    handleLogout();
+                    setLocationWarningOpen(false);
+                  }}
+                  className="w-full rounded-2xl bg-rose-600 py-3 text-sm font-bold text-white hover:bg-rose-700 transition shadow-md"
+                >
+                  Sign Out &amp; Exit
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── RECEPTION DASHBOARD VIEW ── */}
+          {activeNav === "Dashboard" && (
+            <ReceptionDashboardView
+              receptionistName={loggedEmpAccount?.name || (adminEmail ? adminEmail.split("@")[0] : "Employee")}
+              receptionistRole={loggedEmpAccount?.role_name || adminRole || "Staff"}
+              employeeId={loggedEmpAccount?.id || adminDbId}
+              email={adminEmail}
+              accessToken={session?.access_token}
+              branchId={branch}
+              activeBranchName={branches.find((b) => b.id === branch)?.name_en || "Main Branch"}
+              activeBranchNameAr={branches.find((b) => b.id === branch)?.name_ar || "الفرع الرئيسي"}
+              onNavigateTab={(tabName) => setActiveNav(tabName)}
+              onNewBooking={() => {
+                setNewBookingInitialData(null);
+                setActiveNav("Bookings");
+                setShowFullViewNewBooking(true);
+              }}
+              onNewPatient={() => {
+                setActiveNav("Patients");
+                handleOpenAddCustomer();
+              }}
+              onViewBookingDetails={(booking) => {
+                const raw = allReservations.find((r: any) => String(r.id) === String(booking?.id));
+                setViewingBooking((raw || booking) as any);
+              }}
+              onViewTransactions={() => {
+                setActiveNav("Transactions");
+              }}
+              onPendingApprovalsClick={() => {
+                setActiveNav("Bookings");
+                setTimeout(() => {
+                  const el = document.getElementById("pending-approvals-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+              onLogout={handleLogout}
+              todayReservations={allReservations}
+              lang={lang}
+              t={adminTranslations[lang].reception.dashboard}
+            />
+          )}
+
+          {/* ── BOOKINGS, NEW BOOKING & PREVIOUS BOOKING FULL VIEW ── */}
+          {activeNav === "Bookings" && (
+            showFullViewNewBooking ? (
+              <AdminNewBookingView
+                initialData={newBookingInitialData}
+                onClose={() => {
+                  setShowFullViewNewBooking(false);
+                  setNewBookingInitialData(null);
+                }}
+                onBookingCreated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  setShowFullViewNewBooking(false);
+                  setNewBookingInitialData(null);
+                }}
+                services={localServices}
+                providers={providers}
+                customers={customers}
+                branches={branches}
+                lang={lang}
+                t={adminTranslations[lang].bookings.adminNewBookingView}
+                activeBranchId={branch}
+              />
+            ) : showAddPreviousBooking ? (
+              <AdminAddPreviousBookingView
+                onClose={() => {
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingCreated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                onBookingUpdated={() => {
+                  clearFetchCache();
+                  fetchAllReservations();
+                  fetchCustomers();
+                  setShowAddPreviousBooking(false);
+                  setPreviousBookingCustomer(null);
+                  setEditingPreviousBooking(null);
+                }}
+                editingBooking={editingPreviousBooking}
+                initialCustomer={previousBookingCustomer}
+                services={localServices}
+                providers={providers}
+                customers={customers}
+                products={inventoryProducts}
+                branches={branches}
+                activeBranchId={branch}
+                lang={lang}
+                t={adminTranslations[lang].bookings.adminAddPreviousBooking}
+              />
+            ) : (
+              <AdminBookingsView
+                allReservations={allReservations as any}
+                requests={requests as any}
+                providers={providers}
+                localServices={localServices}
+                userName={loggedEmpAccount?.name?.split(" ")[0] || "Sara"}
+                staleSessionThresholdHours={bookingStaleSessionHours}
+                followUpLeadDays={bookingFollowUpLeadDays}
+                hasPermission={hasPermission}
+                lang={lang}
+                t={adminTranslations[lang].bookings.adminBookingsView}
+                onNewBooking={handleBookingsNew}
+                onAddPreviousBooking={handleBookingsAddPrevious}
+                onPendingApprovalsClick={handleBookingsPendingApprovals}
+                onFilterClick={handleBookingsFilter}
+                onViewBookingDetails={handleBookingsViewDetails}
+                onPrint={handleBookingsPrint}
+                onExportCSV={handleExportBookingsCSV}
+                onApproveBooking={handleBookingsApprove}
+                onRejectBooking={handleBookingsReject}
+              />
+            )
+          )}
+          {activeNav === "New Booking" && (
+            <AdminNewBookingView
+              initialData={newBookingInitialData}
+              onClose={() => {
+                setActiveNav("Bookings");
+                setNewBookingInitialData(null);
+              }}
+              onBookingCreated={() => {
+                clearFetchCache();
+                fetchAllReservations();
+                setActiveNav("Bookings");
+                setNewBookingInitialData(null);
+              }}
+              services={localServices}
+              providers={providers}
+              customers={customers}
+              branches={branches}
+              lang={lang}
+              t={adminTranslations[lang].bookings.adminNewBookingView}
+              activeBranchId={branch}
+            />
+          )}
+        </>
+      )}
+    </div>
+  </main>
+</div>
+
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4">
+          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80">
+                  Approve request
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">
+                  {selected.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-3 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-[var(--color-brand-secondary)]">
+              Requested for {selected.date}. Confirm the date and time slot below — change the
+              date if the requested one isn't available (e.g. a closed day).
+            </p>
+            <label className="mb-2 block text-sm font-semibold text-[var(--cr-primary)]">
+              Appointment date
+            </label>
+            <input
+              type="date"
+              value={approveDate || selected.date}
+              onChange={(e) => handleApproveDateChange(e.target.value)}
+              className="mb-4 w-full rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)]"
+            />
+            <label className="mb-2 block text-sm font-semibold text-[var(--cr-primary)]">
+              Time slot
+            </label>
+            <select
+              value={slot}
+              onChange={(e) => { setSlot(e.target.value); setApproveTimeWarning(""); }}
+              className="mb-4 w-full rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)]"
+            >
+              {(() => {
+                const { start, end } = getDayOperatingHoursApprove({ ...selected, date: approveDate || selected.date });
+                const filteredSlots = SLOTS.filter((s) => {
+                  const norm = normaliseTo24hSlot(s) ?? "";
+                  return norm >= start && norm < end;
+                });
+                const options = filteredSlots.map((s) => {
+                  const isUnavailable = approveUnavailableSlots.includes(s);
+                  return (
+                    <option key={s} value={s} disabled={isUnavailable}>
+                      {s} {isUnavailable ? "(Unavailable)" : ""}
+                    </option>
+                  );
+                });
+                // The patient's requested time may fall outside opening hours, in which case it is
+                // not in filteredSlots and the select would render blank — hiding what was asked
+                // for. Surface it explicitly instead.
+                if (slot && !filteredSlots.includes(slot)) {
+                  options.unshift(
+                    <option key={`requested-${slot}`} value={slot}>
+                      {slot} (Requested — outside opening hours)
+                    </option>
+                  );
+                }
+                return options;
+              })()}
+            </select>
+            {approveTimeWarning && (
+              <p className="-mt-2 mb-4 text-xs font-semibold text-rose-600">
+                {approveTimeWarning}
+              </p>
+            )}
+            {(() => {
+              const { start, end } = getDayOperatingHoursApprove({ ...selected, date: approveDate || selected.date });
+              const hasSlots = SLOTS.some((s) => {
+                const norm = normaliseTo24hSlot(s) ?? "";
+                return norm >= start && norm < end;
+              });
+              if (hasSlots) return null;
+              return (
+                <p className="-mt-2 mb-4 text-xs font-semibold text-rose-600">
+                  No time slots available on this date — it may be a closed day for this branch,
+                  or fully booked. Pick a different date above.
+                </p>
+              );
+            })()}
+
+            <label className="mb-2 block text-sm font-semibold text-[var(--cr-primary)]">
+              Assign Doctor
+            </label>
+            <select
+              value={doctorName}
+              onChange={(e) => setDoctorName(e.target.value)}
+              className="mb-6 w-full rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)]"
+            >
+              {availableDoctorsApprove.map((p) => (
+                <option key={p.id || p.name} value={p.name}>
+                  {p.name}
+                </option>
+              ))}
+              {availableDoctorsApprove.length === 0 && (
+                <option value="">No Available Doctors</option>
+              )}
+            </select>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={approve}
+                disabled={approveUnavailableSlots.includes(slot) || !slot}
+                className="rounded-3xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-semibold text-[var(--color-brand-light)] transition hover:bg-[#2e3a26] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm approve
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded-3xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-5 py-3 text-sm font-semibold text-[var(--cr-primary)] transition hover:bg-[#f7f6f2]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Date bookings selector modal */}
+      {dayBookingsSelector.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] border border-[var(--cr-primary)]/10">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Select Appointment</p>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--cr-dark)]">
+                  Bookings on {new Date(dayBookingsSelector.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                </h3>
+              </div>
+              <button
+                onClick={() => setDayBookingsSelector({ open: false, date: "", bookings: [] })}
+                className="rounded-full bg-white border border-[var(--cr-primary)]/10 p-2 text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-1">
+              {dayBookingsSelector.bookings.map((b: any) => {
+                const svc = localServices.find(s => s.id === b.serviceId);
+                const rm = rooms.find(room => room.id === b.roomId);
+                
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      setViewingBooking(b);
+                      setDayBookingsSelector({ open: false, date: "", bookings: [] });
+                    }}
+                    className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 hover:bg-[var(--color-brand-tint)]/30 hover:border-[var(--cr-primary)]/30 transition cursor-pointer group"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-bold text-[var(--cr-dark)] group-hover:text-[var(--cr-primary)] transition-colors">{b.name}</p>
+                      <p className="text-xs text-[var(--color-brand-secondary)] font-medium">{svc ? svc.en : `Service #${b.serviceId}`}</p>
+                      {rm && (
+                        <p className="text-[11px] text-[var(--color-brand-secondary)] flex items-center gap-1">
+                          <DoorOpen size={10} /> {rm.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-flex rounded-full bg-[var(--cr-primary)]/10 text-[var(--cr-primary)] px-2.5 py-1 text-xs font-semibold">
+                        {b.timeSlot || b.requestedTime || "N/A"}
+                      </span>
+                      <p className="text-[10px] text-[var(--color-brand-secondary)]/80 mt-1 capitalize font-medium">{b.status}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingBooking && (
+        <BookingDetailsModal
+          booking={viewingBooking}
+          onClose={handleCloseBookingDetails}
+          setBooking={setViewingBooking}
+          onEditPreviousBooking={handleEditPreviousBooking}
+          rooms={rooms}
+          branches={branches}
+          dbCustomers={dbCustomers}
+          employeesList={employeesList}
+          inventoryProducts={inventoryProducts}
+          localServices={localServices}
+          hasPermission={hasPermission}
+          authenticatedJsonHeaders={authenticatedJsonHeaders}
+          fetchRequests={fetchRequests}
+          fetchAllReservations={fetchAllReservations}
+          fetchCustomers={fetchCustomers}
+          fetchInventoryProducts={fetchInventoryProducts}
+          saveNotes={saveNotes}
+          setActiveNav={setActiveNav}
+          setViewingCustomerProfile={setViewingCustomerProfile}
+          setPrescriptionBookingContext={setPrescriptionBookingContext}
+          setCheckoutBooking={setCheckoutBooking}
+          setInvoiceBooking={setInvoiceBooking}
+          setPostponeBooking={setPostponeBooking}
+          setPostponeMode={setPostponeMode}
+          setPostponeNewDate={setPostponeNewDate}
+          setPostponeNewTime={setPostponeNewTime}
+          setPostponeFollowUpDate={setPostponeFollowUpDate}
+          globalEndingSession={globalEndingSession}
+        />
+      )}
+
+      {/* 1. Cancellations Modal */}
+      {showCancellationsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
+          <div className="w-full max-w-4xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[85vh] overflow-y-auto">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">Canceled & Rejected Requests</h3>
+              </div>
+              <button
+                onClick={() => setShowCancellationsModal(false)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {allReservations.filter(r => r.status === 'rejected').length === 0 ? (
+              <p className="py-12 text-center text-[var(--color-brand-secondary)] font-semibold">No canceled bookings found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--cr-primary)]/10 text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                      <th className="py-3 px-4">Patient</th>
+                      <th className="py-3 px-4">Service</th>
+                      <th className="py-3 px-4">Original Date</th>
+                      <th className="py-3 px-4">Contact</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allReservations.filter(r => r.status === 'rejected').map(r => {
+                      const service = localServices.find(s => s.id === r.serviceId);
+                      return (
+                        <tr key={r.id} className="border-b border-[var(--cr-primary)]/5 hover:bg-[var(--color-brand-sand)]/20 transition text-sm text-[var(--cr-dark)]">
+                          <td className="py-3 px-4 font-semibold">{r.name}</td>
+                          <td className="py-3 px-4">{service ? service.en : `Service #${r.serviceId}`}</td>
+                          <td className="py-3 px-4">{r.date}</td>
+                          <td className="py-3 px-4">{r.phone}</td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={async () => {
+                                await fetch(`/api/reservations?id=${r.id}`, {
+                                  method: 'PATCH',
+                                  headers: authenticatedJsonHeaders,
+                                  body: JSON.stringify({ status: 'pending' })
+                                });
+                                fetchRequests();
+                                fetchAllReservations();
+                                alert(`Restored request for ${r.name}`);
+                              }}
+                              className="rounded-3xl border border-[var(--cr-primary)]/20 bg-white px-4 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+                            >
+                              Restore Request
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. Today's Bookings Modal */}
+      {showTodayBookingsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">
+                  Today's Bookings • {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowTodayBookingsModal(false)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {(() => {
+              const getLocalDateString = (d: Date) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              };
+              const todayStr = getLocalDateString(new Date());
+              const todaysBookings = allReservations.filter(
+                r => String(r.date).slice(0, 10) === todayStr &&
+                  ['approved', 'confirmed', 'started', 'completed', 'pending'].includes(r.status)
+              );
+
+              if (todaysBookings.length === 0) {
+                return (
+                  <p className="py-12 text-center text-[var(--color-brand-secondary)] font-semibold">No bookings scheduled for today.</p>
+                );
+              }
+
+              return (
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                  {todaysBookings.map(r => {
+                    const service = localServices.find(s => s.id === r.serviceId);
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => {
+                          setShowTodayBookingsModal(false);
+                          setViewingBooking(r);
+                        }}
+                        className="flex items-center justify-between rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 cursor-pointer hover:border-[var(--cr-accent)]/30 transition shadow-[0_4px_15px_rgba(0,0,0,0.02)]"
+                      >
+                        <div>
+                          <p className="font-bold text-[var(--cr-dark)]">{r.name}</p>
+                          <p className="text-xs text-[var(--color-brand-secondary)] mt-1">
+                            {service ? service.en : `Service #${r.serviceId}`} • {r.timeSlot ? `@ ${r.timeSlot}` : 'Time not specified'}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-[var(--cr-accent)]/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-[var(--cr-primary)]">
+                          {r.sessionType === 'online' ? 'Online' : 'In Person'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Filter Bookings Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
+          <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">Filter Calendar Bookings</h3>
+              </div>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-2">Status</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['All', 'approved', 'pending', 'rejected', 'pending_deposit', 'postponed', 'no_show'].map(st => (
+                    <button
+                      key={st}
+                      onClick={() => setStatusFilter(st)}
+                      className={`rounded-2xl border px-3 py-2.5 text-xs font-bold transition ${
+                        statusFilter === st
+                          ? 'border-[var(--cr-primary)] bg-[var(--cr-primary)] text-[var(--color-brand-light)]'
+                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#f7f6f2]'
+                      }`}
+                    >
+                      {st === 'approved' ? 'Approved' : st === 'pending' ? 'Pending' : st === 'rejected' ? 'Rejected' : st === 'pending_deposit' ? 'Pending Deposit' : st === 'postponed' ? 'Postponed' : st === 'no_show' ? 'No Show' : 'All'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-2">Session Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['All', 'in_person', 'online'].map(ty => (
+                    <button
+                      key={ty}
+                      onClick={() => setTypeFilter(ty)}
+                      className={`rounded-2xl border px-3 py-2.5 text-xs font-bold transition ${
+                        typeFilter === ty
+                          ? 'border-[var(--cr-primary)] bg-[var(--cr-primary)] text-[var(--color-brand-light)]'
+                          : 'border-[var(--cr-primary)]/15 bg-white text-[var(--cr-primary)] hover:bg-[#f7f6f2]'
+                      }`}
+                    >
+                      {ty === 'in_person' ? 'In Person' : ty === 'online' ? 'Online' : 'All'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-2">Doctor / Provider</label>
+                <select
+                  value={docFilter}
+                  onChange={(e) => setDocFilter(e.target.value)}
+                  className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-sm text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)] cursor-pointer font-semibold"
+                >
+                  <option value="All">All Doctors</option>
+                  {providers.map(p => (
+                    <option key={p.id || p.name} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-2">Date</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={dateFilter === "All" ? "" : dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value || "All")}
+                    className="flex-1 rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-sm text-[var(--cr-primary)] outline-none transition focus:border-[var(--cr-accent)] font-semibold"
+                  />
+                  {dateFilter !== "All" && (
+                    <button
+                      onClick={() => setDateFilter('All')}
+                      className="rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-xs font-bold text-[var(--color-brand-secondary)] transition hover:bg-[#f7f6f2]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--cr-primary)]/10 pt-4 flex gap-3">
+                <button
+                  onClick={() => setShowFilterModal(false)}
+                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition text-center"
+                >
+                  Apply Filters
+                </button>
+                <button
+                  onClick={() => {
+                    setStatusFilter('All');
+                    setTypeFilter('All');
+                    setDocFilter('All');
+                    setDateFilter('All');
+                    setShowFilterModal(false);
+                  }}
+                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-white py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition text-center"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Actions Menu Modal */}
+      {showActionsMenuModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
+          <div className="w-full max-w-sm rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)]">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">Actions Menu</h3>
+              </div>
+              <button
+                onClick={() => setShowActionsMenuModal(false)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              <button
+                onClick={() => {
+                  setShowActionsMenuModal(false);
+                  setShowAddBookingModal(true);
+                }}
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3.5 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition"
+              >
+                + Add Manual Booking
+              </button>
+              <button
+                onClick={() => {
+                  if (allReservations.length === 0) {
+                    alert("No reservations to export.");
+                    return;
+                  }
+                  const headers = ["ID", "Patient Name", "Email", "Phone", "Date", "Time Slot", "Session Type", "Doctor", "Status", "Notes"];
+                  const rows = allReservations.map(r => [
+                    r.id,
+                    r.name,
+                    r.email,
+                    r.phone,
+                    r.date,
+                    r.timeSlot || r.requestedTime || "",
+                    r.sessionType || "in_person",
+                    r.doctorName || "",
+                    r.status,
+                    (r.notes || "").replace(/"/g, '""')
+                  ]);
+                  const csvContent = "data:text/csv;charset=utf-8," 
+                    + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+                  
+                  const encodedUri = encodeURI(csvContent);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", encodedUri);
+                  link.setAttribute("download", `reservations_${new Date().toISOString().slice(0,10)}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  setShowActionsMenuModal(false);
+                }}
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white py-3.5 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] transition"
+              >
+                Export Bookings to CSV
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Add Booking Modal */}
+      {showAddBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4">
+          <div className="w-full max-w-xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[90vh] overflow-y-auto">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Quick actions</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">Add Manual Reservation</h3>
+              </div>
+              <button
+                onClick={() => setShowAddBookingModal(false)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 0. Select an existing patient, instead of relying on the phone field to match one */}
+              <div className="relative">
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">
+                  Select Existing Patient (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search patients by name or phone..."
+                  value={patientSearchQuery}
+                  onChange={(e) => {
+                    setPatientSearchQuery(e.target.value);
+                    setShowPatientSearchResults(e.target.value.trim().length > 0);
+                  }}
+                  onFocus={() => setShowPatientSearchResults(patientSearchQuery.trim().length > 0)}
+                  className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                />
+                {matchedCustomerId && (
+                  <p className="mt-1.5 flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
+                    ✓ Existing patient found{newPatientName ? `: ${newPatientName}` : ""}
+                    <button
+                      type="button"
+                      onClick={() => setMatchedCustomerId(null)}
+                      className="text-[var(--color-brand-secondary)] underline hover:text-[var(--cr-primary)]"
+                    >
+                      Not them?
+                    </button>
+                  </p>
+                )}
+                {showPatientSearchResults && patientSearchQuery.trim().length > 0 && (() => {
+                  const q = patientSearchQuery.trim().toLowerCase();
+                  const matches = dbCustomers
+                    .filter((c: any) => {
+                      const phone = String(c.mobile || c.phone || "").toLowerCase();
+                      return String(c.name || "").toLowerCase().includes(q) || phone.includes(q);
+                    })
+                    .slice(0, 8);
+                  return (
+                    <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-2xl border border-[var(--cr-primary)]/15 bg-white shadow-lg">
+                      {matches.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-[#8A9A81] italic">No matching patients — filling in the fields below will create a new one.</p>
+                      ) : (
+                        matches.map((c: any) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => selectExistingPatientForBooking(c)}
+                            className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-[var(--color-brand-tint)] border-b border-[var(--cr-primary)]/5 last:border-b-0"
+                          >
+                            <span className="font-semibold text-[var(--cr-dark)]">{c.name}</span>
+                            <span className="text-xs text-[var(--color-brand-secondary)]">{c.mobile || c.phone}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* 1. Phone Number at top */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Enter phone (e.g. 01012345678)"
+                  value={newPatientPhone}
+                  onChange={(e) => handleManualPhoneChange(e.target.value)}
+                  className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] mb-2"
+                />
+                
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--cr-primary)]">
+                    <input
+                      type="checkbox"
+                      checked={isManualWhatsappSame}
+                      onChange={(e) => setIsManualWhatsappSame(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-[var(--cr-primary)] focus:ring-[var(--cr-primary)]"
+                    />
+                    <span>This is the WhatsApp number too</span>
+                  </label>
+                  {!isManualWhatsappSame && (
+                    <div className="animate-fadeIn">
+                      <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">WhatsApp Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="Enter WhatsApp number"
+                        value={newPatientWhatsapp}
+                        onChange={(e) => setNewPatientWhatsapp(e.target.value)}
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {matchedCustomerId && (() => {
+                const svc = localServices.find((s) => s.id === newPatientService);
+                const promos = svc
+                  ? (() => {
+                      const details = getServicePriceDetails(svc, newPatientBranch, branches);
+                      return details.hasPromotion ? [{ serviceName: svc.en, promotionText: details.promotionText || "" }] : [];
+                    })()
+                  : [];
+                return <PatientPackagePromoBanner packages={manualBookingCustomerPackages} promotions={promos} />;
+              })()}
+
+              {/* 2. Patient Name and Email side-by-side */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Patient Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter name"
+                    value={newPatientName}
+                    onChange={(e) => setNewPatientName(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Email (Optional)</label>
+                  <input
+                    type="email"
+                    placeholder="Enter email"
+                    value={newPatientEmail}
+                    onChange={(e) => setNewPatientEmail(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Booking Date and Time Slot stacked vertically */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Booking Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newPatientDate}
+                    onChange={(e) => setNewPatientDate(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Time Slot / Requested Time</label>
+                  <select
+                    value={newPatientTimeSlot}
+                    onChange={(e) => setNewPatientTimeSlot(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {(() => {
+                      const { start, end } = getDayOperatingHoursAdmin(newPatientDate);
+                      const filteredSlots = SLOTS.filter((s) => {
+                        const norm = normaliseTo24hSlot(s) ?? "";
+                        return norm >= start && norm < end;
+                      });
+                      return filteredSlots.map(s => {
+                        const isUnavailable = manualUnavailableSlots.includes(s);
+                        return (
+                          <option key={s} value={s} disabled={isUnavailable}>
+                            {s} {isUnavailable ? "(Unavailable)" : ""}
+                          </option>
+                        );
+                      });
+                    })()}
+                  </select>
+                </div>
+              </div>
+
+              {/* 4. Service Type and Session Type */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Service Type</label>
+                  <select
+                    value={newPatientService}
+                    onChange={(e) => setNewPatientService(Number(e.target.value))}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {localServices.map(s => (
+                      <option key={s.id} value={s.id}>{s.en} ({s.cat})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Session Type</label>
+                  <select
+                    value={newPatientSessionType}
+                    onChange={(e) => setNewPatientSessionType(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {(() => {
+                      const selectedSvc = localServices.find(s => s.id === newPatientService);
+                      let allowedType = selectedSvc?.unit?.toLowerCase() || "both";
+                      if (allowedType !== "both" && allowedType !== "in_clinic" && allowedType !== "online") {
+                        allowedType = "both";
+                      }
+                      const showInClinic = allowedType === "both" || allowedType === "in_clinic";
+                      const showOnline = allowedType === "both" || allowedType === "online";
+                      return (
+                        <>
+                          {showInClinic && <option value="in_person">In Person / في العيادة</option>}
+                          {showOnline && <option value="online">Online / أونلاين</option>}
+                        </>
+                      );
+                    })()}
+                  </select>
+                </div>
+              </div>
+
+              {/* 5. Branch and Status */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Branch</label>
+                  <select
+                    value={newPatientBranch}
+                    onChange={(e) => setNewPatientBranch(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>{b.name_en} / {b.name_ar}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Status</label>
+                  <select
+                    value={newPatientStatus}
+                    onChange={(e) => setNewPatientStatus(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    <option value="approved">Approved (Active Booking)</option>
+                    <option value="pending">Pending (Awaiting Approval)</option>
+                    <option value="rejected">Rejected (Canceled Booking)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 6. Doctor Name if Approved */}
+              {newPatientStatus === 'approved' && (
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Assign Doctor</label>
+                  <select
+                    value={newPatientDoctor}
+                    onChange={(e) => setNewPatientDoctor(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {availableDoctorsNewPatient.map(p => (
+                      <option key={p.id || p.name} value={p.name}>{p.name}</option>
+                    ))}
+                    {availableDoctorsNewPatient.length === 0 && (
+                      <option value="">No Available Doctors</option>
+                    )}
+                  </select>
+                </div>
+              )}
+
+              {/* Created By Employee Selector */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Created By (Employee Credit) *</label>
+                <select
+                  value={newPatientCreatedByEmployeeId}
+                  onChange={(e) => setNewPatientCreatedByEmployeeId(e.target.value)}
+                  className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                >
+                  <option value="">Select Employee...</option>
+                  {(employeesList || []).map((emp: any) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role_name || "Staff"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 7. Notes */}
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-[var(--color-brand-secondary)] font-bold mb-1.5">Notes (Optional)</label>
+                <textarea
+                  placeholder="Add details/notes about this appointment"
+                  value={newPatientNotes}
+                  onChange={(e) => setNewPatientNotes(e.target.value)}
+                  className="w-full min-h-[80px] rounded-2xl border border-[var(--cr-primary)]/15 bg-[#fff] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                />
+              </div>
+
+              <div className="border-t border-[var(--cr-primary)]/10 pt-4 flex gap-3">
+                <button
+                  onClick={handleCreateManualBooking}
+                  className="flex-1 rounded-3xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] text-center"
+                >
+                  Create Booking
+                </button>
+                <button
+                  onClick={() => setShowAddBookingModal(false)}
+                  className="flex-1 rounded-3xl border border-[var(--cr-primary)]/20 bg-[#fff] py-3 text-sm font-bold text-[var(--cr-primary)] hover:bg-[#f7f6f2] text-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Search Modal */}
+      {showSearchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/50 p-4 animate-fadeIn">
+          <div className="w-full max-w-2xl rounded-[32px] bg-[var(--color-brand-light)] p-6 shadow-[0_20px_60px_rgba(31,37,26,0.25)] max-h-[85vh] overflow-y-auto">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-[var(--color-brand-secondary)]/80 font-bold">Search</p>
+                <h3 className="mt-2 text-2xl font-semibold text-[var(--cr-dark)]">Search Bookings & Requests</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSearchModal(false);
+                  setSearchQuery("");
+                }}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2.5 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <input
+                type="text"
+                placeholder="Search by patient name, email, phone, notes, status, doctor name, date..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)]"
+              />
+            </div>
+
+            {(() => {
+              const q = searchQuery.trim().toLowerCase();
+              const filtered = allReservations.filter(r => {
+                if (!q) return true;
+                return (
+                  r.name.toLowerCase().includes(q) ||
+                  r.email.toLowerCase().includes(q) ||
+                  r.phone.toLowerCase().includes(q) ||
+                  (r.notes || "").toLowerCase().includes(q) ||
+                  r.status.toLowerCase().includes(q) ||
+                  (r.doctorName || "").toLowerCase().includes(q) ||
+                  r.date.includes(q)
+                );
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <p className="py-8 text-center text-[var(--color-brand-secondary)] font-semibold">No bookings match your search query.</p>
+                );
+              }
+
+              return (
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                  {filtered.map(r => {
+                    const service = localServices.find(s => s.id === r.serviceId);
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={() => {
+                          setShowSearchModal(false);
+                          setSearchQuery("");
+                          if (['approved', 'confirmed', 'started', 'completed'].includes(r.status)) {
+                            setViewingBooking(r);
+                          } else {
+                            alert(`This booking request is ${r.status}. You can review it in the Pending approvals section.`);
+                            document.getElementById("pending-approvals-section")?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="flex items-center justify-between rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 cursor-pointer hover:border-[var(--cr-accent)]/30 transition shadow-[0_4px_15px_rgba(0,0,0,0.02)]"
+                      >
+                        <div>
+                          <p className="font-bold text-[var(--cr-dark)]">{r.name}</p>
+                          <p className="text-xs text-[var(--color-brand-secondary)] mt-1">
+                            {service ? service.en : `Service #${r.serviceId}`} • {r.date} {r.timeSlot ? `@ ${r.timeSlot}` : r.requestedTime ? `@ ${r.requestedTime}` : ""} • <span className="font-semibold text-[var(--cr-primary)]">{branches.find(b => b.id === r.branchId)?.name_en || "Default/All"}</span>
+                          </p>
+                          {r.doctorName && (
+                            <p className="text-xs text-[var(--cr-accent)] mt-0.5 font-semibold">
+                              Doctor: {r.doctorName}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${
+                            getStatusBadgeClass(r.status)
+                          }`}>
+                            {r.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Provider Modal */}
+      <ProviderFormModal
+        providerForm={providerForm}
+        branches={branches}
+        allServicesList={allServicesList}
+        getDoctorFirstReservationDate={getDoctorFirstReservationDate}
+        allReservations={allReservations}
+        parseEgyptianNationalId={parseEgyptianNationalId}
+        lang={lang}
+        t={adminTranslations[lang].doctors.providerFormModal}
+        tFormFields={adminTranslations[lang].doctors.providerFormFields}
+      />
+
+      {/* Doctor Schedule Audit Logs Modal */}
+      {showAuditLogsModal && (
+        <DoctorAuditLogsModal
+          onClose={() => setShowAuditLogsModal(false)}
+          authenticatedJsonHeaders={authenticatedJsonHeaders}
+          lang={lang}
+          t={adminTranslations[lang].doctors.doctorAuditLogsModal}
+        />
+      )}
+
+      {/* ── EXPORT CUSTOMERS MODAL ── */}
+      {showExportCustomersModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowExportCustomersModal(false); }}
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-[var(--cr-primary)]/10 overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)]">
+                  <Download size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--cr-dark)]">Export Customers</h3>
+                  <p className="text-xs text-[var(--color-brand-secondary)]">{customers.length} customer{customers.length !== 1 ? "s" : ""} will be exported</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowExportCustomersModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:bg-[var(--color-brand-tint)] hover:text-[var(--cr-primary)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-[var(--color-brand-secondary)]">
+                The exported CSV file will contain the following data columns for each customer:
+              </p>
+
+              {/* Column Chips */}
+              <div className="flex flex-wrap gap-2">
+                {["ID", "Customer Name", "Mobile", "Gender", "Email", "Number of Bookings", "Registration Date", "Active", "Spent Amount", "Outstanding", "Area", "Location Name", "Street Name", "Building No.", "Floor No.", "Note"].map((col) => (
+                  <span
+                    key={col}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cr-primary)]/15 bg-[var(--color-brand-tint)] px-3 py-1 text-xs font-medium text-[var(--cr-primary)]"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--cr-accent)] flex-shrink-0" />
+                    {col}
+                  </span>
+                ))}
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-3 gap-3 rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[var(--cr-dark)]">{customers.length}</p>
+                  <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">Total Patients</p>
+                </div>
+                <div className="text-center border-x border-[var(--cr-primary)]/10">
+                  <p className="text-xl font-bold text-[var(--cr-dark)]">16</p>
+                  <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">Columns</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[var(--cr-primary)]">CSV</p>
+                  <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">Format</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--color-brand-secondary)] flex items-center gap-1.5">
+                <FileText size={12} className="text-[var(--cr-accent)]" />
+                The file will be UTF-8 encoded (BOM) for full compatibility with Microsoft Excel and Google Sheets.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+              <button
+                onClick={() => setShowExportCustomersModal(false)}
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExportCustomersCSV}
+                disabled={loadingCustomers}
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Download size={15} />
+                {loadingCustomers ? "Loading..." : "Export CSV"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── IMPORT CUSTOMERS MODAL ── */}
+      {showImportCustomersModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget && !importLoading) handleCloseImportModal(); }}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-[var(--cr-primary)]/10 overflow-hidden my-8 animate-fadeIn">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)]">
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--cr-dark)]">Import Customers / Patients</h3>
+                  <p className="text-xs text-[var(--color-brand-secondary)]">Upload a CSV file containing patient demographic details</p>
+                </div>
+              </div>
+              <button
+                disabled={importLoading}
+                onClick={handleCloseImportModal}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:bg-[var(--color-brand-tint)] hover:text-[var(--cr-primary)] disabled:opacity-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {!importFile ? (
+                // Step 1: Upload File Instructions and Box
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--cr-primary)]/25 rounded-2xl p-8 bg-[var(--color-brand-light)] hover:bg-[#F5F4F0] transition group relative">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Upload className="h-10 w-10 text-[var(--cr-accent)] mb-3 transition-transform group-hover:-translate-y-1" />
+                  <span className="text-sm font-semibold text-[var(--cr-dark)]">Click to select CSV File</span>
+                  <span className="text-xs text-[var(--color-brand-secondary)] mt-1">Accepts standard .csv comma-separated values</span>
+                  <div className="mt-4 text-[10px] text-gray-400 text-center max-w-sm">
+                    For best matching, make sure your CSV contains columns like: <strong>Name, Phone/Mobile, Email, Gender, National ID, Age</strong>.
+                  </div>
+                </div>
+              ) : (
+                // Step 2: File Selected and Parsed
+                <div className="space-y-4">
+                  {/* File Info Card */}
+                  <div className="flex items-center justify-between rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-3">
+                    <div className="flex items-center gap-3">
+                      <FileText size={24} className="text-[var(--cr-accent)]" />
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--cr-dark)]">{importFile.name}</p>
+                        <p className="text-xs text-[var(--color-brand-secondary)]">
+                          {(importFile.size / 1024).toFixed(1)} KB • {importRows.length} rows found
+                        </p>
+                      </div>
+                    </div>
+                    {!importLoading && (
+                      <button
+                        onClick={() => {
+                          setImportFile(null);
+                          setImportRows([]);
+                          setImportHeaders([]);
+                          setImportError("");
+                          setImportLog([]);
+                        }}
+                        className="text-xs font-semibold text-red-500 hover:underline"
+                      >
+                        Change File
+                      </button>
+                    )}
+                  </div>
+
+                  {importError && (
+                    <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-600">
+                      {importError}
+                    </div>
+                  )}
+
+                  {/* CSV Columns Detected */}
+                  {!importLoading && importHeaders.length > 0 && (
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">Headers Detected</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {importHeaders.map(h => (
+                          <span key={h} className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 border border-gray-200">
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rows Preview */}
+                  {!importLoading && importRows.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">Preview (First 3 Rows Mapping)</h4>
+                      <div className="overflow-x-auto rounded-xl border border-[var(--cr-primary)]/10 bg-white">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                              <th className="px-3 py-2 font-semibold text-[var(--color-brand-secondary)]">Name</th>
+                              <th className="px-3 py-2 font-semibold text-[var(--color-brand-secondary)]">Phone</th>
+                              <th className="px-3 py-2 font-semibold text-[var(--color-brand-secondary)]">Email</th>
+                              <th className="px-3 py-2 font-semibold text-[var(--color-brand-secondary)]">National ID</th>
+                              <th className="px-3 py-2 font-semibold text-[var(--color-brand-secondary)]">Gender</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {importRows.slice(0, 3).map((row, idx) => {
+                              const m = mapRowToCustomer(row);
+                              return (
+                                <tr key={idx} className="hover:bg-gray-50/50">
+                                  <td className="px-3 py-2 font-medium text-[var(--cr-dark)]">{m.name || <span className="text-red-400 italic">Missing</span>}</td>
+                                  <td className="px-3 py-2 text-gray-600">{m.mobile || <span className="text-red-400 italic">Missing</span>}</td>
+                                  <td className="px-3 py-2 text-gray-600">{m.email || "-"}</td>
+                                  <td className="px-3 py-2 text-gray-600">{m.national_id || "-"}</td>
+                                  <td className="px-3 py-2 text-gray-600">{m.gender || "-"}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Progress & Live Log */}
+                  {(importLoading || importLog.length > 0) && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-[var(--cr-dark)]">
+                          {importLoading ? `Importing patients...` : "Import Complete"}
+                        </span>
+                        <span className="font-bold text-[var(--cr-accent)]">{importProgress}%</span>
+                      </div>
+                      
+                      {/* Progress Bar container */}
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--cr-primary)] transition-all duration-200"
+                          style={{ width: `${importProgress}%` }}
+                        />
+                      </div>
+
+                      {/* Log Container */}
+                      <div className="h-40 overflow-y-auto rounded-xl border border-[var(--cr-primary)]/10 bg-gray-50 p-3 space-y-1 text-[11px] font-mono">
+                        {importLog.map((log, idx) => (
+                          <div key={idx} className="flex justify-between items-center py-0.5 border-b border-gray-100/50 last:border-0">
+                            <span className="font-medium text-gray-700 truncate max-w-sm">{log.name}</span>
+                            {log.status === "success" ? (
+                              <span className="text-green-600 font-semibold bg-green-50 px-1.5 rounded">Success</span>
+                            ) : (
+                              <span className="text-red-600 font-semibold bg-red-50 px-1.5 rounded" title={log.error}>
+                                Error: {log.error || "failed"}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+              <button
+                disabled={importLoading}
+                onClick={handleCloseImportModal}
+                className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)] disabled:opacity-50"
+              >
+                {importProgress === 100 ? "Close" : "Cancel"}
+              </button>
+              {importFile && importRows.length > 0 && importProgress < 100 && (
+                <button
+                  onClick={handleStartImport}
+                  disabled={importLoading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2.5 text-sm font-semibold text-[var(--color-brand-light)] shadow-sm transition hover:bg-[#2e3a26] disabled:opacity-60"
+                >
+                  {importLoading ? (
+                    <>
+                      <svg className="mr-2 h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Importing...
+                    </>
+                  ) : (
+                    `Import ${importRows.length} Patients`
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── DELETE CUSTOMER CONFIRMATION MODAL ── */}
+      {deleteCustomerTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-brand-light)] p-6 shadow-2xl border border-[var(--cr-primary)]/10">
+            <div className="mb-4 flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 border border-red-100">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[var(--cr-dark)]">Delete Customer?</h3>
+                <p className="mt-1 text-xs text-[var(--color-brand-secondary)] leading-relaxed">
+                  You are deleting the customer profile for{" "}
+                  <span className="font-bold text-[var(--cr-dark)]">{deleteCustomerTarget.name}</span>.
+                </p>
+              </div>
+            </div>
+
+            {adminRole === 'superadmin' ? (
+              <div className="space-y-3 mb-5">
+                <p className="text-xs font-semibold text-[var(--cr-dark)]">
+                  As a <strong>Super Admin</strong>, select your deletion method:
+                </p>
+                <div className="grid grid-cols-1 gap-2.5">
+                  <button
+                    type="button"
+                    disabled={deletingCustomer}
+                    onClick={() => handleDeleteCustomer(deleteCustomerTarget.id!, 'soft')}
+                    className="flex items-start gap-3 p-3 rounded-xl border border-emerald-600/30 bg-emerald-50/60 hover:bg-emerald-50 text-start transition cursor-pointer disabled:opacity-50"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <Archive size={16} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-950">Soft Delete (Deactivate)</span>
+                        <span className="text-[9px] font-bold uppercase bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded-full">Preserves Records</span>
+                      </div>
+                      <p className="text-[11px] text-emerald-900/80 mt-0.5">
+                        Deactivates the patient while safely keeping their visit history, invoices, and ledger records.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={deletingCustomer || hardDeleteArmed || deletePreview?.state !== "ready"}
+                    onClick={() => setHardDeleteArmed(true)}
+                    className="flex items-start gap-3 p-3 rounded-xl border border-rose-300 bg-rose-50/60 hover:bg-rose-50 text-start transition cursor-pointer disabled:opacity-50"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
+                      <Trash2 size={16} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-rose-950">Hard Delete (Permanent Removal)</span>
+                        <span className="text-[9px] font-bold uppercase bg-rose-200/70 text-rose-900 px-2 py-0.5 rounded-full">Irreversible</span>
+                      </div>
+                      <p className="text-[11px] text-rose-900/80 mt-0.5">
+                        {lang === "ar"
+                          ? "يحذف الملف نهائياً مع كل ما يخص المريض: الحجوزات والمدفوعات والباقات والمحفظة والسجلات الطبية. لا يمكن التراجع. للاحتفاظ بالسجل استخدم الحذف المؤقت."
+                          : "Permanently deletes this profile together with everything that belongs to the patient: bookings, payments, packages, wallet and medical records. It cannot be undone. Use Soft Delete to keep the history."}
+                      </p>
+                    </div>
+                  </button>
+
+                  {deletePreview?.state === "loading" && (
+                    <p className="text-[11px] text-[var(--color-brand-secondary)]">
+                      {lang === "ar" ? "جاري حساب ما سيتم حذفه..." : "Checking what would be deleted..."}
+                    </p>
+                  )}
+                  {deletePreview?.state === "error" && (
+                    <p className="text-[11px] font-semibold text-rose-700">
+                      {lang === "ar"
+                        ? "تعذر حساب ما سيتم حذفه، لذلك الحذف النهائي غير متاح الآن: "
+                        : "Could not check what would be deleted, so permanent delete is unavailable right now: "}
+                      {deletePreview.message}
+                    </p>
+                  )}
+                  {hardDeleteArmed && deletePreview?.state === "ready" && (
+                    <div className="rounded-xl border border-rose-400 bg-rose-50 p-3 space-y-2">
+                      <p className="text-xs font-bold text-rose-950">
+                        {lang === "ar" ? "سيتم حذف ما يلي نهائياً:" : "This will permanently delete:"}
+                      </p>
+                      <p className="text-xs text-rose-900 leading-relaxed">
+                        {describeDeletionCounts(deletePreview.counts, lang === "ar" ? "ar" : "en") ||
+                          (lang === "ar"
+                            ? "لا توجد حجوزات أو مدفوعات أو سجلات أخرى لهذا المريض."
+                            : "No bookings, payments or other records are attached to this patient.")}
+                      </p>
+                      {deletePreview.keptBookingsOtherName > 0 && (
+                        <p className="text-[11px] text-rose-900/80">
+                          {lang === "ar"
+                            ? `${deletePreview.keptBookingsOtherName} حجز غير مرتبط بنفس رقم الهاتف لكن باسم مختلف لن يُحذف، وقد يظهر كمريض منفصل.`
+                            : `${deletePreview.keptBookingsOtherName} un-linked booking(s) with the same phone but a different name will not be deleted and may still show as a separate patient.`}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        disabled={deletingCustomer}
+                        onClick={() => handleDeleteCustomer(deleteCustomerTarget.id!, "hard")}
+                        className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {deletingCustomer
+                          ? (lang === "ar" ? "جاري الحذف..." : "Deleting...")
+                          : (lang === "ar" ? "نعم، احذف كل شيء نهائياً" : "Yes, permanently delete everything")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--color-brand-secondary)] mb-5 leading-relaxed">
+                This action permanently deletes the customer profile together with all of the patient's bookings, payments, packages, wallet and medical records. Only a Super Admin can do this.
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4">
+              <button
+                type="button"
+                onClick={() => setDeleteCustomerTarget(null)}
+                className="rounded-lg border border-[var(--cr-primary)]/15 bg-white px-4 py-2 text-xs font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)]"
+              >
+                Cancel
+              </button>
+              {adminRole !== 'superadmin' && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteCustomer(deleteCustomerTarget.id!, 'hard')}
+                  disabled={deletingCustomer}
+                  className="rounded-lg bg-red-600 px-5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {deletingCustomer ? "Deleting..." : "Yes, Delete Customer"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── Setup Password Modal (shown after accepting invite or password reset) ── */}
+      {showSetupPasswordModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-4 rounded-3xl bg-white shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-[var(--cr-dark)] to-[var(--cr-primary)] px-8 py-8 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--cr-accent)]/20 ring-2 ring-[var(--cr-accent)]/40">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="var(--cr-accent)" strokeWidth={2}>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-1">Set Your Password</h2>
+              <p className="text-sm text-[var(--cr-accent)]/80">
+                Welcome! Please create a secure password to complete your account setup.
+              </p>
+            </div>
+
+            {/* Body */}
+            <div className="px-8 py-7">
+              {setupSuccess ? (
+                <div className="flex flex-col items-center gap-4 text-center py-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth={2.5}>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <p className="text-green-700 font-semibold text-base">{setupSuccess}</p>
+                  <p className="text-sm text-[var(--color-brand-secondary)]">You will be redirected automatically…</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSetupPassword} className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-2">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={setupPassword}
+                      onChange={(e) => setSetupPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                      disabled={setupLoading}
+                      autoFocus
+                    />
+                    {setupPassword && (
+                  <div className="mt-2 text-xs space-y-1 font-semibold text-gray-500">
+                    <div className="flex items-center gap-1.5">
+                      <span className={setupPassword.length >= 8 ? "text-green-600" : ""}>
+                        {setupPassword.length >= 8 ? "✓" : "○"} At least 8 characters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={/[A-Z]/.test(setupPassword) && /[a-z]/.test(setupPassword) ? "text-green-600" : ""}>
+                        {/[A-Z]/.test(setupPassword) && /[a-z]/.test(setupPassword) ? "✓" : "○"} Uppercase & lowercase letters
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={/\d/.test(setupPassword) ? "text-green-600" : ""}>
+                        {/\d/.test(setupPassword) ? "✓" : "○"} At least one number
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={/[^A-Za-z0-9]/.test(setupPassword) ? "text-green-600" : ""}>
+                        {/[^A-Za-z0-9]/.test(setupPassword) ? "✓" : "○"} At least one special character (e.g. @$!%*?&#)
+                      </span>
+                    </div>
+                  </div>
+                )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-2">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      value={setupConfirmPassword}
+                      onChange={(e) => setSetupConfirmPassword(e.target.value)}
+                      placeholder="Re-enter your password"
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-[#F9F9F7] px-4 py-3 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                      disabled={setupLoading}
+                    />
+                  </div>
+
+                  {setupError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 font-medium">
+                      {setupError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={setupLoading}
+                    className="w-full rounded-xl bg-[var(--cr-primary)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#2e3a26] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {setupLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                        Setting password…
+                      </span>
+                    ) : "Confirm & Access Dashboard"}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── POSTPONE BOOKING MODAL ── */}
+      {postponeBooking && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl bg-[var(--color-brand-light)] p-6 shadow-2xl border border-[var(--cr-primary)]/10">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--cr-accent)]">Reschedule</p>
+                <h3 className="text-xl font-bold text-[var(--cr-dark)] mt-1">Postpone Booking</h3>
+              </div>
+              <button
+                onClick={() => setPostponeBooking(null)}
+                className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex gap-2 rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => setPostponeMode("reschedule")}
+                  className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${postponeMode === "reschedule" ? "bg-[var(--cr-primary)] text-white" : "text-[var(--cr-primary)]"}`}
+                >
+                  I know the new date
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPostponeMode("followup")}
+                  className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${postponeMode === "followup" ? "bg-[var(--cr-primary)] text-white" : "text-[var(--cr-primary)]"}`}
+                >
+                  Not sure yet
+                </button>
+              </div>
+
+              {postponeMode === "reschedule" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-1">New Date</label>
+                    <input
+                      type="date"
+                      value={postponeNewDate}
+                      onChange={(e) => setPostponeNewDate(e.target.value)}
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-1">New Time</label>
+                    <select
+                      value={postponeNewTime}
+                      onChange={(e) => setPostponeNewTime(e.target.value)}
+                      className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                    >
+                      <option value="">Select time</option>
+                      {ALL_15MIN_SLOTS.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-1">Follow Up Around</label>
+                  <input
+                    type="date"
+                    value={postponeFollowUpDate}
+                    onChange={(e) => setPostponeFollowUpDate(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                  <p className="text-[11px] text-[#8A9A81] mt-1.5">
+                    The booking will be marked Postponed with no confirmed date until you come back and reschedule it.
+                  </p>
+                </div>
+              )}
+
+              <button
+                disabled={savingPostpone || (postponeMode === "reschedule" ? !postponeNewDate : !postponeFollowUpDate)}
+                onClick={async () => {
+                  setSavingPostpone(true);
+                  try {
+                    const payload =
+                      postponeMode === "reschedule"
+                        ? { action: "postpone", date: postponeNewDate, timeSlot: postponeNewTime || undefined }
+                        : { action: "postpone", followUpDate: postponeFollowUpDate };
+                    const res = await fetch(`/api/reservations?id=${postponeBooking.id}`, {
+                      method: "PATCH",
+                      headers: authenticatedJsonHeaders,
+                      body: JSON.stringify(payload),
+                    });
+                    if (res.ok) {
+                      setPostponeBooking(null);
+                      setViewingBooking(null);
+                      fetchAllReservations();
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("revera-booking-change"));
+                        window.dispatchEvent(new CustomEvent("revera-prescription-change"));
+                      }
+                    } else {
+                      const err = await res.json();
+                      alert(err.error || "Failed to postpone booking.");
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert("Error postponing booking.");
+                  } finally {
+                    setSavingPostpone(false);
+                  }
+                }}
+                className="w-full rounded-2xl bg-[var(--cr-primary)] py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-50"
+              >
+                {savingPostpone ? "Saving..." : postponeMode === "reschedule" ? "Reschedule Booking" : "Mark as Postponed"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PAYMENT SETTLEMENT MODAL ── */}
+      {checkoutBooking && (
+        (() => {
+          // Laser per-pulse mode detection and rate resolution
+          const isCheckoutPerPulse = Boolean(
+            checkoutBooking?.laserPaymentMode === "PER_PULSE" ||
+            (checkoutBooking as any)?.laser_payment_mode === "PER_PULSE" ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("pay per pulse") ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("per_pulse") ||
+            String(checkoutBooking?.notes || "").includes("[Laser Settlement]") && String(checkoutBooking?.notes || "").includes("per pulse")
+          );
+          const isCheckoutPackage = Boolean(
+            checkoutBooking?.laserPaymentMode === "PACKAGE" ||
+            (checkoutBooking as any)?.laser_payment_mode === "PACKAGE" ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("pay with package") ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("package session") ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("package redemption") ||
+            String(checkoutBooking?.notes || "").toLowerCase().includes("pulses package") ||
+            String(checkoutBooking?.notes || "").includes("[Laser Package]") ||
+            String(checkoutBooking?.notes || "").includes("[Laser Package Redemption]") ||
+            String(checkoutBooking?.notes || "").includes("[Purchasing New Pulses Package]")
+          );
+          const checkoutPulseRate = Number(
+            checkoutBooking?.laserPricePerPulse ||
+            (checkoutBooking as any)?.laser_price_per_pulse ||
+            (() => {
+              const m = String(checkoutBooking?.notes || "").match(/@\s*(\d+(?:\.\d+)?)\s*EGP\/pulse/i);
+              return m ? Number(m[1]) : 1;
+            })()
+          ) || 1;
+          const notesStr = String(checkoutBooking?.notes || "");
+          const primaryDeliveredPulses = extractPrimaryPulses(notesStr, checkoutBooking);
+          const checkoutPackageMatch = String(checkoutBooking?.notes || "").match(/\[Laser Package (?:Redemption|Purchase & Redemption|Deficit Settlement)\]:\s*([^\n]+)/i);
+          const checkoutPackageSettlementText = checkoutPackageMatch ? checkoutPackageMatch[1] : (
+            isRTL
+              ? "تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مغطاة بنظام باقات النبضات"
+              : "Agreed that laser services in this session are covered under patient Pulses Package"
+          );
+          const notePkgIdMatch = notesStr.match(/\[Customer Package ID\]:\s*([0-9a-f-]+)/i) ||
+            notesStr.match(/\[Customer Package ID\]:\s*([^\n\]]+)/i) ||
+            notesStr.match(/Package ID:\s*([0-9a-f-]+)/i);
+          const linkedPkgId = checkoutBooking?.customerPackageId ||
+            (checkoutBooking as any)?.customer_package_id ||
+            checkoutBooking?.packageId ||
+            (checkoutBooking as any)?.package_id ||
+            (notePkgIdMatch ? notePkgIdMatch[1]?.trim() : null);
+
+          const notePkgRemPulses = extractPulsePackageQuota(notesStr);
+
+          const matchedPulsePkg = (checkoutCustomerPackages || []).find((p: any) =>
+            (linkedPkgId && String(p.id) === String(linkedPkgId)) ||
+            (linkedPkgId && String(p.packageId) === String(linkedPkgId))
+          ) || (checkoutCustomerPackages || []).find((p: any) =>
+            (p.packageType === "pulses" || Number(p.totalPulses || p.includedPulses || 0) > 0) &&
+            (p.status || "active").toLowerCase() === "active"
+          );
+
+          const catalogPkgMatch = (allCatalogPackages || []).find(
+            (p: any) =>
+              (checkoutBooking.purchasingPackageId && String(p.id) === String(checkoutBooking.purchasingPackageId)) ||
+              (p.name && notesStr.toLowerCase().includes(p.name.toLowerCase())) ||
+              (p.title && notesStr.toLowerCase().includes(p.title.toLowerCase())) ||
+              (p.name_ar && notesStr.includes(p.name_ar))
+          );
+          const catalogTotalPulses = Number(
+            catalogPkgMatch?.total_pulses ??
+            catalogPkgMatch?.totalPulses ??
+            catalogPkgMatch?.included_pulses ??
+            catalogPkgMatch?.includedPulses ??
+            0
+          );
+
+          const totalPkgPulses = Number(matchedPulsePkg?.totalPulses ?? matchedPulsePkg?.includedPulses ?? 0);
+          const currentRemainingPulses = notePkgRemPulses !== null
+            ? notePkgRemPulses
+            : (matchedPulsePkg
+                ? Number(matchedPulsePkg.pulsesRemaining ?? matchedPulsePkg.remainingPulses ?? totalPkgPulses)
+                : (catalogTotalPulses > 0 ? catalogTotalPulses : 0));
+
+          const deliveredPulsesVal = Number(
+            checkoutBooking?.deliveredPulses ||
+            (checkoutBooking as any)?.delivered_pulses ||
+            primaryDeliveredPulses ||
+            0
+          );
+
+          const hasSettledDeficit = Boolean(
+            notesStr.includes("[Laser Package Deficit Settlement]") ||
+            notesStr.includes("Choice 3A") ||
+            notesStr.includes("Choice 3B")
+          );
+
+          const isOption3Mode = isCheckoutPackage ||
+            notesStr.includes("[Purchasing New Pulses Package]") ||
+            notesStr.includes("Option 3: Pay with Pulses Package");
+
+          const deficitPulsesVal = (!hasSettledDeficit && isOption3Mode && deliveredPulsesVal > currentRemainingPulses)
+            ? (deliveredPulsesVal - currentRemainingPulses)
+            : 0;
+
+          const remainingPulsesAfterCheckout = Math.max(0, currentRemainingPulses - deliveredPulsesVal);
+
+          const selectedDeficitPackage = (allCatalogPackages || []).find(
+            (p: any) => String(p.id) === String(checkoutDeficitPackageId)
+          ) || (allCatalogPackages || []).find(
+            (p: any) =>
+              p.active !== false &&
+              (p.package_type === "pulses" ||
+                p.packageType === "pulses" ||
+                Number(p.total_pulses || p.totalPulses || 0) > 0)
+          );
+
+          const selectedDeficitPkgPrice = Number(
+            selectedDeficitPackage?.price ||
+            selectedDeficitPackage?.selling_price ||
+            0
+          );
+          const selectedDeficitPkgTotalPulses = Number(
+            selectedDeficitPackage?.total_pulses ||
+            selectedDeficitPackage?.totalPulses ||
+            selectedDeficitPackage?.included_pulses ||
+            0
+          );
+          const selectedDeficitPkgRemainingAfterDeduction = Math.max(
+            0,
+            selectedDeficitPkgTotalPulses - deficitPulsesVal
+          );
+
+          const perPulseDeficitTotal = deficitPulsesVal * checkoutDeficitPulseRate;
+
+          let activeDeficitCharge = 0;
+          if (deficitPulsesVal > 0 && !hasSettledDeficit) {
+            if (checkoutDeficitChoice === "BUY_NEW_PACKAGE") {
+              activeDeficitCharge = selectedDeficitPkgPrice;
+            } else {
+              activeDeficitCharge = perPulseDeficitTotal;
+            }
+          }
+
+          // 1. Calculate service cost
+          const svcIds = Array.isArray(checkoutBooking.serviceIds) ? checkoutBooking.serviceIds : [checkoutBooking.serviceId];
+          // A deposit collected at reservation time (BookingModal's "declare deposit paid" step)
+          // is already stored on the booking as amountPaid — checkout must charge only what's
+          // left of the service price, not the full price again. RISK-029.
+          const depositAlreadyPaid = Number(checkoutBooking.amountPaid ?? (checkoutBooking as any).amount_paid ?? 0);
+          const activeCustomerPackageItems = checkoutCustomerPackages
+            .filter((pkg: any) => pkg.status === "active" && (!pkg.expiresAt || new Date(pkg.expiresAt) >= new Date()))
+            .flatMap((pkg: any) => (pkg.items || []).map((it: any) => ({ ...it, packageName: pkg.packageName })));
+          const bookingServicesList = svcIds.map((id: number) => {
+            const s = localServices.find(srv => srv.id === id);
+            const details = s ? getServicePriceDetails(s, checkoutBooking.branchId, branches) : null;
+            const isLaser = checkIsLaserService(s);
+            let price = details ? details.discountedPrice : 500;
+            let pulseDetails = "";
+
+            if (isCheckoutPerPulse && isLaser) {
+              if (primaryDeliveredPulses > 0) {
+                price = primaryDeliveredPulses * checkoutPulseRate;
+                pulseDetails = ` (${primaryDeliveredPulses} pulses × ${checkoutPulseRate} EGP)`;
+              } else {
+                price = 0;
+                pulseDetails = ` (Pay per Pulse @ ${checkoutPulseRate} EGP)`;
+              }
+            } else if (isCheckoutPackage && isLaser) {
+              price = 0;
+              pulseDetails = ` (Package Redemption · 0 EGP)`;
+            }
+
+            // Match service with active package item
+            const redeemableItem = activeCustomerPackageItems.find((it: any) => Number(it.serviceId) === Number(id) && it.qtyRemaining > 0) || null;
+            return {
+              serviceId: id,
+              name: s?.en || `Service #${id}`,
+              price,
+              pulseDetails,
+              isLaser,
+              hasPromotion: details?.hasPromotion || false,
+              promotionText: details?.promotionText || "",
+              redeemableItem,
+            };
+          });
+          const baseServicesTotal = bookingServicesList.reduce(
+            (sum: number, s: any) => redeemedPackageItems[s.serviceId] ? sum : sum + s.price,
+            0
+          );
+
+          // Compute attached products and additional services from attachedProducts and notes
+          const rawAttached: any[] = Array.isArray((checkoutBooking as any).attachedProducts)
+            ? [...(checkoutBooking as any).attachedProducts]
+            : [];
+
+          const checkoutAdditionalServicesList: Array<{ name: string; qty: number; unitPrice: number; total: number; lineType: string }> = [];
+          const checkoutProductsConsumablesList: Array<{ name: string; qty: number; unitPrice: number; total: number; lineType: string }> = [];
+          const existingCheckoutNames = new Set<string>();
+
+          // 1. Process structured attachedProducts
+          for (const item of rawAttached) {
+            const name = String(item.name || 'Item').trim();
+            const qty = Number(item.qty) || 1;
+            let unitPrice = Number(item.unitPrice || item.price || 0);
+            let total = Number(item.total) || (qty * unitPrice);
+            const lineType = item.lineType || (item.serviceId ? 'additional_service' : 'product');
+
+            if (isCheckoutPerPulse && lineType === 'device_pulses') {
+              continue;
+            }
+            const isPulse = lineType === 'device_pulses' || name.toLowerCase().includes('pulse');
+            if (isPulse && (total === 0 || unitPrice === 0)) {
+              continue;
+            }
+
+            const matchingSvc = localServices.find((s) =>
+              (item.serviceId && String(s.id) === String(item.serviceId)) ||
+              s.en?.toLowerCase() === name.toLowerCase() ||
+              s.ar === name
+            );
+            const isLaserService = checkIsLaserService(matchingSvc) || name.toLowerCase().includes('laser') || name.includes('ليزر');
+
+            if (isCheckoutPackage && lineType === 'additional_service' && isLaserService) {
+              unitPrice = 0;
+              total = 0;
+            }
+
+            if (!existingCheckoutNames.has(name.toLowerCase())) {
+              existingCheckoutNames.add(name.toLowerCase());
+              if (lineType === 'additional_service') {
+                checkoutAdditionalServicesList.push({
+                  name: (isCheckoutPackage && isLaserService) ? `${name} (Package Redemption · 0 EGP)` : name,
+                  qty,
+                  unitPrice,
+                  total,
+                  lineType
+                });
+              } else {
+                checkoutProductsConsumablesList.push({ name, qty, unitPrice, total, lineType });
+              }
+            }
+          }
+
+          // 2. Parse from notes (safety net & historical support)
+          if (checkoutBooking.notes) {
+            const notesStr = String(checkoutBooking.notes);
+
+            // a) [Additional Services Used] / [Additional Services]
+            const addSvcBlockMatch = notesStr.match(/\[(?:Additional Services|Extra Services|Services Used|Added Services)(?: Used)?(?: During Session)?\]:\s*([\s\S]*?)(?=\n\s*\[|$)/i);
+            if (addSvcBlockMatch) {
+              const rawBlock = addSvcBlockMatch[1];
+              const items = rawBlock.split(/(?:,|\n)(?![^(]*\))/);
+              for (const item of items) {
+                const parsed = parseAdditionalServiceLine(item.trim());
+                if (parsed && !existingCheckoutNames.has(parsed.name.toLowerCase())) {
+                  existingCheckoutNames.add(parsed.name.toLowerCase());
+                  const matchingSvc = localServices.find((s) =>
+                    s.en?.toLowerCase() === parsed.name.toLowerCase() ||
+                    s.ar === parsed.name
+                  );
+                  const isLaserService = checkIsLaserService(matchingSvc) || parsed.name.toLowerCase().includes('laser') || parsed.name.includes('ليزر');
+                  const unitPrice = (isCheckoutPackage && isLaserService) ? 0 : parsed.unitPrice;
+                  const total = (isCheckoutPackage && isLaserService) ? 0 : parsed.total;
+                  checkoutAdditionalServicesList.push({
+                    name: (isCheckoutPackage && isLaserService)
+                      ? `${parsed.name} (Package Redemption · 0 EGP)`
+                      : parsed.name,
+                    qty: parsed.qty,
+                    unitPrice,
+                    total,
+                    lineType: 'additional_service'
+                  });
+                }
+              }
+            }
+
+            // b) Added Service matches
+            const addedServiceMatches = notesStr.matchAll(/\[(?:Added Service|Additional Service|Extra Service)\]:\s+(.*?)(?=\n|$)/gi);
+            for (const match of addedServiceMatches) {
+              const parsed = parseAdditionalServiceLine(match[1].trim());
+              if (parsed && !existingCheckoutNames.has(parsed.name.toLowerCase())) {
+                existingCheckoutNames.add(parsed.name.toLowerCase());
+                const matchingSvc = localServices.find((s) =>
+                  s.en?.toLowerCase() === parsed.name.toLowerCase() ||
+                  s.ar === parsed.name
+                );
+                const isLaserService = checkIsLaserService(matchingSvc) || parsed.name.toLowerCase().includes('laser') || parsed.name.includes('ليزر');
+                const unitPrice = (isCheckoutPackage && isLaserService) ? 0 : parsed.unitPrice;
+                const total = (isCheckoutPackage && isLaserService) ? 0 : parsed.total;
+                checkoutAdditionalServicesList.push({
+                  name: (isCheckoutPackage && isLaserService)
+                    ? `${parsed.name} (Package Redemption · 0 EGP)`
+                    : parsed.name,
+                  qty: parsed.qty,
+                  unitPrice,
+                  total,
+                  lineType: 'additional_service'
+                });
+              }
+            }
+
+            // c) Products Used in notes
+            const prodBlockMatch = notesStr.match(/\[Products Used During Session\]:\s*([\s\S]*?)(?=\n\s*\[|$)/i);
+            if (prodBlockMatch) {
+              const rawProdBlock = prodBlockMatch[1];
+              const items = rawProdBlock.split(/(?:,|\n)(?![^(]*\))/);
+              for (const item of items) {
+                const trimmed = item.trim();
+                if (!trimmed || trimmed.startsWith("[")) continue;
+                const m1 = trimmed.match(/^(.+?)\s*\(Qty:\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*EGP\s*=\s*(\d+(?:\.\d+)?)\s*EGP\)/i);
+                if (m1) {
+                  const name = m1[1].trim();
+                  const qty = Number(m1[2]) || 1;
+                  const unitPrice = Number(m1[3]) || 0;
+                  const total = Number(m1[4]) || (qty * unitPrice);
+                  if (!existingCheckoutNames.has(name.toLowerCase())) {
+                    existingCheckoutNames.add(name.toLowerCase());
+                    checkoutProductsConsumablesList.push({ name, qty, unitPrice, total, lineType: 'product' });
+                  }
+                  continue;
+                }
+              }
+            }
+
+            // d) Added Product matches
+            const receptionistMatches = notesStr.matchAll(/\[Added Product\]:\s+(.*?)(?:\s*\(x(\d+)\))?\s*-\s+(\d+(?:\.\d+)?)\s+EGP/gi);
+            for (const match of receptionistMatches) {
+              const name = match[1].trim();
+              const qty = match[2] ? Number(match[2]) : 1;
+              const total = Number(match[3]);
+              const unitPrice = qty > 0 ? total / qty : total;
+              if (!existingCheckoutNames.has(name.toLowerCase())) {
+                existingCheckoutNames.add(name.toLowerCase());
+                checkoutProductsConsumablesList.push({ name, qty, unitPrice, total, lineType: 'product' });
+              }
+            }
+
+            // e) Extra Device Pulses matches (only in non-per-pulse mode)
+            if (!isCheckoutPerPulse) {
+              const pulseMatches = notesStr.matchAll(/\[(?:Extra Device Pulses|Device Pulses Deducted)\]:\s*(.*?)=\s*(\d+(?:\.\d+)?)\s*EGP/gi);
+              for (const match of pulseMatches) {
+                const name = "Extra Device Pulses";
+                const total = parseFloat(match[2]) || 0;
+                if (total > 0 && !existingCheckoutNames.has(name.toLowerCase())) {
+                  existingCheckoutNames.add(name.toLowerCase());
+                  checkoutProductsConsumablesList.push({ name, qty: 1, unitPrice: total, total, lineType: 'device_pulses' });
+                }
+              }
+            }
+
+            // g) Generic format: - Name (x2) @ 700 EGP
+            const doctorMatches = notesStr.matchAll(/-\s+(.*?)\s+\(x(\d+)\)\s+@\s+(\d+(?:\.\d+)?)\s+EGP/gi);
+            for (const match of doctorMatches) {
+              const name = match[1].trim();
+              const qty = Number(match[2]);
+              const unitPrice = Number(match[3]);
+              const total = qty * unitPrice;
+              if (!existingCheckoutNames.has(name.toLowerCase())) {
+                existingCheckoutNames.add(name.toLowerCase());
+                checkoutProductsConsumablesList.push({ name, qty, unitPrice, total, lineType: 'product' });
+              }
+            }
+
+            // h) Package Purchase matches in notes:
+            // [Purchasing New Pulses Package]: Name (2500 EGP · 5,000 pulses) or [Laser Package Purchase & Redemption]: Name (2500 EGP)
+            const pkgPurchaseMatch = notesStr.match(/\[(?:Purchasing New Pulses Package|Laser Package Purchase & Redemption|Laser Package Deficit Settlement)\]:\s*(?:Choice 3A\s*-\s*)?([^(]+?)\s*\((\d+(?:,\d+)?(?:\.\d+)?)\s*EGP/i);
+            if (pkgPurchaseMatch) {
+              const rawPkgName = pkgPurchaseMatch[1].trim();
+              const pkgPrice = parseFloat(pkgPurchaseMatch[2].replace(/,/g, '')) || 0;
+              const displayName = isRTL ? `شراء باقة: ${rawPkgName}` : `Purchased Package: ${rawPkgName}`;
+              if (pkgPrice > 0 && !existingCheckoutNames.has(displayName.toLowerCase()) && !existingCheckoutNames.has(rawPkgName.toLowerCase())) {
+                existingCheckoutNames.add(displayName.toLowerCase());
+                existingCheckoutNames.add(rawPkgName.toLowerCase());
+                checkoutProductsConsumablesList.push({
+                  name: displayName,
+                  qty: 1,
+                  unitPrice: pkgPrice,
+                  total: pkgPrice,
+                  lineType: 'product'
+                });
+              }
+            }
+
+            // i) Package Deficit Choice 3B (per pulse deficit in notes)
+            const deficitPerPulseMatch = notesStr.match(/\[Laser Package Deficit Settlement\]:\s*Choice 3B\s*-\s*Pay Rest per Pulse\s*\(([^)]+?)=\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*EGP\)/i);
+            if (deficitPerPulseMatch) {
+              const deficitDesc = `Excess Pulses Deficit (${deficitPerPulseMatch[1].trim()})`;
+              const deficitPrice = parseFloat(deficitPerPulseMatch[2].replace(/,/g, '')) || 0;
+              if (deficitPrice > 0 && !existingCheckoutNames.has(deficitDesc.toLowerCase())) {
+                existingCheckoutNames.add(deficitDesc.toLowerCase());
+                checkoutProductsConsumablesList.push({
+                  name: deficitDesc,
+                  qty: 1,
+                  unitPrice: deficitPrice,
+                  total: deficitPrice,
+                  lineType: 'device_pulses'
+                });
+              }
+            }
+          }
+
+          // 3. Fallback reconciliation if note or DB has higher total
+          const baseAndAttachedTotal = baseServicesTotal + checkoutAdditionalServicesList.reduce((sum, s) => sum + s.total, 0) + checkoutProductsConsumablesList.reduce((sum, p) => sum + p.total, 0);
+          let targetCheckoutTotal = baseAndAttachedTotal;
+
+          if (checkoutBooking.notes && !isCheckoutPerPulse && !isCheckoutPackage) {
+            const invMatch = String(checkoutBooking.notes).match(/\[(?:Invoice Total Updated|Total Invoice|Final Invoice|Updated Invoice Total|Total Price|Invoice Total)\]:\s*(\d+(?:\.\d+)?)\s*EGP/i);
+            if (invMatch) {
+              const notedTotal = Number(invMatch[1]);
+              if (notedTotal > targetCheckoutTotal) {
+                targetCheckoutTotal = notedTotal;
+              }
+            }
+          }
+
+          const checkoutAdditionalServicesCost = checkoutAdditionalServicesList.reduce((sum, s) => sum + s.total, 0);
+          const checkoutProductsCost = checkoutProductsConsumablesList.reduce((sum, p) => sum + p.total, 0);
+          const calculatedTotal = baseServicesTotal + checkoutAdditionalServicesCost + checkoutProductsCost;
+
+          let bookedPackagePurchasePrice = 0;
+          if (isCheckoutPackage) {
+            const pkgPriceMatch = String(checkoutBooking?.notes || "").match(
+              /\[(?:Purchasing New Pulses Package|Laser Package Purchase & Redemption)\]:[^(]+\((\d+(?:,\d+)?(?:\.\d+)?)\s*EGP/i
+            );
+            if (pkgPriceMatch) {
+              bookedPackagePurchasePrice = parseFloat(pkgPriceMatch[1].replace(/,/g, '')) || 0;
+            }
+          }
+
+          const rawPaid = Number(checkoutBooking.amountPaid || (checkoutBooking as any).amount_paid || 0);
+          const rawLeft = (checkoutBooking as any).amountLeft ?? (checkoutBooking as any).amount_left;
+          const totalCost = isCheckoutPackage
+            ? Math.max(calculatedTotal, bookedPackagePurchasePrice, rawPaid + (rawLeft !== null && rawLeft !== undefined && !isNaN(Number(rawLeft)) ? Number(rawLeft) : 0))
+            : isCheckoutPerPulse
+            ? calculatedTotal
+            : Math.max(calculatedTotal, targetCheckoutTotal, rawPaid + (rawLeft !== null && rawLeft !== undefined && !isNaN(Number(rawLeft)) ? Number(rawLeft) : 0));
+
+          const balanceDue = Math.max(0, totalCost - depositAlreadyPaid);
+
+          // 2. Fetch customer details
+          const targetCustId = checkoutBooking.customerId || (checkoutBooking as any).customer_id;
+          const rawCustPhone = (checkoutBooking.phone || checkoutBooking.customer_phone || '').trim().replace(/\D/g, '');
+          const customerRecord = dbCustomers.find(c => 
+            (targetCustId && c.id === targetCustId) ||
+            (rawCustPhone && c.phone && c.phone.trim().replace(/\D/g, '') === rawCustPhone)
+          );
+          const walletBalance = customerRecord ? Number(customerRecord.wallet || customerRecord.wallet_balance || 0) : 0;
+
+          // 3. Math calculation
+          const walletDeduction = useWalletBalance ? Math.min(walletBalance, balanceDue) : 0;
+          const netDue = Math.max(0, balanceDue - walletDeduction);
+
+          const amountPaidNum = checkoutAmountPaid.trim() !== "" ? (parseFloat(checkoutAmountPaid) || 0) : netDue;
+          const diff = amountPaidNum - netDue;
+
+          const changeAmount = diff > 0 ? diff : 0;
+          const remainingAmount = diff < 0 ? -diff : 0;
+
+          // Total paid on this reservation is the previous deposit + cash/card paid now + wallet balance applied!
+          const totalPaidIncludingDeposit = depositAlreadyPaid + amountPaidNum + walletDeduction;
+
+          const handleConfirmCheckout = async () => {
+            // Brief 35 / DEC-079: a package-mode laser pulse deficit must be resolved at this
+            // modal before the money PATCH below runs — never silently clamped after the fact.
+            if (isCheckoutPackage) {
+              const deliveredPulsesVal = Number(
+                checkoutBooking.deliveredPulses || (checkoutBooking as any).delivered_pulses || 0
+              );
+              if (deliveredPulsesVal > 0) {
+                try {
+                  const defRes = await fetch(
+                    `/api/reservations/laser-deficit?reservationId=${encodeURIComponent(checkoutBooking.id)}`,
+                    { headers: authenticatedJsonHeaders }
+                  );
+                  const defData = defRes.ok ? await defRes.json().catch(() => null) : null;
+                  if (defData && !defData.resolved && Number(defData.deficitPulses) > 0) {
+                    alert(
+                      `This booking has an unresolved laser pulse deficit of ${Number(defData.deficitPulses).toLocaleString()} pulses. Resolve it above before completing checkout.`
+                    );
+                    return;
+                  }
+                } catch {
+                  // the render-time prompt shows its own error state; don't double-alert
+                }
+              }
+            }
+            setSavingCheckout(true);
+            try {
+              const res = await fetch(`/api/reservations?id=${checkoutBooking.id}`, {
+                method: "PATCH",
+                headers: authenticatedJsonHeaders,
+                body: JSON.stringify({
+                  status: "completed",
+                  amountPaid: totalPaidIncludingDeposit,
+                  amountLeft: remainingAmount,
+                  walletWithdrawal: walletDeduction,
+                  walletDeposit: changeAmount > 0 && depositChangeToWallet ? changeAmount : 0,
+                  customerId: customerRecord?.id || (checkoutBooking as any).customerId || (checkoutBooking as any).customer_id,
+                  redeemedServiceIds: Object.keys(redeemedPackageItems).map(Number),
+                  paymentMethod: checkoutPaymentMethod,
+                  paymentReference: checkoutPaymentReference ? checkoutPaymentReference.trim() : null
+                })
+              });
+              if (res.ok) {
+                const redeemedEntries = Object.entries(redeemedPackageItems);
+                const consumeFailures: string[] = [];
+                for (const [serviceIdStr, customerPackageItemId] of redeemedEntries) {
+                  try {
+                    const consumeRes = await fetch("/api/packages/consume", {
+                      method: "POST",
+                      headers: authenticatedJsonHeaders,
+                      body: JSON.stringify({ customerPackageItemId, reservationId: checkoutBooking.id })
+                    });
+                    if (!consumeRes.ok) {
+                      const consumeErr = await consumeRes.json();
+                      const svc = bookingServicesList.find((s: any) => String(s.serviceId) === serviceIdStr);
+                      consumeFailures.push(`${svc?.name || `Service #${serviceIdStr}`}: ${consumeErr.error || "redemption failed"}`);
+                    }
+                  } catch (consumeErr) {
+                    console.error("Error consuming package session:", consumeErr);
+                    const svc = bookingServicesList.find((s: any) => String(s.serviceId) === serviceIdStr);
+                    consumeFailures.push(`${svc?.name || `Service #${serviceIdStr}`}: redemption failed`);
+                  }
+                }
+
+                // Consume Laser Package Pulses if applicable and not yet deducted
+                const isLaserPkgCheckout = Boolean(
+                  checkoutBooking.laserPaymentMode === "PACKAGE" ||
+                  (checkoutBooking as any).laser_payment_mode === "PACKAGE" ||
+                  String(checkoutBooking.notes || "").toLowerCase().includes("package redemption") ||
+                  String(checkoutBooking.notes || "").toLowerCase().includes("pulses package") ||
+                  String(checkoutBooking.notes || "").includes("[Laser Package]") ||
+                  String(checkoutBooking.notes || "").includes("[Laser Package Redemption]") ||
+                  String(checkoutBooking.notes || "").includes("[Purchasing New Pulses Package]") ||
+                  String(checkoutBooking.notes || "").includes("Option 3: Pay with Pulses Package")
+                );
+                if (isLaserPkgCheckout) {
+                  try {
+                    const deliveredPulsesVal = Number(
+                      checkoutBooking.deliveredPulses ||
+                      (checkoutBooking as any).delivered_pulses ||
+                      extractPrimaryPulses(String(checkoutBooking.notes || ""), checkoutBooking) ||
+                      0
+                    );
+                    const targetCustId = customerRecord?.id || (checkoutBooking as any).customerId || (checkoutBooking as any).customer_id;
+                    const notesStr = String(checkoutBooking.notes || "");
+                    const notePkgIdMatch = notesStr.match(/\[Customer Package ID\]:\s*([0-9a-f-]+)/i) ||
+                      notesStr.match(/\[Customer Package ID\]:\s*([^\n\]]+)/i) ||
+                      notesStr.match(/Package ID:\s*([0-9a-f-]+)/i);
+                    let targetPkgId = checkoutBooking.customerPackageId ||
+                      (checkoutBooking as any).customer_package_id ||
+                      checkoutBooking.packageId ||
+                      (checkoutBooking as any).package_id ||
+                      (notePkgIdMatch ? notePkgIdMatch[1]?.trim() : null);
+
+                    if (!targetPkgId && targetCustId) {
+                      const pRes = await fetch(`/api/customers/packages?customerId=${encodeURIComponent(targetCustId)}`, { headers: authenticatedJsonHeaders });
+                      if (pRes.ok) {
+                        const pData = await pRes.json();
+                        const pList = pData.customerPackages || pData.packages || [];
+                        const actPkg = pList.find((p: any) => {
+                          const rem = Number(p.remainingPulses ?? p.pulsesRemaining ?? p.remaining_pulses ?? p.pulses_remaining ?? 0);
+                          return (p.status || "active").toLowerCase() === "active" && rem > 0;
+                        });
+                        if (actPkg) targetPkgId = actPkg.id;
+                      }
+                    }
+                    if (targetPkgId && deliveredPulsesVal > 0) {
+                      await fetch("/api/customers/packages", {
+                        method: "PATCH",
+                        headers: authenticatedJsonHeaders,
+                        body: JSON.stringify({
+                          action: "consume_package_pulses",
+                          customer_package_id: targetPkgId,
+                          package_id: targetPkgId,
+                          quantity_used: deliveredPulsesVal,
+                          pulses: deliveredPulsesVal,
+                          booking_id: checkoutBooking.id,
+                          reservationId: checkoutBooking.id,
+                          used_by: "Checkout Settlement",
+                          notes: `Checkout pulse deduction (${deliveredPulsesVal} pulses deducted)`
+                        })
+                      });
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("revera-laser-change"));
+                      }
+                    }
+                  } catch (pulseErr) {
+                    console.error("Error consuming laser package pulses at checkout:", pulseErr);
+                  }
+                }
+
+                setCheckoutBooking(null);
+                setCheckoutAmountPaid("");
+                setCheckoutPaymentMethod("cash");
+                setCheckoutPaymentReference("");
+                setUseWalletBalance(false);
+                setDepositChangeToWallet(false);
+                setRedeemedPackageItems({});
+                clearFetchCache();
+                fetchAllReservations();
+                fetchCustomers();
+                setViewingBooking(null);
+
+                if (consumeFailures.length > 0) {
+                  alert(
+                    `Checkout completed and charged correctly, but package redemption failed for:\n${consumeFailures.join("\n")}\n\nPlease reconcile this patient's package balance manually.`
+                  );
+                }
+              } else {
+                const err = await res.json();
+                alert(err.error || "Failed to complete checkout");
+              }
+            } catch (err) {
+              console.error(err);
+              alert("Error completing checkout");
+            } finally {
+              setSavingCheckout(false);
+            }
+          };
+
+          const settlementMatch = String(checkoutBooking.notes || "").match(/\[Laser Settlement\]:\s*([^\n]+)/i);
+          const settlementText = checkoutBooking.laserSettlementNote || (settlementMatch ? settlementMatch[1] : (
+            isCheckoutPerPulse
+              ? `Settled that laser services in this session are charged per pulse (@ ${checkoutPulseRate} EGP/pulse) / تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مدفوعة بنظام حساب النبضات (${checkoutPulseRate} ج.م/نبضة)`
+              : ""
+          ));
+
+          return (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto my-auto rounded-3xl bg-[var(--color-brand-light)] p-6 sm:p-8 shadow-2xl border border-[var(--cr-primary)]/10 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--cr-accent)]">Invoice Checkout</p>
+                    <h3 className="text-xl font-bold text-[var(--cr-dark)] mt-1">Payment Settlement</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCheckoutBooking(null);
+                      setCheckoutAmountPaid("");
+                      setUseWalletBalance(false);
+                      setDepositChangeToWallet(false);
+                      setRedeemedPackageItems({});
+                    }}
+                    className="rounded-full bg-[var(--color-brand-sand)] p-2 text-[var(--cr-primary)] transition hover:bg-[#e4e0d6]"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="space-y-4 text-sm text-[var(--cr-primary)]">
+                  {/* Customer Information */}
+                  <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1">Customer / المريض</p>
+                    <p className="font-bold text-[var(--cr-dark)]">{checkoutBooking.name}</p>
+                    <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">{checkoutBooking.phone}</p>
+                  </div>
+
+                  {/* Laser Per-Pulse Settlement Agreement Notice */}
+                  {isCheckoutPerPulse && (
+                    <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-900 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                        <Zap size={15} className="text-amber-600 shrink-0" />
+                        <span>Laser Per-Pulse Settlement / اتفاقية محاسبة نبضات الليزر</span>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed text-amber-800">
+                        {settlementText}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Laser Package Settlement Agreement & Pulse Deduction Breakdown */}
+                  {isCheckoutPackage && (
+                    <div className="rounded-2xl border border-purple-200/90 bg-gradient-to-br from-purple-50/95 via-white to-purple-50/60 p-4 text-xs text-purple-900 space-y-3 shadow-xs animate-fadeIn">
+                      <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
+                        <div className="flex items-center gap-2 font-bold text-purple-950 text-sm">
+                          <div className="p-1.5 bg-purple-600 text-white rounded-lg shrink-0 shadow-xs">
+                            <Zap size={15} />
+                          </div>
+                          <div>
+                            <p className="leading-tight">{isRTL ? "خصم نبضات باقة الليزر" : "Laser Package Pulse Deduction"}</p>
+                            <p className="text-[11px] font-medium text-purple-700 mt-0.5">
+                              {matchedPulsePkg ? (isRTL && matchedPulsePkg.packageNameAr ? matchedPulsePkg.packageNameAr : matchedPulsePkg.packageName) : (isRTL ? "باقة نبضات الليزر" : "Laser Pulses Package")}
+                            </p>
+                          </div>
+                        </div>
+                        {totalPkgPulses > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-800 border border-purple-300/60 px-2.5 py-0.5 text-[11px] font-bold">
+                            {totalPkgPulses.toLocaleString()} {isRTL ? "نبضة" : "pulses total"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Deduction calculation box */}
+                      <div className="bg-white/90 rounded-xl border border-purple-200/70 p-3 space-y-2.5">
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="bg-purple-50/70 rounded-lg p-2 border border-purple-100">
+                            <p className="text-[10px] uppercase font-semibold text-purple-600">{isRTL ? "رصيد الباقة الحالي" : "Current Balance"}</p>
+                            <p className="font-extrabold text-[var(--cr-dark)] text-xs sm:text-sm mt-0.5">
+                              {currentRemainingPulses.toLocaleString()} <span className="text-[10px] font-normal text-[var(--color-brand-secondary)]">{isRTL ? "نبضة" : "pulses"}</span>
+                            </p>
+                          </div>
+                          <div className="bg-amber-50/80 rounded-lg p-2 border border-amber-200/80">
+                            <p className="text-[10px] uppercase font-semibold text-amber-800">{isRTL ? "المستخدم بالجلسة" : "Session Usage"}</p>
+                            <p className="font-extrabold text-amber-900 text-xs sm:text-sm mt-0.5">
+                              -{deliveredPulsesVal.toLocaleString()} <span className="text-[10px] font-normal text-amber-700">{isRTL ? "نبضة" : "pulses"}</span>
+                            </p>
+                          </div>
+                          <div className="bg-emerald-50/80 rounded-lg p-2 border border-emerald-200/80">
+                            <p className="text-[10px] uppercase font-semibold text-emerald-800">{isRTL ? "المتبقي بالباقة" : "Remaining After"}</p>
+                            <p className="font-extrabold text-emerald-900 text-xs sm:text-sm mt-0.5">
+                              {remainingPulsesAfterCheckout.toLocaleString()} <span className="text-[10px] font-normal text-emerald-700">{isRTL ? "نبضة" : "pulses"}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar Visualization */}
+                        {totalPkgPulses > 0 && (
+                          <div className="space-y-1 pt-1">
+                            <div className="flex justify-between text-[11px] font-medium text-purple-900">
+                              <span>{isRTL ? "رصيد النبضات المتبقي" : "Package Pulses Remaining"}</span>
+                              <span className="font-bold">
+                                {remainingPulsesAfterCheckout.toLocaleString()} / {totalPkgPulses.toLocaleString()} {isRTL ? "نبضة" : "pulses"}
+                              </span>
+                            </div>
+                            <div className="w-full bg-purple-100 rounded-full h-2 overflow-hidden flex">
+                              <div
+                                className="bg-purple-600 h-full transition-all duration-500 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, (remainingPulsesAfterCheckout / totalPkgPulses) * 100))}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Summary sentence matching user prompt */}
+                        <div className="text-[11.5px] leading-relaxed text-purple-900 bg-purple-50/50 rounded-lg p-2 border border-purple-100 font-medium">
+                          {isRTL ? (
+                            <span>
+                              سيتم خصم <strong>{deliveredPulsesVal.toLocaleString()}</strong> نبضة من باقة <strong>{totalPkgPulses > 0 ? `${totalPkgPulses.toLocaleString()} نبضة` : (matchedPulsePkg?.packageName || "النبضات")}</strong>، والرصيد المتبقي <strong>{remainingPulsesAfterCheckout.toLocaleString()}</strong> نبضة.
+                            </span>
+                          ) : (
+                            <span>
+                              <strong>{deliveredPulsesVal.toLocaleString()} pulses</strong> will be deducted from the <strong>{totalPkgPulses > 0 ? `${totalPkgPulses.toLocaleString()} pulses` : (matchedPulsePkg?.packageName || "pulses")}</strong> package, and <strong>{remainingPulsesAfterCheckout.toLocaleString()} pulses</strong> remaining.
+                            </span>
+                          )}
+                        </div>
+
+                        {deficitPulsesVal > 0 && (
+                          <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                            ⚠️ {isRTL
+                              ? `تنبيه: عدد النبضات المستهلكة يتجاوز رصيد الباقة بمقدار ${deficitPulsesVal.toLocaleString()} نبضة.`
+                              : `Note: Session pulses exceed package balance by ${deficitPulsesVal.toLocaleString()} pulses.`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brief 35 / DEC-079: deficit resolution prompt — reception decides, before
+                      the totals below are confirmed. Blocks handleConfirmCheckout when unresolved. */}
+                  {isCheckoutPackage && (
+                    <LaserDeficitPrompt
+                      reservationId={checkoutBooking.id}
+                      headers={authenticatedJsonHeaders}
+                      isRTL={isRTL}
+                      onResolved={(result: any) => {
+                        // PAY_PER_PULSE adds the deficit charge to reservations.amount_left on the
+                        // server; mirror it here so the open modal's totals include it instead of
+                        // showing 0 due until the page is reloaded.
+                        const delta = result?.resolution === "PAY_PER_PULSE" && !result?.alreadyResolved
+                          ? Number(result?.invoiceDelta) || 0
+                          : 0;
+                        if (delta <= 0) return;
+                        const bump = (r: any) => {
+                          const left = Number(r?.amountLeft ?? r?.amount_left ?? 0) + delta;
+                          return { ...r, amountLeft: left, amount_left: left };
+                        };
+                        const resId = String(checkoutBooking.id);
+                        setCheckoutBooking((prev: any) => (prev ? bump(prev) : prev));
+                        setAllReservations((prev: any[]) => prev.map((r) => (String(r.id) === resId ? bump(r) : r)));
+                      }}
+                    />
+                  )}
+
+                  {/* Services Invoice details */}
+                  <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Services List / الخدمات</p>
+                    {bookingServicesList.map((svc: any) => {
+                      const isRedeemed = !!redeemedPackageItems[svc.serviceId];
+                      return (
+                        <div key={svc.serviceId} className="border-b border-[var(--cr-primary)]/10 pb-2 space-y-1">
+                          <div className="flex justify-between items-center text-sm font-semibold">
+                            <span className="flex items-center gap-2">
+                              <span>{svc.name}</span>
+                              {svc.hasPromotion && !isRedeemed && (
+                                <span className="text-[10px] font-bold bg-[var(--cr-accent)] text-white px-2 py-0.5 rounded-full">
+                                  {svc.promotionText || "OFFER"}
+                                </span>
+                              )}
+                            </span>
+                            <span className={isRedeemed ? "line-through text-[var(--color-brand-secondary)]" : "text-right"}>
+                              <span>{svc.price} EGP</span>
+                              {svc.pulseDetails && <span className="text-[11px] font-normal text-amber-700 block">{svc.pulseDetails}</span>}
+                            </span>
+                          </div>
+                          {svc.redeemableItem && (
+                            <label className="flex items-center gap-2 text-xs bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-lg p-2 cursor-pointer font-medium">
+                              <input
+                                type="checkbox"
+                                checked={isRedeemed}
+                                onChange={(e) => {
+                                  setRedeemedPackageItems((prev: any) => {
+                                    const next = { ...prev };
+                                    if (e.target.checked) {
+                                      next[svc.serviceId] = svc.redeemableItem.id;
+                                    } else {
+                                      delete next[svc.serviceId];
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="h-4 w-4 rounded accent-emerald-700"
+                              />
+                              <span>
+                                Apply from package: <strong>{svc.redeemableItem.packageName}</strong> ({svc.redeemableItem.qtyRemaining} left)
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Additional Services */}
+                    {checkoutAdditionalServicesList.length > 0 && (
+                      <div className="mt-2.5 rounded-xl border border-[var(--cr-accent)]/30 bg-[#FAF5EB]/50 p-3 space-y-2 text-xs">
+                        <div className="flex items-center justify-between border-b border-[var(--cr-accent)]/20 pb-1.5">
+                          <span className="font-bold text-[var(--cr-primary)] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                            <span>✨</span> Additional Services / الخدمات الإضافية
+                          </span>
+                          <span className="font-bold text-[var(--cr-accent)]">+{checkoutAdditionalServicesCost} EGP</span>
+                        </div>
+                        <div className="space-y-1.5 pt-0.5">
+                          {checkoutAdditionalServicesList.map((item, iIdx) => (
+                            <div key={`chk-as-${iIdx}`} className="flex items-center justify-between bg-white p-2 rounded-lg border border-[var(--cr-accent)]/20 shadow-2xs">
+                              <div>
+                                <p className="font-bold text-[var(--cr-dark)]">{item.name}</p>
+                                <p className="text-[11px] text-[var(--color-brand-secondary)]">Qty: {item.qty} {item.qty > 1 ? `× ${item.unitPrice} EGP` : ''}</p>
+                              </div>
+                              <span className="font-extrabold text-[var(--cr-primary)]">+{item.total} EGP</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Products & Session Consumables */}
+                    {checkoutProductsConsumablesList.length > 0 && (
+                      <div className="mt-2.5 rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] p-3 space-y-2 text-xs">
+                        <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-1.5">
+                          <span className="font-bold text-[var(--cr-primary)] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                            <span>📦</span> Session Consumables & Products / المستلزمات والمنتجات
+                          </span>
+                          <span className="font-bold text-[var(--cr-primary)]">+{checkoutProductsCost} EGP</span>
+                        </div>
+                        <div className="space-y-1.5 pt-0.5">
+                          {checkoutProductsConsumablesList.map((item, iIdx) => (
+                            <div key={`chk-p-${iIdx}`} className="flex items-center justify-between bg-white p-2 rounded-lg border border-[var(--cr-primary)]/10 shadow-2xs">
+                              <div>
+                                <p className="font-bold text-[var(--cr-dark)]">{item.name}</p>
+                                <p className="text-[11px] text-[var(--color-brand-secondary)]">Qty: {item.qty} {item.qty > 1 ? `× ${item.unitPrice} EGP` : ''}</p>
+                              </div>
+                              <span className="font-extrabold text-[var(--cr-primary)]">+{item.total} EGP</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t border-[var(--cr-primary)]/10 pt-2 flex justify-between font-bold text-[var(--cr-dark)] text-base">
+                      <span>Total Cost / الإجمالي</span>
+                      <span>{totalCost} EGP</span>
+                    </div>
+                    {depositAlreadyPaid > 0 && (
+                      <>
+                        <div className="flex justify-between text-xs text-[var(--color-brand-secondary)]">
+                          <span>Deposit already paid / العربون المدفوع</span>
+                          <span>-{depositAlreadyPaid} EGP</span>
+                        </div>
+                        <div className="border-t border-[var(--cr-primary)]/10 pt-2 flex justify-between font-bold text-[var(--cr-primary)] text-base">
+                          <span>Balance Due / المتبقي</span>
+                          <span>{balanceDue} EGP</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Wallet Option */}
+                  {walletBalance > 0 && (
+                    <div className="rounded-2xl border border-[var(--cr-accent)]/20 bg-[var(--color-brand-light)] p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-[var(--cr-dark)] flex items-center gap-1.5">
+                          <span className="inline-block h-2 w-2 rounded-full bg-[var(--cr-accent)]"></span>
+                          Use Customer Wallet / استخدام المحفظة
+                        </p>
+                        <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">Available balance: {walletBalance} EGP</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={useWalletBalance}
+                          onChange={(e) => setUseWalletBalance(e.target.checked)}
+                          className="h-5 w-5 rounded border-[var(--cr-primary)]/15 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)] cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Payment Inputs */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-1">
+                        Net Due / المبلغ المستحق
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          disabled
+                          value={`${netDue} EGP`}
+                          className="w-full rounded-xl border border-[var(--cr-primary)]/10 bg-[var(--color-brand-tint)]/30 px-3 py-2.5 text-sm font-bold text-[var(--cr-dark)] outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-[var(--color-brand-secondary)]">
+                          Amount Paid / المبلغ المدفوع
+                        </label>
+                        {netDue > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setCheckoutAmountPaid(String(netDue))}
+                            className="text-[11px] font-bold text-[var(--cr-primary)] hover:underline cursor-pointer"
+                          >
+                            {isRTL ? "دفع كامل المبلغ" : "Pay Full"} ({netDue} EGP)
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          value={checkoutAmountPaid}
+                          onChange={(e) => setCheckoutAmountPaid(e.target.value)}
+                          placeholder={String(netDue)}
+                          className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white pl-3 pr-10 py-2.5 text-sm font-bold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[var(--color-brand-secondary)]">EGP</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-2">
+                      Payment Method / طريقة الدفع
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { id: 'cash', labelEn: 'Cash', labelAr: 'نقدي', icon: '💵' },
+                        { id: 'card', labelEn: 'Visa / Card', labelAr: 'بطاقة بنكية', icon: '💳' },
+                        { id: 'instapay', labelEn: 'InstaPay', labelAr: 'إنستاباي', icon: '⚡' },
+                        { id: 'vodafone_cash', labelEn: 'Vodafone Cash', labelAr: 'فودافون كاش', icon: '📱' },
+                        { id: 'bank_transfer', labelEn: 'Bank Transfer', labelAr: 'تحويل بنكي', icon: '🏦' }
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setCheckoutPaymentMethod(m.id as any)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                            checkoutPaymentMethod === m.id
+                              ? 'bg-[var(--cr-primary)] text-white border-[var(--cr-primary)] shadow-sm'
+                              : 'bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 hover:border-[var(--cr-accent)] hover:bg-[var(--color-brand-tint)]/20'
+                          }`}
+                        >
+                          <span>{m.icon}</span>
+                          <span className="truncate">{m.labelEn} / {m.labelAr}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Payment Reference (for non-cash payments) */}
+                  {checkoutPaymentMethod !== 'cash' && (
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--color-brand-secondary)] mb-1">
+                        Transaction / Reference No. / رقم العملية أو الإيصال
+                      </label>
+                      <input
+                        type="text"
+                        value={checkoutPaymentReference}
+                        onChange={(e) => setCheckoutPaymentReference(e.target.value)}
+                        placeholder="e.g. InstaPay Ref #, Card Auth Code, Transaction ID..."
+                        className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 text-xs font-medium text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                      />
+                    </div>
+                  )}
+
+                  {/* Calculations & Overpay Options */}
+                  {changeAmount > 0 && (
+                    <div className="rounded-2xl border border-green-200 bg-green-50/50 p-4 space-y-3">
+                      <div className="flex justify-between font-bold text-green-800 text-sm">
+                        <span>Change / الباقي</span>
+                        <span>{changeAmount} EGP</span>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={depositChangeToWallet}
+                          onChange={(e) => setDepositChangeToWallet(e.target.checked)}
+                          className="h-4 w-4 rounded border-[var(--cr-primary)]/15 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)] cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-[var(--cr-dark)]">
+                          Put change in customer's wallet / أضف الباقي إلى محفظة المريض
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {remainingAmount > 0 && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50/50 p-4 flex justify-between font-bold text-red-800 text-sm">
+                      <span>Outstanding Balance / الرصيد المستحق</span>
+                      <span>{remainingAmount} EGP</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-6 flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4">
+                  <button
+                    onClick={() => {
+                      setCheckoutBooking(null);
+                      setCheckoutAmountPaid("");
+                      setCheckoutPaymentMethod("cash");
+                      setCheckoutPaymentReference("");
+                      setUseWalletBalance(false);
+                      setDepositChangeToWallet(false);
+                      setRedeemedPackageItems({});
+                    }}
+                    className="rounded-xl border border-[var(--cr-primary)]/15 bg-white px-5 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[var(--color-brand-tint)] transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={savingCheckout}
+                    onClick={handleConfirmCheckout}
+                    className="rounded-xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition disabled:opacity-60 flex items-center gap-1.5 shadow-md"
+                  >
+                    {savingCheckout ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        Processing...
+                      </>
+                    ) : (
+                      "Confirm & Complete"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()
+      )}
+
+      {/* ── BOOKING INVOICE MODAL ── */}
+      {invoiceBooking && (
+        (() => {
+          // Brief 32: If we have a real ledger invoice, use immutable data instead of live-recomputing
+          if (ledgerInvoice) {
+            const inv = ledgerInvoice.invoice;
+            const isInvoicePerPulse = Boolean(
+              invoiceBooking.laserPaymentMode === "PER_PULSE" ||
+              (invoiceBooking as any)?.laser_payment_mode === "PER_PULSE" ||
+              invoiceBooking.laserSettlementNote ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("pay per pulse") ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("per_pulse") ||
+              String(invoiceBooking.notes || "").includes("[Laser Settlement]") && String(invoiceBooking.notes || "").includes("per pulse")
+            );
+            const isInvoicePackage = Boolean(
+              invoiceBooking.laserPaymentMode === "PACKAGE" ||
+              (invoiceBooking as any)?.laser_payment_mode === "PACKAGE" ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("pay with package") ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("package session") ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("package redemption") ||
+              String(invoiceBooking.notes || "").toLowerCase().includes("pulses package") ||
+              String(invoiceBooking.notes || "").includes("[Laser Package]") ||
+              String(invoiceBooking.notes || "").includes("[Laser Package Redemption]") ||
+              String(invoiceBooking.notes || "").includes("[Purchasing New Pulses Package]")
+            );
+            const invoicePulseRate = Number(
+              invoiceBooking.laserPricePerPulse ||
+              (invoiceBooking as any)?.laser_price_per_pulse ||
+              (() => {
+                const m = String(invoiceBooking.notes || "").match(/@\s*(\d+(?:\.\d+)?)\s*EGP\/pulse/i);
+                return m ? Number(m[1]) : 1;
+              })()
+            ) || 1;
+            const settlementMatch = String(invoiceBooking.notes || "").match(/\[Laser Settlement\]:\s*([^\n]+)/i);
+            const invoiceSettlementText = invoiceBooking.laserSettlementNote || (settlementMatch ? settlementMatch[1] : (
+              isInvoicePerPulse
+                ? `Settled that laser services in this session are charged per pulse (@ ${invoicePulseRate} EGP/pulse) / تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مدفوعة بنظام حساب النبضات (${invoicePulseRate} ج.م/نبضة)`
+                : ""
+            ));
+            const packageSettlementMatch = String(invoiceBooking.notes || "").match(/\[Laser Package (?:Redemption|Purchase & Redemption|Deficit Settlement)\]:\s*([^\n]+)/i);
+            const invoicePackageSettlementText = packageSettlementMatch ? packageSettlementMatch[1] : (
+              isRTL
+                ? "تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مغطاة بنظام باقات النبضات"
+                : "Agreed that laser services in this session are covered under patient Pulses Package"
+            );
+
+            const allInvoiceItems = ledgerInvoice.lines.map((line: any) => ({
+              name: isRTL ? (line.nameAr || line.nameEn || line.description) : (line.nameEn || line.description),
+              nameAr: line.nameAr || line.description,
+              qty: Number(line.qty) || 1,
+              unitPrice: Number(line.unit_price) || 0,
+              price: Number(line.unit_price) || 0,
+              total: Number(line.line_total) || 0,
+            }));
+            const totalCost = Number(inv.grand_total) || 0;
+
+            const rawPaid = Number(invoiceBooking.amountPaid || (invoiceBooking as any).amount_paid || 0);
+            const rawLeft = (invoiceBooking as any).amountLeft !== undefined && (invoiceBooking as any).amountLeft !== null && (invoiceBooking as any).amountLeft !== ""
+              ? Number((invoiceBooking as any).amountLeft)
+              : ((invoiceBooking as any).amount_left !== undefined && (invoiceBooking as any).amount_left !== null && (invoiceBooking as any).amount_left !== ""
+                  ? Number((invoiceBooking as any).amount_left)
+                  : null);
+            const finalPaid = rawPaid;
+            const finalLeft = rawLeft ?? 0;
+            const walletUsed = Math.max(0, totalCost - finalPaid - finalLeft);
+            const branch = branches.find((b: any) => b.id === invoiceBooking.branchId);
+            const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "Revera Zayed Clinic";
+            const invoiceNo = inv.invoice_no || (invoiceBooking as any).invoiceNo || (invoiceBooking as any).invoice_no || `INV-${String(invoiceBooking.id || '').slice(0, 6).toUpperCase()}`;
+
+            return (
+              <div 
+                className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
+                onClick={() => setInvoiceBooking(null)}
+              >
+                <div 
+                  className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white p-5 sm:p-6 shadow-2xl border border-[var(--cr-primary)]/10 my-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  
+                  {/* Header Actions */}
+                  <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-3 mb-3 shrink-0">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--cr-accent)]">Invoice Preview</span>
+                      <h3 className="text-base font-bold text-[var(--cr-dark)] mt-0.5 font-sans">Booking Invoice Details</h3>
+                    </div>
+                    <button
+                      onClick={() => setInvoiceBooking(null)}
+                      className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 transition cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Printable Invoice Container (Scrollable) */}
+                  <div className="overflow-y-auto pr-1.5 flex-1 border border-gray-100 rounded-2xl p-4 sm:p-5 bg-[var(--color-brand-light)]/40 space-y-4">
+                    {/* Top Header */}
+                    <div className="flex justify-between items-start gap-4 pb-3.5 border-b border-[var(--cr-primary)]/20">
+                      <div>
+                        <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>REVERA CLINICS</h1>
+                        <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5 font-semibold">Sheikh Zayed / New Cairo</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Phone: {CLIENT.phoneDisplay}</p>
+                        <p className="text-[11px] text-gray-400">Email: inquiries@reveraclinics.com</p>
+                      </div>
+                      <div className="text-right">
+                        <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-[var(--cr-accent)]" style={{ fontFamily: "Marcellus, serif" }}>INVOICE</h2>
+                        <p className="text-xs text-[var(--cr-dark)] mt-1 font-bold">No: {invoiceNo}</p>
+                        <p className="text-[11px] text-[var(--color-brand-secondary)] mt-0.5">Date: {invoiceBooking.date || new Date().toISOString().slice(0, 10)}</p>
+                      </div>
+                    </div>
+
+                    {/* Customer / Billing Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs leading-relaxed">
+                      <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5 border-b border-gray-100 pb-1">Billed To</p>
+                        <p className="font-bold text-[var(--cr-dark)] text-sm">{invoiceBooking.name || "Patient"}</p>
+                        <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Phone:</strong> {invoiceBooking.phone || "—"}</p>
+                        <p className="text-[var(--color-brand-secondary)]"><strong>Email:</strong> {invoiceBooking.email || "—"}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5 border-b border-gray-100 pb-1">Booking Details</p>
+                        <p className="text-[var(--color-brand-secondary)]"><strong>Doctor:</strong> {invoiceBooking.doctorName || "—"}</p>
+                        <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Time Slot:</strong> {invoiceBooking.timeSlot || "—"}</p>
+                        <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Branch:</strong> {branchName}</p>
+                      </div>
+                    </div>
+
+                    {/* Laser Per-Pulse Settlement Agreement Notice */}
+                    {isInvoicePerPulse && (
+                      <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 space-y-1">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                          <Zap size={14} className="text-amber-600 shrink-0" />
+                          <span>Laser Per-Pulse Settlement / اتفاقية محاسبة نبضات الليزر</span>
+                        </div>
+                        <p className="text-[11.5px] leading-relaxed text-amber-800">
+                          {invoiceSettlementText}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Laser Package Settlement Agreement Notice */}
+                    {isInvoicePackage && (
+                      <div className="rounded-xl border border-purple-300 bg-purple-50/90 p-3 text-xs text-purple-900 space-y-1 animate-fadeIn">
+                        <div className="flex items-center gap-1.5 font-bold text-purple-950">
+                          <Package size={15} className="text-purple-700 shrink-0" />
+                          <span>Laser Package Settlement / اتفاقية باقة نبضات الليزر</span>
+                        </div>
+                        <p className="text-[11.5px] leading-relaxed text-purple-800">
+                          {invoicePackageSettlementText}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Table of Services & Add-ons */}
+                    <div className="overflow-x-auto border border-gray-100 rounded-xl bg-white shadow-sm">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-[var(--color-brand-tint)] text-[var(--cr-primary)] font-bold border-b border-gray-100">
+                            <th className="p-2.5 text-left">Service / Item Rendered</th>
+                            <th className="p-2.5 text-center w-14">Qty</th>
+                            <th className="p-2.5 text-right w-24">Unit Price</th>
+                            <th className="p-2.5 text-right w-24">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {allInvoiceItems.map((item: any, idx: number) => (
+                            <tr key={idx} className="hover:bg-gray-50/50">
+                              <td className="p-2.5 font-semibold text-[var(--cr-dark)]">{item.name}</td>
+                              <td className="p-2.5 text-center text-gray-500">{item.qty || 1}</td>
+                              <td className="p-2.5 text-right text-gray-600">EGP {(Number(item.unitPrice || item.price) || 0).toLocaleString()}</td>
+                              <td className="p-2.5 text-right font-bold text-[var(--cr-dark)]">EGP {(Number(item.total) || 0).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pricing Summary */}
+                    <div className="flex justify-end text-xs">
+                      <div className="w-60 space-y-1.5">
+                        <div className="flex justify-between text-gray-500">
+                          <span>Subtotal:</span>
+                          <span className="font-semibold text-[var(--cr-dark)]">EGP {totalCost.toLocaleString()}</span>
+                        </div>
+                        {walletUsed > 0 && (
+                          <div className="flex justify-between text-green-700 font-medium">
+                            <span>Paid from Wallet:</span>
+                            <span className="font-bold">- EGP {walletUsed.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t border-[var(--cr-primary)] pt-1.5 text-sm font-bold text-[var(--cr-primary)]">
+                          <span>Amount Paid:</span>
+                          <span>EGP {finalPaid.toLocaleString()}</span>
+                        </div>
+                        {finalLeft > 0 && (
+                          <div className="flex justify-between font-bold text-red-600">
+                            <span>Outstanding Due:</span>
+                            <span>EGP {finalLeft.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Thank you */}
+                    <div className="text-center text-[10px] text-gray-400 pt-2 border-t border-dashed border-gray-200">
+                      <p>Thank you for choosing {CLIENT.name}!</p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Buttons */}
+                  <div className="flex items-center justify-end gap-3 mt-3 border-t border-gray-100 pt-3 shrink-0">
+                    <button
+                      onClick={() => setInvoiceBooking(null)}
+                      className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition cursor-pointer"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => handlePrintInvoice(invoiceBooking, allInvoiceItems, totalCost, walletUsed, branchName, invoiceNo)}
+                      className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                      </svg>
+                      Print / Save PDF
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            );
+          }
+
+          // === FALLBACK: pre-ledger bookings (no invoice row) — existing logic unchanged ===
+          const isInvoicePerPulse = Boolean(
+            invoiceBooking.laserPaymentMode === "PER_PULSE" ||
+            (invoiceBooking as any)?.laser_payment_mode === "PER_PULSE" ||
+            invoiceBooking.laserSettlementNote ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("pay per pulse") ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("per_pulse") ||
+            String(invoiceBooking.notes || "").includes("[Laser Settlement]") && String(invoiceBooking.notes || "").includes("per pulse")
+          );
+          const isInvoicePackage = Boolean(
+            invoiceBooking.laserPaymentMode === "PACKAGE" ||
+            (invoiceBooking as any)?.laser_payment_mode === "PACKAGE" ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("pay with package") ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("package session") ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("package redemption") ||
+            String(invoiceBooking.notes || "").toLowerCase().includes("pulses package") ||
+            String(invoiceBooking.notes || "").includes("[Laser Package]") ||
+            String(invoiceBooking.notes || "").includes("[Laser Package Redemption]") ||
+            String(invoiceBooking.notes || "").includes("[Purchasing New Pulses Package]")
+          );
+          const invoicePulseRate = Number(
+            invoiceBooking.laserPricePerPulse ||
+            (invoiceBooking as any)?.laser_price_per_pulse ||
+            (() => {
+              const m = String(invoiceBooking.notes || "").match(/@\s*(\d+(?:\.\d+)?)\s*EGP\/pulse/i);
+              return m ? Number(m[1]) : 1;
+            })()
+          ) || 1;
+          const primaryDeliveredPulses = extractPrimaryPulses(String(invoiceBooking.notes || ""), invoiceBooking);
+          const settlementMatch = String(invoiceBooking.notes || "").match(/\[Laser Settlement\]:\s*([^\n]+)/i);
+          const invoiceSettlementText = invoiceBooking.laserSettlementNote || (settlementMatch ? settlementMatch[1] : (
+            isInvoicePerPulse
+              ? `Settled that laser services in this session are charged per pulse (@ ${invoicePulseRate} EGP/pulse) / تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مدفوعة بنظام حساب النبضات (${invoicePulseRate} ج.م/نبضة)`
+              : ""
+          ));
+          const packageSettlementMatch = String(invoiceBooking.notes || "").match(/\[Laser Package (?:Redemption|Purchase & Redemption|Deficit Settlement)\]:\s*([^\n]+)/i);
+          const invoicePackageSettlementText = packageSettlementMatch ? packageSettlementMatch[1] : (
+            isRTL
+              ? "تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مغطاة بنظام باقات النبضات"
+              : "Agreed that laser services in this session are covered under patient Pulses Package"
+          );
+
+          // 1. Calculate service cost
+          const svcIds = Array.isArray(invoiceBooking.serviceIds) ? invoiceBooking.serviceIds : (invoiceBooking.serviceId ? [invoiceBooking.serviceId] : []);
+          const baseServicesList = svcIds.map((id: number) => {
+            const s = localServices.find(srv => srv.id === id);
+            const isLaser = checkIsLaserService(s);
+            let price = s ? getEffectiveServicePrice(s, invoiceBooking.branchId, branches) : 500;
+            if (isInvoicePerPulse && isLaser) {
+              if (primaryDeliveredPulses > 0) {
+                price = primaryDeliveredPulses * invoicePulseRate;
+              } else {
+                price = 0;
+              }
+            } else if (isInvoicePackage && isLaser) {
+              price = 0;
+            }
+            return {
+              name: (isInvoicePerPulse && isLaser)
+                ? (primaryDeliveredPulses > 0
+                    ? `${s?.en || `Service #${id}`} (${primaryDeliveredPulses} pulses × ${invoicePulseRate} EGP)`
+                    : `${s?.en || `Service #${id}`} (Pay per Pulse @ ${invoicePulseRate} EGP)`)
+                : (isInvoicePackage && isLaser)
+                  ? `${s?.en || `Service #${id}`} (Package Redemption · 0 EGP)`
+                  : (s?.en || `Service #${id}`),
+              nameAr: (isInvoicePerPulse && isLaser)
+                ? (primaryDeliveredPulses > 0
+                    ? `${s?.ar || `خدمة #${id}`} (${primaryDeliveredPulses} نبضة × ${invoicePulseRate} ج.م)`
+                    : `${s?.ar || `خدمة #${id}`} (حساب بالنبضة @ ${invoicePulseRate} ج.م)`)
+                : (isInvoicePackage && isLaser)
+                  ? `${s?.ar || `خدمة #${id}`} (استهلاك باقة · 0 ج.م)`
+                  : (s?.ar || `خدمة #${id}`),
+              qty: 1,
+              unitPrice: price,
+              price: price,
+              total: price
+            };
+          });
+
+          // Extract attached products/consumables/add-ons and additional services
+          const rawAttached: any[] = Array.isArray(invoiceBooking.attachedProducts)
+            ? [...invoiceBooking.attachedProducts]
+            : [];
+
+          const invoiceAdditionalServicesList: Array<{ name: string; nameAr: string; qty: number; unitPrice: number; price: number; total: number }> = [];
+          const invoiceProductsList: Array<{ name: string; nameAr: string; qty: number; unitPrice: number; price: number; total: number }> = [];
+          const existingNames = new Set<string>();
+
+          // 1. Process structured attachedProducts
+          for (const item of rawAttached) {
+            const name = String(item.name || 'Item').trim();
+            const qty = Number(item.qty) || 1;
+            let unitPrice = Number(item.unitPrice || item.price || 0);
+            let total = Number(item.total) || (qty * unitPrice);
+            const lineType = item.lineType || (item.serviceId ? 'additional_service' : 'product');
+
+            // Skip device pulses counters in per-pulse mode or zero-cost counters
+            if (isInvoicePerPulse && lineType === 'device_pulses') {
+              continue;
+            }
+            const isPulse = lineType === 'device_pulses' || name.toLowerCase().includes('pulse');
+            if (isPulse && (total === 0 || unitPrice === 0)) {
+              continue;
+            }
+
+            const matchingSvc = localServices.find((s) =>
+              (item.serviceId && String(s.id) === String(item.serviceId)) ||
+              s.en?.toLowerCase() === name.toLowerCase() ||
+              s.ar === name
+            );
+            const isLaserService = checkIsLaserService(matchingSvc) || name.toLowerCase().includes('laser') || name.includes('ليزر');
+
+            if (isInvoicePackage && lineType === 'additional_service' && isLaserService) {
+              unitPrice = 0;
+              total = 0;
+            }
+
+            if (!existingNames.has(name.toLowerCase())) {
+              existingNames.add(name.toLowerCase());
+              if (lineType === 'additional_service') {
+                invoiceAdditionalServicesList.push({
+                  name: (isInvoicePackage && isLaserService) ? `${name} (Package Redemption · 0 EGP)` : `${name} (Additional Service)`,
+                  nameAr: (isInvoicePackage && isLaserService) ? `${name} (استهلاك باقة · 0 ج.م)` : `${name} (خدمة إضافية)`,
+                  qty,
+                  unitPrice,
+                  price: unitPrice,
+                  total
+                });
+              } else {
+                invoiceProductsList.push({
+                  name: `${name} (Add-on)`,
+                  nameAr: `${name} (إضافة)`,
+                  qty,
+                  unitPrice,
+                  price: unitPrice,
+                  total
+                });
+              }
+            }
+          }
+
+          // 2. Parse from notes (safety net & historical support)
+          if (invoiceBooking.notes) {
+            const notesStr = String(invoiceBooking.notes);
+
+            // a) Check for [Additional Services Used] or [Additional Services]
+            const addSvcBlockMatch = notesStr.match(/\[(?:Additional Services|Extra Services|Services Used|Added Services)(?: Used)?(?: During Session)?\]:\s*([\s\S]*?)(?=\n\s*\[|$)/i);
+            if (addSvcBlockMatch) {
+              const rawBlock = addSvcBlockMatch[1];
+              const items = rawBlock.split(/(?:,|\n)(?![^(]*\))/);
+              for (const item of items) {
+                const parsed = parseAdditionalServiceLine(item.trim());
+                if (parsed && !existingNames.has(parsed.name.toLowerCase())) {
+                  existingNames.add(parsed.name.toLowerCase());
+                  const matchingSvc = localServices.find((s) =>
+                    s.en?.toLowerCase() === parsed.name.toLowerCase() ||
+                    s.ar === parsed.name
+                  );
+                  const isLaserService = checkIsLaserService(matchingSvc) || parsed.name.toLowerCase().includes('laser') || parsed.name.includes('ليزر');
+                  const unitPrice = (isInvoicePackage && isLaserService) ? 0 : parsed.unitPrice;
+                  const total = (isInvoicePackage && isLaserService) ? 0 : parsed.total;
+                  invoiceAdditionalServicesList.push({
+                    name: (isInvoicePackage && isLaserService) ? `${parsed.name} (Package Redemption · 0 EGP)` : `${parsed.name} (Additional Service)`,
+                    nameAr: (isInvoicePackage && isLaserService) ? `${parsed.name} (استهلاك باقة · 0 ج.م)` : `${parsed.name} (خدمة إضافية)`,
+                    qty: parsed.qty,
+                    unitPrice,
+                    price: unitPrice,
+                    total
+                  });
+                }
+              }
+            }
+
+            // b) Added Service format: [Added Service]: Name - 350 EGP or [Additional Service]: Name - 200 EGP
+            const addedServiceMatches = notesStr.matchAll(/\[(?:Added Service|Additional Service|Extra Service)\]:\s+(.*?)(?=\n|$)/gi);
+            for (const match of addedServiceMatches) {
+              const parsed = parseAdditionalServiceLine(match[1].trim());
+              if (parsed && !existingNames.has(parsed.name.toLowerCase())) {
+                existingNames.add(parsed.name.toLowerCase());
+                const matchingSvc = localServices.find((s) =>
+                  s.en?.toLowerCase() === parsed.name.toLowerCase() ||
+                  s.ar === parsed.name
+                );
+                const isLaserService = checkIsLaserService(matchingSvc) || parsed.name.toLowerCase().includes('laser') || parsed.name.includes('ليزر');
+                const unitPrice = (isInvoicePackage && isLaserService) ? 0 : parsed.unitPrice;
+                const total = (isInvoicePackage && isLaserService) ? 0 : parsed.total;
+                invoiceAdditionalServicesList.push({
+                  name: (isInvoicePackage && isLaserService) ? `${parsed.name} (Package Redemption · 0 EGP)` : `${parsed.name} (Additional Service)`,
+                  nameAr: (isInvoicePackage && isLaserService) ? `${parsed.name} (استهلاك باقة · 0 ج.م)` : `${parsed.name} (خدمة إضافية)`,
+                  qty: parsed.qty,
+                  unitPrice,
+                  price: unitPrice,
+                  total
+                });
+              }
+            }
+
+            // c) Products Used in notes
+            const prodBlockMatch = notesStr.match(/\[Products Used During Session\]:\s*([\s\S]*?)(?=\n\s*\[|$)/i);
+            if (prodBlockMatch) {
+              const rawProdBlock = prodBlockMatch[1];
+              const items = rawProdBlock.split(/(?:,|\n)(?![^(]*\))/);
+              for (const item of items) {
+                const trimmed = item.trim();
+                if (!trimmed || trimmed.startsWith("[")) continue;
+                const m1 = trimmed.match(/^(.+?)\s*\(Qty:\s*(\d+)\s*x\s*(\d+(?:\.\d+)?)\s*EGP\s*=\s*(\d+(?:\.\d+)?)\s*EGP\)/i);
+                if (m1) {
+                  const name = m1[1].trim();
+                  const qty = Number(m1[2]) || 1;
+                  const unitPrice = Number(m1[3]) || 0;
+                  const total = Number(m1[4]) || (qty * unitPrice);
+                  if (!existingNames.has(name.toLowerCase())) {
+                    existingNames.add(name.toLowerCase());
+                    invoiceProductsList.push({
+                      name: `${name} (Add-on)`,
+                      nameAr: `${name} (إضافة)`,
+                      qty,
+                      unitPrice,
+                      price: unitPrice,
+                      total
+                    });
+                  }
+                  continue;
+                }
+              }
+            }
+
+            // d) Receptionist Added Product: [Added Product]: Name (x2) - 1400 EGP
+            const receptionistMatches = notesStr.matchAll(/\[Added Product\]:\s+(.*?)(?:\s*\(x(\d+)\))?\s*-\s+(\d+(?:\.\d+)?)\s+EGP/gi);
+            for (const match of receptionistMatches) {
+              const name = match[1].trim();
+              const qty = match[2] ? Number(match[2]) : 1;
+              const total = Number(match[3]);
+              const unitPrice = qty > 0 ? total / qty : total;
+              if (!existingNames.has(name.toLowerCase())) {
+                existingNames.add(name.toLowerCase());
+                invoiceProductsList.push({
+                  name: `${name} (Add-on)`,
+                  nameAr: `${name} (إضافة)`,
+                  qty,
+                  unitPrice,
+                  price: unitPrice,
+                  total
+                });
+              }
+            }
+
+            // e) Generic format: - Name (x2) @ 700 EGP
+            const doctorMatches = notesStr.matchAll(/-\s+(.*?)\s+\(x(\d+)\)\s+@\s+(\d+(?:\.\d+)?)\s+EGP/gi);
+            for (const match of doctorMatches) {
+              const name = match[1].trim();
+              const qty = Number(match[2]);
+              const unitPrice = Number(match[3]);
+              const total = qty * unitPrice;
+              if (!existingNames.has(name.toLowerCase())) {
+                existingNames.add(name.toLowerCase());
+                invoiceProductsList.push({
+                  name: `${name} (Add-on)`,
+                  nameAr: `${name} (إضافة)`,
+                  qty,
+                  unitPrice,
+                  price: unitPrice,
+                  total
+                });
+              }
+            }
+          }
+
+          // 3. Fallback reconciliation: If notes or booking balance recorded a higher invoice total than the sum of parsed lines,
+          // recover the missing additional services / session adjustments difference!
+          const baseCost = baseServicesList.reduce((sum: number, s: any) => sum + s.total, 0);
+          const currentAttachedTotal = baseCost + invoiceAdditionalServicesList.reduce((sum: number, s: any) => sum + s.total, 0) + invoiceProductsList.reduce((sum: number, p: any) => sum + p.total, 0);
+          let targetInvoiceTotal = currentAttachedTotal;
+
+          if (invoiceBooking.notes && !isInvoicePerPulse && !isInvoicePackage) {
+            const invMatch = String(invoiceBooking.notes).match(/\[(?:Invoice Total Updated|Total Invoice|Final Invoice|Updated Invoice Total|Total Price|Invoice Total)\]:\s*(\d+(?:\.\d+)?)\s*EGP/i);
+            if (invMatch) {
+              const notedTotal = Number(invMatch[1]);
+              if (notedTotal > targetInvoiceTotal) {
+                targetInvoiceTotal = notedTotal;
+              }
+            }
+          }
+
+          const rawPaid = Number(invoiceBooking.amountPaid || (invoiceBooking as any).amount_paid || 0);
+          const rawLeft = (invoiceBooking as any).amountLeft !== undefined && (invoiceBooking as any).amountLeft !== null && (invoiceBooking as any).amountLeft !== ""
+            ? Number((invoiceBooking as any).amountLeft)
+            : ((invoiceBooking as any).amount_left !== undefined && (invoiceBooking as any).amount_left !== null && (invoiceBooking as any).amount_left !== ""
+                ? Number((invoiceBooking as any).amount_left)
+                : null);
+
+          const allInvoiceItems = [...baseServicesList, ...invoiceAdditionalServicesList, ...invoiceProductsList].filter((item: any) => {
+            const nameLower = String(item.name || '').toLowerCase();
+            const isPulse = nameLower.includes('pulse') || nameLower.includes('device —') || nameLower.includes('device -');
+            if (isPulse && (Number(item.total) === 0 || Number(item.unitPrice) === 0 || Number(item.price) === 0)) {
+              return false;
+            }
+            return true;
+          });
+          const totalCost = allInvoiceItems.reduce((sum: number, item: any) => sum + (Number(item.total) || 0), 0);
+
+          // 2. Fetch customer and branch details
+          const finalPaid = rawPaid;
+          const finalLeft = rawLeft ?? 0;
+          const walletUsed = Math.max(0, totalCost - finalPaid - finalLeft);
+          const branch = branches.find(b => b.id === invoiceBooking.branchId);
+          const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "Revera Zayed Clinic";
+          const invoiceNo = (invoiceBooking as any).invoiceNo || (invoiceBooking as any).invoice_no || `INV-${String(invoiceBooking.id || '').slice(0, 6).toUpperCase()}`;
+
+          return (
+            <div 
+              className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto"
+              onClick={() => setInvoiceBooking(null)}
+            >
+              <div 
+                className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-white p-5 sm:p-6 shadow-2xl border border-[var(--cr-primary)]/10 my-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                
+                {/* Header Actions */}
+                <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/10 pb-3 mb-3 shrink-0">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--cr-accent)]">Invoice Preview</span>
+                    <h3 className="text-base font-bold text-[var(--cr-dark)] mt-0.5 font-sans">Booking Invoice Details</h3>
+                  </div>
+                  <button
+                    onClick={() => setInvoiceBooking(null)}
+                    className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 transition cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Printable Invoice Container (Scrollable) */}
+                <div className="overflow-y-auto pr-1.5 flex-1 border border-gray-100 rounded-2xl p-4 sm:p-5 bg-[var(--color-brand-light)]/40 space-y-4">
+                  {/* Top Header */}
+                  <div className="flex justify-between items-start gap-4 pb-3.5 border-b border-[var(--cr-primary)]/20">
+                    <div>
+                      <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>REVERA CLINICS</h1>
+                      <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5 font-semibold">Sheikh Zayed / New Cairo</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Phone: {CLIENT.phoneDisplay}</p>
+                      <p className="text-[11px] text-gray-400">Email: inquiries@reveraclinics.com</p>
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-[var(--cr-accent)]" style={{ fontFamily: "Marcellus, serif" }}>INVOICE</h2>
+                      <p className="text-xs text-[var(--cr-dark)] mt-1 font-bold">No: {invoiceNo}</p>
+                      <p className="text-[11px] text-[var(--color-brand-secondary)] mt-0.5">Date: {invoiceBooking.date || new Date().toISOString().slice(0, 10)}</p>
+                    </div>
+                  </div>
+
+                  {/* Customer / Billing Info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs leading-relaxed">
+                    <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5 border-b border-gray-100 pb-1">Billed To</p>
+                      <p className="font-bold text-[var(--cr-dark)] text-sm">{invoiceBooking.name || "Patient"}</p>
+                      <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Phone:</strong> {invoiceBooking.phone || "—"}</p>
+                      <p className="text-[var(--color-brand-secondary)]"><strong>Email:</strong> {invoiceBooking.email || "—"}</p>
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5 border-b border-gray-100 pb-1">Booking Details</p>
+                      <p className="text-[var(--color-brand-secondary)]"><strong>Doctor:</strong> {invoiceBooking.doctorName || "—"}</p>
+                      <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Time Slot:</strong> {invoiceBooking.timeSlot || "—"}</p>
+                      <p className="text-[var(--color-brand-secondary)] mt-0.5"><strong>Branch:</strong> {branchName}</p>
+                    </div>
+                  </div>
+
+                  {/* Laser Per-Pulse Settlement Agreement Notice */}
+                  {isInvoicePerPulse && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-950">
+                        <Zap size={14} className="text-amber-600 shrink-0" />
+                        <span>Laser Per-Pulse Settlement / اتفاقية محاسبة نبضات الليزر</span>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed text-amber-800">
+                        {invoiceSettlementText}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Laser Package Settlement Agreement Notice */}
+                  {isInvoicePackage && (
+                    <div className="rounded-xl border border-purple-300 bg-purple-50/90 p-3 text-xs text-purple-900 space-y-1">
+                      <div className="flex items-center gap-1.5 font-bold text-purple-950">
+                        <Package size={14} className="text-purple-600 shrink-0" />
+                        <span>Laser Package Settlement / اتفاقية محاسبة باقات الليزر</span>
+                      </div>
+                      <p className="text-[11.5px] leading-relaxed text-purple-800">
+                        {invoicePackageSettlementText}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Table of Services & Add-ons */}
+                  <div className="overflow-x-auto border border-gray-100 rounded-xl bg-white shadow-sm">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-[var(--color-brand-tint)] text-[var(--cr-primary)] font-bold border-b border-gray-100">
+                          <th className="p-2.5 text-left">Service / Item Rendered</th>
+                          <th className="p-2.5 text-center w-14">Qty</th>
+                          <th className="p-2.5 text-right w-24">Unit Price</th>
+                          <th className="p-2.5 text-right w-24">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {allInvoiceItems.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-gray-50/50">
+                            <td className="p-2.5 font-semibold text-[var(--cr-dark)]">{item.name}</td>
+                            <td className="p-2.5 text-center text-gray-500">{item.qty || 1}</td>
+                            <td className="p-2.5 text-right text-gray-600">EGP {(Number(item.unitPrice || item.price) || 0).toLocaleString()}</td>
+                            <td className="p-2.5 text-right font-bold text-[var(--cr-dark)]">EGP {(Number(item.total) || 0).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pricing Summary */}
+                  <div className="flex justify-end text-xs">
+                    <div className="w-60 space-y-1.5">
+                      <div className="flex justify-between text-gray-500">
+                        <span>Subtotal:</span>
+                        <span className="font-semibold text-[var(--cr-dark)]">EGP {totalCost.toLocaleString()}</span>
+                      </div>
+                      {walletUsed > 0 && (
+                        <div className="flex justify-between text-green-700 font-medium">
+                          <span>Paid from Wallet:</span>
+                          <span className="font-bold">- EGP {walletUsed.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-[var(--cr-primary)] pt-1.5 text-sm font-bold text-[var(--cr-primary)]">
+                        <span>Amount Paid:</span>
+                        <span>EGP {finalPaid.toLocaleString()}</span>
+                      </div>
+                      {finalLeft > 0 && (
+                        <div className="flex justify-between font-bold text-red-600">
+                          <span>Outstanding Due:</span>
+                          <span>EGP {finalLeft.toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Thank you */}
+                  <div className="text-center text-[10px] text-gray-400 pt-2 border-t border-dashed border-gray-200">
+                    <p>Thank you for choosing {CLIENT.name}!</p>
+                  </div>
+                </div>
+
+                {/* Bottom Buttons */}
+                <div className="flex items-center justify-end gap-3 mt-3 border-t border-gray-100 pt-3 shrink-0">
+                  <button
+                    onClick={() => setInvoiceBooking(null)}
+                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => handlePrintInvoice(invoiceBooking, allInvoiceItems, totalCost, walletUsed, branchName, invoiceNo)}
+                    className="rounded-xl bg-[var(--cr-primary)] px-4 py-2 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition flex items-center gap-1.5 shadow-md cursor-pointer"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 6 2 18 2 18 9" />
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                      <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Print / Save PDF
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          );
+        })()
+      )}
+
+
+      {activeInfoFeature && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cr-dark)]/60 backdrop-blur-sm p-4">
+          <div className="bg-[var(--color-brand-light)] rounded-[32px] border border-[var(--cr-primary)]/10 p-6 max-w-md w-full shadow-2xl relative">
+            <h4 className="text-lg font-bold text-[var(--cr-dark)] pr-8 mb-2 flex items-center gap-2">
+              <Info className="text-[var(--cr-accent)] shrink-0" size={20} />
+              {activeInfoFeature.title}
+            </h4>
+            <div className="text-sm text-[var(--color-brand-secondary)] leading-relaxed space-y-2 font-medium">
+              <p>{activeInfoFeature.description}</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveInfoFeature(null)}
+                className="rounded-2xl bg-[var(--cr-primary)] px-5 py-2.5 text-xs font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition shadow-md"
+              >
+                Got it
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveInfoFeature(null)}
+              className="absolute top-5 right-5 text-[var(--color-brand-secondary)]/60 hover:text-[var(--cr-dark)] transition-colors hover:bg-gray-100 p-1.5 rounded-full"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

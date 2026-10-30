@@ -1,0 +1,984 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import {
+  ArrowLeft,
+  BookUser,
+  Lock,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  Cake,
+  CreditCard,
+  Briefcase,
+  Compass,
+  MapPin,
+  Building2,
+  Building,
+  Signpost,
+  Wallet,
+  Coins,
+  ShieldCheck,
+  Receipt,
+  Loader2,
+  ChevronDown,
+  X,
+} from "lucide-react";
+import { adminTranslations } from "@/components/admin/translations";
+import { calculateAge } from "@/lib/age";
+
+interface CountryOption {
+  code: string;
+  flag: string;
+  nameEn: string;
+  nameAr: string;
+}
+
+const COUNTRY_OPTIONS: CountryOption[] = [
+  { code: "+20", flag: "🇪🇬", nameEn: "Egypt", nameAr: "مصر" },
+  { code: "+966", flag: "🇸🇦", nameEn: "Saudi Arabia", nameAr: "المملكة العربية السعودية" },
+  { code: "+971", flag: "🇦🇪", nameEn: "UAE", nameAr: "الإمارات العربية المتحدة" },
+  { code: "+965", flag: "🇰🇼", nameEn: "Kuwait", nameAr: "الكويت" },
+  { code: "+974", flag: "🇶🇦", nameEn: "Qatar", nameAr: "قطر" },
+  { code: "+968", flag: "🇴🇲", nameEn: "Oman", nameAr: "عُمان" },
+  { code: "+973", flag: "🇧🇭", nameEn: "Bahrain", nameAr: "البحرين" },
+  { code: "+962", flag: "🇯🇴", nameEn: "Jordan", nameAr: "الأردن" },
+  { code: "+964", flag: "🇮🇶", nameEn: "Iraq", nameAr: "العراق" },
+  { code: "+961", flag: "🇱🇧", nameEn: "Lebanon", nameAr: "لبنان" },
+  { code: "+218", flag: "🇱🇾", nameEn: "Libya", nameAr: "ليبيا" },
+  { code: "+249", flag: "🇸🇩", nameEn: "Sudan", nameAr: "السودان" },
+  { code: "+963", flag: "🇸🇾", nameEn: "Syria", nameAr: "سوريا" },
+  { code: "+967", flag: "🇾🇪", nameEn: "Yemen", nameAr: "اليمن" },
+  { code: "+970", flag: "🇵🇸", nameEn: "Palestine", nameAr: "فلسطين" },
+  { code: "+216", flag: "🇹🇳", nameEn: "Tunisia", nameAr: "تونس" },
+  { code: "+212", flag: "🇲🇦", nameEn: "Morocco", nameAr: "المغرب" },
+  { code: "+213", flag: "🇩🇿", nameEn: "Algeria", nameAr: "الجزائر" },
+  { code: "+1", flag: "🇺🇸", nameEn: "USA / Canada", nameAr: "أمريكا / كندا" },
+  { code: "+44", flag: "🇬🇧", nameEn: "United Kingdom", nameAr: "المملكة المتحدة" },
+  { code: "+49", flag: "🇩🇪", nameEn: "Germany", nameAr: "ألمانيا" },
+  { code: "+33", flag: "🇫🇷", nameEn: "France", nameAr: "فرنسا" },
+  { code: "+39", flag: "🇮🇹", nameEn: "Italy", nameAr: "إيطاليا" },
+  { code: "+90", flag: "🇹🇷", nameEn: "Turkey", nameAr: "تركيا" },
+];
+
+function cleanPhone(raw: string): string {
+  let p = raw.trim();
+  if (p.startsWith("+20")) {
+    p = "0" + p.slice(3);
+  } else if (p.startsWith("0020")) {
+    p = "0" + p.slice(4);
+  } else if (p.startsWith("20") && p.length === 12) {
+    p = "0" + p.slice(2);
+  }
+  return p;
+}
+
+function parsePhoneWithCountry(raw: string): { code: string; number: string } {
+  if (!raw) return { code: "+20", number: "" };
+  const trimmed = raw.trim();
+  for (const c of COUNTRY_OPTIONS) {
+    if (trimmed.startsWith(c.code)) {
+      return { code: c.code, number: trimmed.slice(c.code.length).replace(/^0+/, "") };
+    }
+    const noPlus = c.code.replace("+", "");
+    if (trimmed.startsWith(`00${noPlus}`)) {
+      return { code: c.code, number: trimmed.slice(2 + noPlus.length).replace(/^0+/, "") };
+    }
+  }
+  return { code: "+20", number: cleanPhone(trimmed) };
+}
+
+function formatFullPhone(number: string, countryCode: string = "+20"): string {
+  const trimmed = number.trim();
+  if (!trimmed) return "";
+  if (countryCode === "+20") {
+    let p = cleanPhone(trimmed);
+    if (!p.startsWith("0") && p.length === 10) p = "0" + p;
+    return p;
+  }
+  const cleanDigits = trimmed.replace(/\D/g, "").replace(/^0+/, "");
+  return `${countryCode}${cleanDigits}`;
+}
+
+function isValidPhone(raw: string, countryCode: string = "+20"): boolean {
+  if (!raw) return false;
+  const digits = raw.replace(/\D/g, "");
+  if (countryCode === "+20") {
+    let p = cleanPhone(raw);
+    if (!p.startsWith("0") && p.length === 10) p = "0" + p;
+    // Egyptian mobile format: 010, 011, 012, 015 followed by 8 digits
+    if (/^01[0125]\d{8}$/.test(p)) return true;
+    if (/^(\+?20)?01[0125]\d{8}$/.test(raw.trim())) return true;
+    return digits.length >= 10 && digits.length <= 12;
+  }
+  // Generic international format (6-15 digits)
+  return digits.length >= 6 && digits.length <= 15;
+}
+
+interface CustomerFormModalProps {
+  setShowCustomerFormModal: (v: boolean) => void;
+  selectedCustomerForEdit: any;
+  authenticatedJsonHeaders: { "Content-Type": string; Authorization: string };
+  fetchCustomers: () => void;
+  lang: "en" | "ar";
+  t: typeof adminTranslations["en"]["patients"]["customerFormModal"];
+  adminRole?: string;
+}
+
+export default function CustomerFormModal({
+  setShowCustomerFormModal,
+  selectedCustomerForEdit,
+  authenticatedJsonHeaders,
+  fetchCustomers,
+  lang,
+  t,
+  adminRole,
+}: CustomerFormModalProps) {
+  const isSuperAdmin = adminRole === "superadmin";
+  const isFinancialsEditable = !selectedCustomerForEdit || isSuperAdmin;
+  const isNameLocked = Boolean(selectedCustomerForEdit) && !isSuperAdmin;
+
+  const c = selectedCustomerForEdit || {};
+  const parsedInitMobile = parsePhoneWithCountry(c.mobile || c.phone || "");
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerFormError, setCustomerFormError] = useState("");
+  const [custName, setCustName] = useState(c.name || "");
+  const [custMobileCountryCode, setCustMobileCountryCode] = useState(parsedInitMobile.code);
+  const [custMobile, setCustMobile] = useState(parsedInitMobile.number);
+  const [custEmail, setCustEmail] = useState(c.email || "");
+  const [custGender, setCustGender] = useState<"Male" | "Female" | "">((c.gender as any) || "");
+  const [custActive, setCustActive] = useState(c.active !== undefined ? c.active : true);
+  const [custSpent, setCustSpent] = useState(String(c.spent_amount !== undefined ? c.spent_amount : c.spent || 0));
+  const [custOutstanding, setCustOutstanding] = useState(String(c.outstanding || 0));
+  const [custWallet, setCustWallet] = useState(String(c.wallet_balance || c.wallet || 0));
+  const [custArea, setCustArea] = useState(c.area || "");
+  const [custLocationName, setCustLocationName] = useState(c.location_name || "");
+  const [custStreet, setCustStreet] = useState(c.street_name || "");
+  const [custBuilding, setCustBuilding] = useState(c.building_no || "");
+  const [custFloor, setCustFloor] = useState(c.floor_no || "");
+  const [custNote, setCustNote] = useState("");
+  const [isCustomerWhatsappSame, setIsCustomerWhatsappSame] = useState(true);
+  const [custWaCountryCode, setCustWaCountryCode] = useState("+20");
+  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [custAge, setCustAge] = useState(c.age !== undefined && c.age !== null ? String(c.age) : "");
+  const [custDob, setCustDob] = useState(c.date_of_birth || "");
+  const ageFromDob = calculateAge(custDob);
+  const [custNationalId, setCustNationalId] = useState(c.national_id || "");
+  const [custAddress, setCustAddress] = useState(c.address || "");
+  const [custReferral, setCustReferral] = useState(c.referral || "");
+  const [custOccupation, setCustOccupation] = useState(c.occupation || "");
+
+  const selectedMobileCountry = useMemo(() => {
+    return COUNTRY_OPTIONS.find((co) => co.code === custMobileCountryCode) || COUNTRY_OPTIONS[0];
+  }, [custMobileCountryCode]);
+
+  const selectedWaCountry = useMemo(() => {
+    return COUNTRY_OPTIONS.find((co) => co.code === custWaCountryCode) || COUNTRY_OPTIONS[0];
+  }, [custWaCountryCode]);
+
+  // Initialize WhatsApp/note parsing for edit mode
+  React.useEffect(() => {
+    if (selectedCustomerForEdit) {
+      const parsedMob = parsePhoneWithCountry(selectedCustomerForEdit.mobile || selectedCustomerForEdit.phone || "");
+      setCustMobileCountryCode(parsedMob.code);
+      setCustMobile(parsedMob.number);
+
+      const rawNote = selectedCustomerForEdit.note || "";
+      const waMatch = rawNote.match(/\[WhatsApp:\s*([^\]]+)\]/);
+      if (waMatch) {
+        setIsCustomerWhatsappSame(false);
+        const parsedWA = parsePhoneWithCountry(waMatch[1].trim());
+        setCustWaCountryCode(parsedWA.code);
+        setCustomerWhatsapp(parsedWA.number);
+        setCustNote(rawNote.replace(/\[WhatsApp:\s*([^\]]+)\]\n?/, "").trim());
+      } else {
+        setIsCustomerWhatsappSame(true);
+        setCustWaCountryCode("+20");
+        setCustomerWhatsapp("");
+        setCustNote(rawNote);
+      }
+    }
+  }, [selectedCustomerForEdit]);
+
+  function handleSaveCustomer() {
+    if (!custName.trim()) {
+      setCustomerFormError(t.nameRequiredErr);
+      return;
+    }
+    if (!custMobile.trim()) {
+      setCustomerFormError(t.mobileRequiredErr);
+      return;
+    }
+
+    // Validate mobile number format
+    if (!isValidPhone(custMobile, custMobileCountryCode)) {
+      setCustomerFormError(t.mobileFormatErr || (lang === "ar" ? "رقم الهاتف غير صالح" : "Invalid phone number format"));
+      return;
+    }
+    if (!isCustomerWhatsappSame) {
+      if (!customerWhatsapp.trim()) {
+        setCustomerFormError(lang === "ar" ? "رقم الواتساب مطلوب." : "WhatsApp number is required.");
+        return;
+      }
+      if (!isValidPhone(customerWhatsapp, custWaCountryCode)) {
+        setCustomerFormError(t.whatsappFormatErr || (lang === "ar" ? "رقم الواتساب غير صالح" : "Invalid WhatsApp number format"));
+        return;
+      }
+    }
+
+    setSavingCustomer(true);
+    setCustomerFormError("");
+
+    const cleanedMobile = formatFullPhone(custMobile, custMobileCountryCode);
+    const cleanedWA = !isCustomerWhatsappSame ? formatFullPhone(customerWhatsapp, custWaCountryCode) : "";
+
+    const finalNote = isCustomerWhatsappSame
+      ? custNote.trim()
+      : `[WhatsApp: ${cleanedWA}]${custNote.trim() ? "\n" : ""}${custNote.trim()}`;
+
+    const payload = {
+      id: selectedCustomerForEdit?.id || undefined,
+      name: custName.trim(),
+      mobile: cleanedMobile,
+      email: custEmail.trim() || null,
+      gender: custGender || null,
+      active: custActive,
+      spent_amount: parseFloat(custSpent) || 0,
+      outstanding: parseFloat(custOutstanding) || 0,
+      wallet_balance: parseFloat(custWallet) || 0,
+      area: custArea.trim() || null,
+      location_name: custLocationName.trim() || null,
+      street_name: custStreet.trim() || null,
+      building_no: custBuilding.trim() || null,
+      floor_no: custFloor.trim() || null,
+      note: finalNote || null,
+      // demographic fields
+      age: custDob ? null : (custAge ? parseInt(custAge) : null),
+      date_of_birth: custDob || null,
+      national_id: custNationalId.trim() || null,
+      address: custAddress.trim() || null,
+      referral: custReferral.trim() || null,
+      occupation: custOccupation.trim() || null,
+    };
+
+    fetch("/api/customers", {
+      method: "POST",
+      headers: authenticatedJsonHeaders,
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || t.saveFailedErr);
+        }
+        return data;
+      })
+      .then(() => {
+        fetchCustomers();
+        setShowCustomerFormModal(false);
+      })
+      .catch((err) => {
+        console.error("handleSaveCustomer error:", err);
+        setCustomerFormError(err.message || t.saveErrorErr);
+      })
+      .finally(() => {
+        setSavingCustomer(false);
+      });
+  }
+
+  return (
+    <div dir={lang === "ar" ? "rtl" : "ltr"} className="space-y-6 animate-fadeIn pb-12">
+      {/* Top Navigation & Action Header */}
+      <div className="space-y-3">
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowCustomerFormModal(false)}
+            className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] outline-none transition uppercase tracking-wider cursor-pointer"
+          >
+            <ArrowLeft size={14} className={lang === "ar" ? "rotate-180" : ""} /> {t.backBtn}
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-2xl font-bold text-[var(--cr-dark)] tracking-tight">
+              {selectedCustomerForEdit ? t.editTitle : t.addTitle}
+            </h3>
+            <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">
+              {selectedCustomerForEdit ? t.editSubtitle : t.addSubtitle}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowCustomerFormModal(false)}
+              className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition cursor-pointer"
+            >
+              {t.cancelBtn}
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCustomer}
+              disabled={savingCustomer}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#203D20] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#182E18] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {savingCustomer ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>{t.savingBtn}</span>
+                </>
+              ) : (
+                <span>{selectedCustomerForEdit ? (t.saveChangesBtn || "Save Changes") : t.saveBtn}</span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Form Container */}
+      <div className="w-full bg-white rounded-3xl border border-[var(--cr-primary)]/10 p-6 sm:p-8 shadow-sm space-y-8">
+        {customerFormError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {customerFormError}
+          </div>
+        )}
+
+        {/* ── SECTION 1: Contact Information ── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+              <BookUser size={20} className="text-[var(--cr-primary)]" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[var(--cr-dark)]">{t.contactSectionTitle || "Contact Information"}</h4>
+              <p className="text-xs text-[var(--color-brand-secondary)]">{t.contactSectionSubtitle || "Manage the customer's contact details."}</p>
+            </div>
+          </div>
+
+          {/* Edit Mode Lock Banner */}
+          {isNameLocked && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-[#F0F6EE] border border-[#D5E5D1] px-4 py-3 text-xs sm:text-sm font-medium text-[#2E5233]">
+              <Lock size={15} className="shrink-0 text-[#2E5233]" />
+              <span>{t.nameCannotBeEdited || "Customer name cannot be edited."}</span>
+            </div>
+          )}
+          {selectedCustomerForEdit && isSuperAdmin && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm font-medium text-amber-800">
+              <ShieldCheck size={15} className="shrink-0 text-amber-700" />
+              <span>{t.superAdminNameEditable || "Superadmin override: you can edit this customer's name."}</span>
+            </div>
+          )}
+
+          {/* Customer Name */}
+          <div>
+            <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">
+              {t.nameLabel} {!isNameLocked && <span className="text-red-500">*</span>}
+            </label>
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                <User size={16} />
+              </div>
+              <input
+                type="text"
+                value={custName}
+                onChange={(e) => setCustName(e.target.value)}
+                readOnly={isNameLocked}
+                disabled={isNameLocked}
+                placeholder={t.namePlaceholder}
+                className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
+                  isNameLocked
+                    ? "bg-[#F7F7F6] text-gray-700 border-gray-200 cursor-not-allowed font-medium"
+                    : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                }`}
+                required={!isNameLocked}
+              />
+            </div>
+          </div>
+
+          {/* Mobile Number & Email Address */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">
+                {t.mobileLabel} <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center rounded-xl border border-[var(--cr-primary)]/15 bg-white overflow-hidden transition focus-within:border-[var(--cr-primary)] focus-within:ring-1 focus-within:ring-[var(--cr-primary)]">
+                {/* Compact Country Code Dropdown */}
+                <div className="relative flex items-center justify-center bg-[#F9FAF8] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F0F4EE] transition cursor-pointer">
+                  <div className="flex items-center gap-1.5 pointer-events-none text-xs sm:text-sm font-bold text-[#111827]">
+                    <span className="text-base leading-none select-none">{selectedMobileCountry.flag}</span>
+                    <span className="font-mono text-xs sm:text-sm">{custMobileCountryCode}</span>
+                    <ChevronDown size={13} className="text-[var(--color-brand-secondary)]" />
+                  </div>
+                  <select
+                    value={custMobileCountryCode}
+                    onChange={(e) => setCustMobileCountryCode(e.target.value)}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer text-sm"
+                    title={lang === "ar" ? "اختر الدولة" : "Select Country"}
+                  >
+                    {COUNTRY_OPTIONS.map((co) => (
+                      <option key={co.code} value={co.code} className="text-[#111827] py-1">
+                        {co.flag} {co.code} ({lang === "ar" ? co.nameAr : co.nameEn})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Phone Input */}
+                <div className="relative flex-1 flex items-center min-w-0">
+                  <input
+                    type="tel"
+                    value={custMobile}
+                    onChange={(e) => setCustMobile(e.target.value)}
+                    placeholder={custMobileCountryCode === "+20" ? (t.mobilePlaceholder || "01X XXXX XXXX") : "XXXXXXXXX"}
+                    className="w-full bg-transparent px-3.5 py-2.5 text-sm text-[var(--cr-dark)] outline-none placeholder:text-gray-400 font-medium"
+                    required
+                  />
+                  {custMobile ? (
+                    <button
+                      type="button"
+                      onClick={() => setCustMobile("")}
+                      className="pe-3 text-gray-400 hover:text-[var(--cr-dark)] transition cursor-pointer"
+                    >
+                      <X size={15} />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">
+                {t.emailLabel}
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Mail size={16} />
+                </div>
+                <input
+                  type="email"
+                  value={custEmail}
+                  onChange={(e) => setCustEmail(e.target.value)}
+                  placeholder={t.emailPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* WhatsApp Same Checkbox & WhatsApp Input */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-[var(--cr-primary)] select-none">
+              <input
+                type="checkbox"
+                checked={isCustomerWhatsappSame}
+                onChange={(e) => setIsCustomerWhatsappSame(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-[#203D20] focus:ring-[#203D20] accent-[#203D20] cursor-pointer"
+              />
+              <span>{t.whatsappSameLabel}</span>
+            </label>
+            {!isCustomerWhatsappSame && (
+              <div className="animate-fadeIn mt-2">
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">
+                  {t.whatsappLabel} <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center rounded-xl border border-[var(--cr-primary)]/15 bg-white overflow-hidden transition focus-within:border-[var(--cr-primary)] focus-within:ring-1 focus-within:ring-[var(--cr-primary)]">
+                  {/* Compact Country Code Dropdown */}
+                  <div className="relative flex items-center justify-center bg-[#F9FAF8] border-e border-gray-200 px-3 py-2.5 shrink-0 hover:bg-[#F0F4EE] transition cursor-pointer">
+                    <div className="flex items-center gap-1.5 pointer-events-none text-xs sm:text-sm font-bold text-[#111827]">
+                      <span className="text-base leading-none select-none">{selectedWaCountry.flag}</span>
+                      <span className="font-mono text-xs sm:text-sm">{custWaCountryCode}</span>
+                      <ChevronDown size={13} className="text-[var(--color-brand-secondary)]" />
+                    </div>
+                    <select
+                      value={custWaCountryCode}
+                      onChange={(e) => setCustWaCountryCode(e.target.value)}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer text-sm"
+                      title={lang === "ar" ? "اختر الدولة" : "Select Country"}
+                    >
+                      {COUNTRY_OPTIONS.map((co) => (
+                        <option key={co.code} value={co.code} className="text-[#111827] py-1">
+                          {co.flag} {co.code} ({lang === "ar" ? co.nameAr : co.nameEn})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Phone Input */}
+                  <div className="relative flex-1 flex items-center min-w-0">
+                    <input
+                      type="tel"
+                      value={customerWhatsapp}
+                      onChange={(e) => setCustomerWhatsapp(e.target.value)}
+                      placeholder={custWaCountryCode === "+20" ? (t.mobilePlaceholder || "01X XXXX XXXX") : "XXXXXXXXX"}
+                      className="w-full bg-transparent px-3.5 py-2.5 text-sm text-[var(--cr-dark)] outline-none placeholder:text-gray-400 font-medium"
+                      required
+                    />
+                    {customerWhatsapp ? (
+                      <button
+                        type="button"
+                        onClick={() => setCustomerWhatsapp("")}
+                        className="pe-3 text-gray-400 hover:text-[var(--cr-dark)] transition cursor-pointer"
+                      >
+                        <X size={15} />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Demographics & Personal Attributes */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-2">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.dobLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Cake size={16} />
+                </div>
+                <input
+                  type="date"
+                  value={custDob}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setCustDob(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.ageLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Calendar size={16} />
+                </div>
+                <input
+                  type={custDob ? "text" : "number"}
+                  value={custDob ? (ageFromDob ?? "") : custAge}
+                  readOnly={Boolean(custDob)}
+                  disabled={Boolean(custDob)}
+                  onChange={(e) => setCustAge(e.target.value)}
+                  placeholder={t.agePlaceholder}
+                  className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
+                    custDob
+                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                  }`}
+                />
+              </div>
+              {custDob && (
+                <p className="mt-1 text-[11px] text-[var(--color-brand-secondary)]">{t.ageFromDobNote}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.genderLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <User size={16} />
+                </div>
+                <select
+                  value={custGender}
+                  onChange={(e) => setCustGender(e.target.value as any)}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)] cursor-pointer"
+                >
+                  <option value="">{t.genderSelectPlaceholder}</option>
+                  <option value="Male">{t.genderMale}</option>
+                  <option value="Female">{t.genderFemale}</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.nationalIdLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <CreditCard size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={custNationalId}
+                  onChange={(e) => setCustNationalId(e.target.value)}
+                  placeholder={t.nationalIdPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.referralLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Compass size={16} />
+                </div>
+                <select
+                  value={custReferral}
+                  onChange={(e) => setCustReferral(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)] cursor-pointer"
+                >
+                  <option value="">{t.referralSelectPlaceholder}</option>
+                  <option value="Facebook">{t.referralSources["Facebook"]}</option>
+                  <option value="Instagram">{t.referralSources["Instagram"]}</option>
+                  <option value="TikTok">{t.referralSources["TikTok"]}</option>
+                  <option value="Google Search">{t.referralSources["Google Search"]}</option>
+                  <option value="Friend / Word of Mouth">{t.referralSources["Friend / Word of Mouth"]}</option>
+                  <option value="Walk-in">{t.referralSources["Walk-in"]}</option>
+                  <option value="Website">{t.referralSources["Website"]}</option>
+                  <option value="Other">{t.referralSources["Other"]}</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.occupationLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Briefcase size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={custOccupation}
+                  onChange={(e) => setCustOccupation(e.target.value)}
+                  placeholder={t.occupationPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-[var(--cr-primary)]/10" />
+
+        {/* ── SECTION 2: Address Information ── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+              <MapPin size={20} className="text-[var(--cr-primary)]" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[var(--cr-dark)]">{t.addressSectionTitle || "Address Information"}</h4>
+              <p className="text-xs text-[var(--color-brand-secondary)]">{t.addressSectionSubtitle || "Manage the customer's address details."}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.cityLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Building2 size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={custArea}
+                  onChange={(e) => setCustArea(e.target.value)}
+                  placeholder={t.cityPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.streetLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Signpost size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={custStreet}
+                  onChange={(e) => setCustStreet(e.target.value)}
+                  placeholder={t.streetPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.buildingLabel}</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Building size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={custBuilding}
+                  onChange={(e) => setCustBuilding(e.target.value)}
+                  placeholder={t.buildingPlaceholder}
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.floorLabel || "Floor / Apt (Optional)"}</label>
+              <input
+                type="text"
+                value={custFloor}
+                onChange={(e) => setCustFloor(e.target.value)}
+                placeholder={t.floorPlaceholder || "e.g. Floor 2, Apt 4"}
+                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">
+                {lang === "ar" ? "تفاصيل إضافية للعنوان (اختياري)" : "Additional Address Details (Optional)"}
+              </label>
+              <input
+                type="text"
+                value={custAddress}
+                onChange={(e) => setCustAddress(e.target.value)}
+                placeholder={lang === "ar" ? "مثال: بجوار مول التسعين" : "e.g. Near Downtown Mall"}
+                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+              />
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-[var(--cr-primary)]/10" />
+
+        {/* ── SECTION 3: Financial Balances ── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+              <Wallet size={20} className="text-[var(--cr-primary)]" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[var(--cr-dark)]">{t.financialSectionTitle || "Financial Information"}</h4>
+              <p className="text-xs text-[var(--color-brand-secondary)]">
+                {selectedCustomerForEdit
+                  ? (t.financialSectionSubtitle || "View the customer's wallet, total spend, and outstanding balances.")
+                  : (t.financialSectionSubtitleAdd || "Set an opening balance if this customer already has wallet credit, prior spend, or an outstanding debt.")}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Wallet Balance */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.walletLabel}</label>
+                {selectedCustomerForEdit && isSuperAdmin && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                    <ShieldCheck size={11} className="text-amber-600" />
+                    {lang === "ar" ? "تعديل السوبر أدمن" : "Superadmin Override"}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Wallet size={16} />
+                </div>
+                <input
+                  type={isFinancialsEditable ? "number" : "text"}
+                  step={isFinancialsEditable ? "any" : undefined}
+                  min={isFinancialsEditable ? "0" : undefined}
+                  readOnly={!isFinancialsEditable}
+                  disabled={!isFinancialsEditable}
+                  value={isFinancialsEditable ? custWallet : (Number(custWallet || 0).toLocaleString("en-US"))}
+                  onChange={(e) => setCustWallet(e.target.value)}
+                  placeholder="0"
+                  className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
+                    !isFinancialsEditable
+                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      : isSuperAdmin && selectedCustomerForEdit
+                        ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Total Spent */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.spentLabel}</label>
+                {selectedCustomerForEdit && isSuperAdmin && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                    <ShieldCheck size={11} className="text-amber-600" />
+                    {lang === "ar" ? "تعديل السوبر أدمن" : "Superadmin Override"}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Coins size={16} />
+                </div>
+                <input
+                  type={isFinancialsEditable ? "number" : "text"}
+                  step={isFinancialsEditable ? "any" : undefined}
+                  min={isFinancialsEditable ? "0" : undefined}
+                  readOnly={!isFinancialsEditable}
+                  disabled={!isFinancialsEditable}
+                  value={isFinancialsEditable ? custSpent : (Number(custSpent || 0).toLocaleString("en-US"))}
+                  onChange={(e) => setCustSpent(e.target.value)}
+                  placeholder="0"
+                  className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
+                    !isFinancialsEditable
+                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      : isSuperAdmin && selectedCustomerForEdit
+                        ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Outstanding Balance */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-[var(--color-brand-secondary)]">{t.outstandingLabel}</label>
+                {selectedCustomerForEdit && isSuperAdmin && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                    <ShieldCheck size={11} className="text-amber-600" />
+                    {lang === "ar" ? "تعديل السوبر أدمن" : "Superadmin Override"}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 rtl:left-auto rtl:right-0 rtl:pl-0 rtl:pr-3.5 text-gray-400">
+                  <Receipt size={16} />
+                </div>
+                <input
+                  type={isFinancialsEditable ? "number" : "text"}
+                  step={isFinancialsEditable ? "any" : undefined}
+                  min={isFinancialsEditable ? "0" : undefined}
+                  readOnly={!isFinancialsEditable}
+                  disabled={!isFinancialsEditable}
+                  value={isFinancialsEditable ? custOutstanding : (Number(custOutstanding || 0).toLocaleString("en-US"))}
+                  onChange={(e) => setCustOutstanding(e.target.value)}
+                  placeholder="0"
+                  className={`w-full rounded-xl border px-3.5 py-2.5 pl-10 rtl:pl-3.5 rtl:pr-10 text-sm outline-none transition ${
+                    !isFinancialsEditable
+                      ? "border-gray-200 bg-[#F7F7F6] font-semibold text-gray-700 cursor-not-allowed select-none"
+                      : isSuperAdmin && selectedCustomerForEdit
+                        ? "border-amber-300 bg-amber-50/20 text-[var(--cr-dark)] font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        : "bg-white text-[var(--cr-dark)] border-[var(--cr-primary)]/15 focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)]"
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-[var(--cr-primary)]/10" />
+
+        {/* ── SECTION 4: Status & Internal Notes ── */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#EBF1E8] text-[var(--cr-primary)] flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} className="text-[var(--cr-primary)]" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-[var(--cr-dark)]">{t.statusSectionTitle || "Status"}</h4>
+              <p className="text-xs text-[var(--color-brand-secondary)]">{t.statusSectionSubtitle || "Manage the customer account status."}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div
+              onClick={() => setCustActive(!custActive)}
+              className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none ${
+                custActive
+                  ? "border-[var(--cr-primary)]/20 bg-[#F4F7F2]/80 hover:bg-[#EEF4EC]"
+                  : "border-gray-200 bg-[var(--color-brand-light)] hover:bg-gray-50"
+              }`}
+            >
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm font-bold text-[var(--cr-dark)]">{t.activeLabel || "Active Profile"}</span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                      custActive
+                        ? "bg-[#E0EBDC] text-[#244322] border border-[#244322]/15"
+                        : "bg-red-50 text-red-700 border border-red-200"
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${custActive ? "bg-[#244322]" : "bg-red-500"}`} />
+                    {custActive
+                      ? (t.activeStatusActive || (lang === "ar" ? "نشط" : "Active"))
+                      : (t.activeStatusInactive || (lang === "ar" ? "غير نشط" : "Inactive"))}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--color-brand-secondary)]">
+                  {custActive
+                    ? (t.activeProfileActiveDesc || (lang === "ar" ? "ملف المريض نشط حالياً. قم بالتبديل لإلغاء التفعيل." : "Patient profile is currently active. Toggle to deactivate."))
+                    : (t.activeProfileInactiveDesc || (lang === "ar" ? "ملف المريض غير نشط حالياً. قم بالتبديل للتفعيل." : "Patient profile is currently inactive. Toggle to activate."))}
+                </p>
+              </div>
+
+              {/* Toggle switch */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={custActive}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCustActive(!custActive);
+                }}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--cr-primary)]/30 ${
+                  custActive ? "bg-[#203D20]" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    custActive
+                      ? lang === "ar"
+                        ? "-translate-x-5"
+                        : "translate-x-5"
+                      : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-brand-secondary)] mb-1.5">{t.notesLabel}</label>
+              <textarea
+                value={custNote}
+                onChange={(e) => setCustNote(e.target.value)}
+                placeholder={t.notesPlaceholder}
+                rows={3}
+                className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2.5 text-sm text-[var(--cr-dark)] outline-none transition focus:border-[var(--cr-primary)] focus:ring-1 focus:ring-[var(--cr-primary)] resize-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Action Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-6">
+          <button
+            type="button"
+            onClick={() => setShowCustomerFormModal(false)}
+            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-xs hover:bg-gray-50 transition cursor-pointer"
+          >
+            {t.cancelBtn}
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveCustomer}
+            disabled={savingCustomer}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#203D20] px-6 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#182E18] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {savingCustomer ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>{t.savingBtn}</span>
+              </>
+            ) : (
+              <span>{selectedCustomerForEdit ? (t.saveChangesBtn || "Save Changes") : t.saveBtn}</span>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

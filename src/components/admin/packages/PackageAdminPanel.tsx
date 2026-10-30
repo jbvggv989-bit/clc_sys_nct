@@ -1,0 +1,668 @@
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Pencil, Trash2, Package, X, Loader2, Zap } from "lucide-react";
+
+export type PackageItem = {
+  id?: string;
+  serviceId: number;
+  serviceName?: string;
+  qty: number;
+};
+
+export type PackageOffer = {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  packageType: "services" | "pulses";
+  totalPulses: number;
+  branchId: string | null;
+  price: number;
+  taxRate: number;
+  validityDays: number;
+  onExpiry: "recognise_revenue" | "extend";
+  extensionDays: number;
+  active: boolean;
+  showOnWebsite: boolean;
+  items: PackageItem[];
+};
+
+type BranchOption = {
+  id: string;
+  name_en?: string;
+  name?: string;
+};
+
+type ServiceOption = {
+  id: number;
+  en: string;
+  ar?: string;
+};
+
+export function PackageAdminPanel({ session }: { session: any }) {
+  const [packages, setPackages] = useState<PackageOffer[]>([]);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    nameAr: "",
+    packageType: "services" as "services" | "pulses",
+    totalPulses: "",
+    branchId: "",
+    price: "",
+    taxRate: "",
+    validityDays: "365",
+    onExpiry: "recognise_revenue" as "recognise_revenue" | "extend",
+    extensionDays: "",
+    active: true,
+    showOnWebsite: false,
+  });
+  const [items, setItems] = useState<{ serviceId: string; qty: string; id?: string }[]>([{ serviceId: "", qty: "1" }]);
+
+  const accessToken = session?.access_token || "";
+
+  const loadData = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [packagesRes, branchesRes, servicesRes] = await Promise.all([
+        fetch("/api/packages", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }),
+        fetch("/api/branches", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }),
+        fetch("/api/services", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" }),
+      ]);
+      if (!packagesRes.ok) throw new Error("Failed to load packages.");
+      if (!branchesRes.ok) throw new Error("Failed to load branches.");
+      if (!servicesRes.ok) throw new Error("Failed to load services.");
+      const [packagesData, branchesData, servicesData] = await Promise.all([
+        packagesRes.json(),
+        branchesRes.json(),
+        servicesRes.json(),
+      ]);
+      setPackages(Array.isArray(packagesData) ? packagesData : []);
+      setBranches(Array.isArray(branchesData) ? branchesData : []);
+      setServices(Array.isArray(servicesData) ? servicesData : []);
+    } catch (err: any) {
+      setError(err.message || "Error loading data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      name: "",
+      nameAr: "",
+      packageType: "services",
+      totalPulses: "",
+      branchId: "",
+      price: "",
+      taxRate: "",
+      validityDays: "365",
+      onExpiry: "recognise_revenue",
+      extensionDays: "",
+      active: true,
+      showOnWebsite: false,
+    });
+    setItems([{ serviceId: "", qty: "1" }]);
+  };
+
+  const openAdd = () => {
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const openEdit = (pkg: PackageOffer) => {
+    setEditingId(pkg.id);
+    const isPulses = pkg.packageType === "pulses" || Number(pkg.totalPulses || 0) > 0;
+    setForm({
+      name: pkg.name,
+      nameAr: pkg.nameAr || "",
+      packageType: isPulses ? "pulses" : "services",
+      totalPulses: pkg.totalPulses && pkg.totalPulses > 0 ? String(pkg.totalPulses) : "",
+      branchId: pkg.branchId || "",
+      price: String(pkg.price),
+      taxRate: String(pkg.taxRate),
+      validityDays: String(pkg.validityDays),
+      onExpiry: pkg.onExpiry,
+      extensionDays: String(pkg.extensionDays),
+      active: pkg.active,
+      showOnWebsite: pkg.showOnWebsite,
+    });
+    setItems(
+      pkg.items && pkg.items.length > 0
+        ? pkg.items.map((it) => ({ id: it.id, serviceId: String(it.serviceId), qty: String(it.qty) }))
+        : [{ serviceId: "", qty: "1" }]
+    );
+    setModalOpen(true);
+  };
+
+  const closeModal = () => setModalOpen(false);
+
+  const handleSave = async () => {
+    if (!accessToken) return;
+
+    if (form.packageType === "pulses") {
+      const parsedPulses = Number(form.totalPulses || 0);
+      if (!Number.isInteger(parsedPulses) || parsedPulses <= 0) {
+        setError("Please enter a valid positive number of pulses for this package.");
+        return;
+      }
+    } else {
+      const mappedItems = items
+        .filter((it) => it.serviceId && Number(it.qty) > 0)
+        .map((it) => ({ serviceId: Number(it.serviceId), qty: Number(it.qty), id: it.id }));
+      if (mappedItems.length === 0) {
+        setError("Add at least one service item with a positive quantity.");
+        return;
+      }
+    }
+
+    const mappedItems = items
+      .filter((it) => it.serviceId && Number(it.qty) > 0)
+      .map((it) => ({ serviceId: Number(it.serviceId), qty: Number(it.qty), id: it.id }));
+
+    const payload = {
+      id: editingId || undefined,
+      name: form.name.trim(),
+      nameAr: form.nameAr.trim() || null,
+      packageType: form.packageType,
+      totalPulses: form.packageType === "pulses" ? Number(form.totalPulses || 0) : 0,
+      branchId: form.branchId || null,
+      price: Number(form.price || 0),
+      taxRate: Number(form.taxRate || 0),
+      validityDays: form.validityDays.trim() === "" ? 365 : Number(form.validityDays),
+      onExpiry: form.onExpiry,
+      extensionDays: Number(form.extensionDays || 0),
+      active: form.active,
+      showOnWebsite: form.showOnWebsite,
+      items: mappedItems,
+    };
+    setSaving(true);
+    try {
+      const res = await fetch("/api/packages", {
+        method: editingId ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save package.");
+      await loadData();
+      setModalOpen(false);
+    } catch (err: any) {
+      setError(err.message || "Error saving package.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!accessToken) return;
+    if (!confirm("Delete this package? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/packages?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete package.");
+      }
+      await loadData();
+    } catch (err: any) {
+      setError(err.message || "Error deleting package.");
+    }
+  };
+
+  const addItem = () => setItems([...items, { serviceId: "", qty: "1" }]);
+  const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
+  const updateItem = (index: number, field: "serviceId" | "qty", value: string) => {
+    const next = [...items];
+    next[index][field] = value;
+    setItems(next);
+  };
+
+  return (
+    <div className="space-y-5">
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+          <button onClick={() => setError(null)} className="ml-3 text-xs font-semibold underline">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[var(--cr-dark)]">Package Offers</h3>
+        <button
+          onClick={openAdd}
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#31382b]"
+        >
+          <Plus size={16} /> Add Package
+        </button>
+      </div>
+
+      {loading && <div className="text-sm text-[var(--color-brand-secondary)]"><Loader2 className="inline mr-2 h-4 w-4 animate-spin" /> Loading packages…</div>}
+
+      {!loading && packages.length === 0 && (
+        <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-8 text-center text-sm text-[var(--color-brand-secondary)]">
+          No packages yet. Create one to bundle services.
+        </div>
+      )}
+
+      {packages.length > 0 && (
+        <div className="overflow-x-auto [scrollbar-width:thin] rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead className="bg-[#F9F9F7]">
+              <tr>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Name</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Type</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Branch</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Price</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Tax</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Validity</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">On Expiry</th>
+                <th className="px-5 py-3 text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Items / Quota</th>
+                <th className="px-5 py-3 text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Active</th>
+                <th className="px-5 py-3 text-center text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Website</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--cr-primary)]/6">
+              {packages.map((pkg) => {
+                const isPulses = pkg.packageType === "pulses" || Number(pkg.totalPulses || 0) > 0;
+                return (
+                  <tr key={pkg.id} className="hover:bg-[#F9F9F7]">
+                    <td className="px-5 py-3 font-medium text-[var(--cr-dark)]">{pkg.name}</td>
+                    <td className="px-5 py-3 text-left">
+                      {isPulses ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10.5px] font-bold text-amber-900 shadow-2xs whitespace-nowrap">
+                          <Zap size={10} className="text-amber-600 fill-amber-500 shrink-0" />
+                          <span>Laser Pulses</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-brand-tint)] border border-[var(--cr-primary)]/15 px-2 py-0.5 text-[10.5px] font-bold text-[var(--cr-primary)] whitespace-nowrap">
+                          <Package size={10} className="shrink-0" />
+                          <span>Services</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-[var(--color-brand-secondary)]">
+                      {branches.find((b) => b.id === pkg.branchId)?.name_en || branches.find((b) => b.id === pkg.branchId)?.name || "All branches"}
+                    </td>
+                    <td className="px-5 py-3 text-right font-medium text-[var(--cr-accent)]">EGP {Number(pkg.price).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-right text-[var(--color-brand-secondary)]">{Number(pkg.taxRate).toFixed(1)}%</td>
+                    <td className="px-5 py-3 text-right text-[var(--color-brand-secondary)]">{pkg.validityDays}d</td>
+                    <td className="px-5 py-3 text-left text-[var(--color-brand-secondary)]">
+                      {pkg.onExpiry === "extend" ? "Auto-extend" : "Recognise revenue"}
+                    </td>
+                    <td className="px-5 py-3 text-center text-[var(--color-brand-secondary)]">
+                      {isPulses ? (
+                        <span className="font-extrabold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 text-[10.5px] inline-block whitespace-nowrap">
+                          {Number(pkg.totalPulses || 0).toLocaleString()} Pulses
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-[var(--cr-primary)] text-[10.5px] whitespace-nowrap">
+                          {pkg.items?.length || 0} services
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pkg.active ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500"}`}>
+                        {pkg.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${pkg.showOnWebsite ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-500"}`}>
+                        {pkg.showOnWebsite ? "Visible" : "Hidden"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEdit(pkg)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)] cursor-pointer"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(pkg.id)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-600 transition hover:bg-red-50 cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl border border-[var(--cr-primary)]/10">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-brand-tint)]">
+                  <Package size={20} className="text-[var(--cr-primary)]" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--cr-dark)]">{editingId ? "Edit Package" : "Add Package"}</h3>
+                  <p className="text-sm text-[var(--color-brand-secondary)]">Bundle services, set laser pulse quota, validity and expiry behaviour.</p>
+                </div>
+              </div>
+              <button
+                onClick={closeModal}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] hover:bg-[#F9F9F7] cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {/* PACKAGE TYPE SELECTOR */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                  Package Type / نوع الباقة *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, packageType: "services" })}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition cursor-pointer ${
+                      form.packageType === "services"
+                        ? "border-[var(--cr-primary)] bg-[var(--color-brand-tint)] ring-2 ring-[var(--cr-primary)]/20 shadow-xs"
+                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F9F9F7]"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${form.packageType === "services" ? "bg-[var(--cr-primary)] text-white" : "bg-gray-100 text-[var(--color-brand-secondary)]"}`}>
+                      <Package size={18} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[var(--cr-dark)]">Services Package</div>
+                      <div className="text-xs text-[var(--color-brand-secondary)] mt-0.5">باقة خدمات — Bundle multiple treatment sessions</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, packageType: "pulses" })}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition cursor-pointer ${
+                      form.packageType === "pulses"
+                        ? "border-amber-600 bg-amber-50/70 ring-2 ring-amber-500/20 shadow-xs"
+                        : "border-[var(--cr-primary)]/15 bg-white hover:bg-[#F9F9F7]"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${form.packageType === "pulses" ? "bg-amber-600 text-white" : "bg-gray-100 text-[var(--color-brand-secondary)]"}`}>
+                      <Zap size={18} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-[var(--cr-dark)] flex items-center gap-1.5">
+                        <span>Laser Pulses Package</span>
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">Laser</span>
+                      </div>
+                      <div className="text-xs text-[var(--color-brand-secondary)] mt-0.5">باقة نبضات ليزر — Pre-paid pulse quota</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Package Name *</label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="e.g. Summer Glow Bundle"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Package Name (Arabic)</label>
+                  <input
+                    value={form.nameAr}
+                    onChange={(e) => setForm({ ...form, nameAr: e.target.value })}
+                    dir="rtl"
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="مثال: باقة صيفية"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Branch</label>
+                  <select
+                    value={form.branchId}
+                    onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)]"
+                  >
+                    <option value="">All branches</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name_en || b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Price (EGP) *</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Tax Rate (%)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={form.taxRate}
+                    onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="0.0"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Validity Days</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.validityDays}
+                    onChange={(e) => setForm({ ...form, validityDays: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="365"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">On Expiry</label>
+                  <select
+                    value={form.onExpiry}
+                    onChange={(e) => setForm({ ...form, onExpiry: e.target.value as any })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)]"
+                  >
+                    <option value="recognise_revenue">Recognise revenue</option>
+                    <option value="extend">Auto-extend</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Extension Days</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.extensionDays}
+                    onChange={(e) => setForm({ ...form, extensionDays: e.target.value })}
+                    className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--cr-accent)] focus:ring-2 focus:ring-[var(--cr-accent)]/20"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--cr-dark)]">
+                    <input
+                      type="checkbox"
+                      checked={form.active}
+                      onChange={(e) => setForm({ ...form, active: e.target.checked })}
+                      className="h-4 w-4 rounded border-[var(--cr-primary)]/20 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)]"
+                    />
+                    Active
+                  </label>
+                </div>
+                <div className="flex flex-col justify-end pb-2">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[var(--cr-dark)]">
+                    <input
+                      type="checkbox"
+                      checked={form.showOnWebsite}
+                      onChange={(e) => setForm({ ...form, showOnWebsite: e.target.checked })}
+                      className="h-4 w-4 rounded border-[var(--cr-primary)]/20 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)]"
+                    />
+                    Show on Website
+                  </label>
+                  <span className="mt-1 text-[11px] text-[var(--color-brand-secondary)]">Separate from Active — controls public visibility only.</span>
+                </div>
+              </div>
+
+              {/* CONDITIONAL SECTION: LASER PULSES VS SERVICES */}
+              {form.packageType === "pulses" ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-900 uppercase tracking-wider">
+                      <Zap size={15} className="text-amber-600" />
+                      <span>Total Included Pulses / إجمالي عدد النبضات *</span>
+                    </div>
+                    {Number(form.totalPulses) > 0 && (
+                      <span className="text-xs font-extrabold text-amber-900 bg-white px-3 py-1 rounded-full border border-amber-300 shadow-2xs">
+                        {Number(form.totalPulses).toLocaleString()} Pulses
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={form.totalPulses}
+                      onChange={(e) => setForm({ ...form, totalPulses: e.target.value })}
+                      className="w-full rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-bold text-[var(--cr-dark)] outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="Enter total pulses in package (e.g. 5000)"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[11px] font-semibold text-[var(--color-brand-secondary)] mr-1">Quick Presets:</span>
+                      {[1000, 2500, 5000, 10000, 20000].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setForm({ ...form, totalPulses: String(preset) })}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                            form.totalPulses === String(preset)
+                              ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                              : "bg-white text-amber-900 border-amber-200 hover:bg-amber-100/60"
+                          }`}
+                        >
+                          {preset.toLocaleString()} Pulses
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-amber-800/80 leading-relaxed">
+                    This package provides a pre-paid laser pulse quota. Patients purchasing this package will be credited with these pulses for clinical sessions.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-[var(--cr-primary)]/10 bg-[#F9F9F7] p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-primary)]">Included Services</h4>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--cr-primary)]/20 bg-white px-2.5 py-1.5 text-xs font-medium text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)] cursor-pointer"
+                    >
+                      <Plus size={12} /> Add Service
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {items.map((it, idx) => (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr,120px,40px] gap-3 items-end">
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Service</label>
+                          <select
+                            value={it.serviceId}
+                            onChange={(e) => updateItem(idx, "serviceId", e.target.value)}
+                            className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--cr-accent)]"
+                          >
+                            <option value="">Select service</option>
+                            {services.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.en} {s.ar ? `(${s.ar})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-brand-secondary)]">Quantity</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={it.qty}
+                            onChange={(e) => updateItem(idx, "qty", e.target.value)}
+                            className="w-full rounded-lg border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--cr-accent)]"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="mb-0.5 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 transition hover:bg-red-50 cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 border-t border-[var(--cr-primary)]/10 pt-4">
+                <button
+                  onClick={closeModal}
+                  className="rounded-lg border border-[var(--cr-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--cr-primary)] transition hover:bg-[#F9F9F7]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--cr-primary)] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#31382b] disabled:opacity-60"
+                >
+                  {saving && <Loader2 size={16} className="animate-spin" />}
+                  {editingId ? "Save Changes" : "Create Package"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

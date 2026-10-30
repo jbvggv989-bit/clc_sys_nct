@@ -1,0 +1,312 @@
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '@/lib/supabaseServer';
+import { requireStaffAccess } from '@/lib/access';
+import { CLIENT } from '@/config/client';
+import fs from 'fs';
+import path from 'path';
+
+const FORMS_LOCAL_PATH = path.join(process.cwd(), 'data', 'medical_records.json');
+const REPORTS_LOCAL_PATH = path.join(process.cwd(), 'data', 'medical_reports.json');
+
+function readLocalData(filepath: string): any[] {
+  try {
+    if (fs.existsSync(filepath)) {
+      const data = fs.readFileSync(filepath, 'utf8');
+      return JSON.parse(data || '[]');
+    }
+  } catch (err) {
+    console.error(`Error reading ${filepath}:`, err);
+  }
+  return [];
+}
+
+function writeLocalData(filepath: string, data: any[]) {
+  try {
+    const dir = path.dirname(filepath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error(`Error writing ${filepath}:`, err);
+  }
+}
+
+export async function GET(req: Request) {
+  const access = await requireStaffAccess(req);
+  if ('error' in access) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const customerId = searchParams.get('customerId') || searchParams.get('customer_id');
+    const reservationId = searchParams.get('reservationId') || searchParams.get('reservation_id');
+
+    let form: any = null;
+    let reports: any[] = [];
+
+    // Try Supabase first for intake form
+    try {
+      if (customerId && customerId !== 'all') {
+        // RISK-081 / CORRUPT-D03: medical_records can now hold one row per visit
+        // (reservation_id) plus one reservation_id-less "patient profile" row, so a plain
+        // customer_id filter can match more than one row. `.single()` used to error whenever that
+        // happened, which the surrounding try/catch silently swallowed into "no record found" -
+        // exactly the kind of regression a schema change here must not introduce. A specific
+        // reservationId asks for that visit's own row; otherwise return whichever row was touched
+        // most recently, so doctor prefill still sees the patient's latest baseline.
+        let formQuery = supabaseServer.from('medical_records').select('*').eq('customer_id', String(customerId));
+        formQuery = reservationId
+          ? formQuery.eq('reservation_id', String(reservationId))
+          : formQuery.order('updated_at', { ascending: false }).limit(1);
+        const { data: formRows, error: formErr } = await formQuery;
+        if (!formErr && formRows && formRows.length > 0) {
+          form = formRows[0];
+        }
+      } else {
+        const { data: formData, error: formErr } = await supabaseServer.from('medical_records').select('*');
+        if (!formErr && formData) {
+          form = formData;
+        }
+      }
+    } catch (err) {
+      console.warn('Supabase medical_records lookup failed, using local fallback');
+    }
+
+    // Fallback to local JSON for form if not found in DB
+    if (!form) {
+      const localForms = readLocalData(FORMS_LOCAL_PATH);
+      if (customerId && customerId !== 'all') {
+        const matches = localForms.filter((f: any) => String(f.customer_id) === String(customerId));
+        form = reservationId
+          ? matches.find((f: any) => String(f.reservation_id) === String(reservationId)) || null
+          : [...matches].sort((a: any, b: any) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))[0] || null;
+      } else {
+        form = localForms;
+      }
+    }
+
+    // Try Supabase first for reports
+    try {
+      let repQuery = supabaseServer.from('medical_reports').select('*').order('created_at', { ascending: false });
+      if (customerId && customerId !== 'all') {
+        repQuery = repQuery.eq('customer_id', String(customerId));
+      }
+      const { data: reportsData, error: repErr } = await repQuery;
+
+      if (!repErr && reportsData) {
+        reports = reportsData;
+      }
+    } catch (err) {
+      console.warn('Supabase medical_reports lookup failed, using local fallback');
+    }
+
+    // Fallback to local JSON for reports if empty
+    if (reports.length === 0) {
+      const localReports = readLocalData(REPORTS_LOCAL_PATH);
+      if (customerId && customerId !== 'all') {
+        reports = localReports.filter((r: any) => String(r.customer_id) === String(customerId));
+      } else {
+        reports = localReports;
+      }
+    }
+
+    return NextResponse.json({
+      form,
+      reports,
+    });
+  } catch (err: any) {
+    console.error('GET /api/medical-records error:', err);
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const access = await requireStaffAccess(req);
+  if ('error' in access) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  try {
+    const body = await req.json();
+    const type = body.type || 'form';
+    const recordData = body.recordData || body.data || body;
+    const reportData = body.reportData || body.data || body;
+    const customerId = body.customerId || body.customer_id || recordData.customer_id || reportData.customer_id;
+
+    if (!customerId) {
+      return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
+    }
+
+    if (type === 'report') {
+      // Create a new medical report
+      const newReport = {
+        id: `REP-${Date.now()}`,
+        customer_id: String(customerId),
+        title: reportData.title || 'Medical Report',
+        description: reportData.description || '',
+        file_url: reportData.file_url || null,
+        doctor_name: reportData.doctor_name || `Dr. ${CLIENT.nameShort}`,
+        date: new Date().toISOString().slice(0, 10),
+        created_at: new Date().toISOString(),
+      };
+
+      // Try Supabase insert
+      try {
+        const { data, error } = await supabaseServer
+          .from('medical_reports')
+          .insert([newReport])
+          .select()
+          .single();
+
+        if (!error && data) {
+          return NextResponse.json({ success: true, report: data });
+        }
+      } catch (err) {
+        console.warn('Supabase report insert failed, falling back to JSON local file');
+      }
+
+      // Local storage fallback
+      const localReports = readLocalData(REPORTS_LOCAL_PATH);
+      localReports.unshift(newReport);
+      writeLocalData(REPORTS_LOCAL_PATH, localReports);
+
+      return NextResponse.json({ success: true, report: newReport });
+    } else {
+      // Upsert Medical Intake Form
+      const now = new Date().toISOString();
+      const responsesData = recordData.responses || recordData.template_responses || {};
+      const reservationId = body.reservationId || body.reservation_id || recordData.reservation_id || null;
+      const updatedForm = {
+        customer_id: String(customerId),
+        reservation_id: reservationId ? String(reservationId) : null,
+        template_id: recordData.template_id || recordData.templateId || null,
+        responses: responsesData,
+        skin_type: recordData.skin_type || responsesData.skin_type || responsesData.fitzpatrick_scale || 'Normal',
+        main_concerns: Array.isArray(recordData.main_concerns) ? recordData.main_concerns : [],
+        other_concerns_details: recordData.other_concerns_details || '',
+        has_previous_treatments: Boolean(recordData.has_previous_treatments || responsesData.previous_treatments || responsesData.previous_injectables),
+        previous_treatments_details: recordData.previous_treatments_details || responsesData.previous_treatments || responsesData.previous_injectables || '',
+        has_medical_conditions: Boolean(recordData.has_medical_conditions || responsesData.medical_conditions || responsesData.bleeding_disorders),
+        medical_conditions_details: recordData.medical_conditions_details || responsesData.medical_conditions || responsesData.bleeding_disorders || '',
+        is_taking_medication: Boolean(recordData.is_taking_medication || responsesData.medications || responsesData.photosensitizing_drugs),
+        medication_details: recordData.medication_details || responsesData.medications || responsesData.photosensitizing_drugs || '',
+        allergies: recordData.allergies || responsesData.allergies || '',
+        updated_at: now,
+        created_by_role: recordData.created_by_role || 'Staff',
+        created_by_name: recordData.created_by_name || 'Staff',
+      };
+
+      // Try Supabase upsert
+      try {
+        // RISK-081 / CORRUPT-D03: medical_records used to be UNIQUE(customer_id), so a second
+        // visit's intake silently overwrote the first visit's baseline data with no way to recover
+        // it. It is now UNIQUE(customer_id, reservation_id) instead, so each visit gets its own
+        // row while the same visit's repeated auto-saves keep updating that one row.
+        //
+        // Postgres never matches NULL against NULL for ON CONFLICT purposes, so a save with no
+        // reservationId (the patient-profile-level edit from MedicalFormModal, not tied to any
+        // visit) can't use .upsert(onConflict:...) — it would INSERT a brand new row every single
+        // time instead of updating the one profile-level row. Emulate upsert manually for that case.
+        let data: any = null;
+        let error: any = null;
+        if (reservationId) {
+          ({ data, error } = await supabaseServer
+            .from('medical_records')
+            .upsert([updatedForm], { onConflict: 'customer_id,reservation_id' })
+            .select()
+            .single());
+        } else {
+          const { data: existingProfileRow } = await supabaseServer
+            .from('medical_records')
+            .select('id')
+            .eq('customer_id', String(customerId))
+            .is('reservation_id', null)
+            .maybeSingle();
+
+          if (existingProfileRow?.id) {
+            ({ data, error } = await supabaseServer
+              .from('medical_records')
+              .update(updatedForm)
+              .eq('id', existingProfileRow.id)
+              .select()
+              .single());
+          } else {
+            ({ data, error } = await supabaseServer
+              .from('medical_records')
+              .insert([updatedForm])
+              .select()
+              .single());
+          }
+        }
+
+        if (!error && data) {
+          return NextResponse.json({ success: true, form: data });
+        }
+      } catch (err) {
+        console.warn('Supabase medical_records upsert failed, falling back to JSON local file');
+      }
+
+      // Local storage fallback — same customer_id + reservation_id matching as the Supabase path
+      const localForms = readLocalData(FORMS_LOCAL_PATH);
+      const existingIndex = localForms.findIndex(
+        (f: any) => String(f.customer_id) === String(customerId) && (f.reservation_id || null) === (updatedForm.reservation_id || null)
+      );
+      let savedId: string;
+
+      if (existingIndex >= 0) {
+        localForms[existingIndex] = {
+          ...localForms[existingIndex],
+          ...updatedForm,
+        };
+        savedId = localForms[existingIndex].id;
+      } else {
+        savedId = `MED-${Date.now()}`;
+        localForms.push({
+          id: savedId,
+          created_at: now,
+          ...updatedForm,
+        });
+      }
+
+      writeLocalData(FORMS_LOCAL_PATH, localForms);
+      const finalForm = localForms.find((f: any) => f.id === savedId);
+
+      return NextResponse.json({ success: true, form: finalForm });
+    }
+  } catch (err: any) {
+    console.error('POST /api/medical-records error:', err);
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const access = await requireStaffAccess(req);
+  if ('error' in access) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const reportId = searchParams.get('reportId');
+
+    if (!reportId) {
+      return NextResponse.json({ error: 'Report ID is required' }, { status: 400 });
+    }
+
+    try {
+      await supabaseServer.from('medical_reports').delete().eq('id', reportId);
+    } catch (err) {
+      console.warn('Supabase delete report failed, updating local JSON file');
+    }
+
+    const localReports = readLocalData(REPORTS_LOCAL_PATH);
+    const filtered = localReports.filter((r: any) => String(r.id) !== String(reportId));
+    writeLocalData(REPORTS_LOCAL_PATH, filtered);
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  }
+}

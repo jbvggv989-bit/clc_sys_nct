@@ -1,0 +1,437 @@
+export function getDurationInMinutes(duration: string | null | undefined): number {
+  if (!duration) return 30; // default to 30 mins
+  const cleaned = duration.toLowerCase().trim();
+  
+  // Format: "1:30 Hours" or "0:30 Hours" or "1:00 Hours"
+  const matchHours = cleaned.match(/(\d+):(\d+)\s*hour/);
+  if (matchHours) {
+    const hrs = parseInt(matchHours[1], 10);
+    const mins = parseInt(matchHours[2], 10);
+    return hrs * 60 + mins;
+  }
+  
+  // Format: "30 mins" or "15 mins"
+  const matchMins = cleaned.match(/(\d+)\s*min/);
+  if (matchMins) {
+    return parseInt(matchMins[1], 10);
+  }
+
+  // Format: "1 hour"
+  const matchOneHour = cleaned.match(/(\d+)\s*hour/);
+  if (matchOneHour) {
+    return parseInt(matchOneHour[1], 10) * 60;
+  }
+  
+  // Format: "1:30"
+  const matchHHMM = cleaned.match(/^(\d+):(\d+)$/);
+  if (matchHHMM) {
+    const hrs = parseInt(matchHHMM[1], 10);
+    const mins = parseInt(matchHHMM[2], 10);
+    return hrs * 60 + mins;
+  }
+
+  return 30; // default fallback
+}
+
+/**
+ * Session length in minutes for a service.
+ *
+ * Prefers the numeric `duration_minutes` column and only falls back to parsing the
+ * free-text `duration` when it is absent. Prefer this over calling getDurationInMinutes()
+ * on `.duration` directly.
+ *
+ * `duration` is free text with no constraint and no write-side validation, and
+ * getDurationInMinutes silently returns 30 for anything it cannot parse — so a typo like
+ * "45" or "1 hr" quietly became a 30-minute session, and every seeded service had no
+ * duration at all. Capacity analysis (PROPOSAL-002 Phase 5) and the room-minutes overhead
+ * allocation (DEC-015) both need this to be real.
+ *
+ * Still returns 30 when nothing is available, so callers keep a usable number — but that
+ * fallback should get rarer as duration_minutes is populated.
+ */
+export function getServiceDurationMinutes(
+  service: { duration_minutes?: number | null; duration?: string | null } | null | undefined
+): number {
+  if (!service) return 30;
+  const numeric = Number(service.duration_minutes);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  return getDurationInMinutes(service.duration);
+}
+
+/**
+ * Human-readable "H:MM Hours" label for a minutes value — the inverse of getDurationInMinutes().
+ *
+ * The legacy free-text `duration` column used to be entered independently of `duration_minutes`
+ * (a dropdown next to a number field), which let the two drift apart — some services showed
+ * "1:00 Hours" in the label while `duration_minutes` (the value actually used for availability
+ * and collision checks) was 30. This derives the label from the number instead, so the two can
+ * never disagree.
+ */
+export function getDurationLabel(minutes: number): string {
+  const safeMinutes = Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes) : 30;
+  const hrs = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${hrs}:${String(mins).padStart(2, "0")} Hours`;
+}
+
+/**
+ * How long a session may sit in `started` before it is treated as forgotten rather than active.
+ *
+ * RISK-043: `reservations.started_at` was added so a staleness check could exist at all, but
+ * nothing consumed it — a doctor who forgot to press Complete held a slot, a room and an
+ * "Upcoming" count indefinitely (one was found still open from the 10th of the month).
+ *
+ * Fixed at 2 hours by clinic decision (2026-08-16) rather than derived from the service's
+ * `duration_minutes`: long enough that no genuine session trips it, short enough that a forgotten
+ * one is caught the same working day.
+ */
+export const STALE_SESSION_THRESHOLD_MS = 2 * 60 * 60 * 1000;
+
+export type SessionStaleness = {
+  isStale: boolean;
+  /** Milliseconds since the session was started, or null when `started_at` is absent. */
+  elapsedMs: number | null;
+  /** Short human label ("3h", "2d") for the badge, or null when nothing is known. */
+  elapsedLabel: string | null;
+};
+
+const NOT_STALE: SessionStaleness = { isStale: false, elapsedMs: null, elapsedLabel: null };
+
+function formatElapsedShort(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  if (days >= 1) return `${days}d`;
+  const hours = Math.floor(totalMinutes / 60);
+  if (hours >= 1) return `${hours}h`;
+  return `${totalMinutes}m`;
+}
+
+/**
+ * Decides whether an in-progress session has been left open too long.
+ *
+ * Only ever reports on a session that is actually `started`/`in_progress` — a completed or
+ * cancelled booking is never stale no matter how old its `started_at` is.
+ *
+ * `startedAt` is null for any session started before the RISK-043 migration landed. Rather than
+ * guess an elapsed time, those fall back to the booking's own date: a session still open from an
+ * earlier day is stale with an unknown duration, one from today is left alone. `elapsedMs` stays
+ * null in that case so callers do not present a fabricated number.
+ *
+ * `thresholdMs` defaults to `STALE_SESSION_THRESHOLD_MS` (2 hours) but is a parameter, not a
+ * hardcoded read of the constant, so a SuperAdmin-configured value (Booking Settings →
+ * "Stale Session Alert") can be threaded through by the caller without editing this function.
+ */
+export function getSessionStaleness(
+  status: string | null | undefined,
+  startedAt: string | null | undefined,
+  bookingDate?: string | null,
+  thresholdMs: number = STALE_SESSION_THRESHOLD_MS,
+  now: Date = new Date()
+): SessionStaleness {
+  const st = (status || "").toLowerCase();
+  if (st !== "started" && st !== "in_progress") return NOT_STALE;
+
+  if (startedAt) {
+    const startedMs = new Date(startedAt).getTime();
+    if (!Number.isFinite(startedMs)) return NOT_STALE;
+    const elapsedMs = now.getTime() - startedMs;
+    if (elapsedMs < thresholdMs) return NOT_STALE;
+    return { isStale: true, elapsedMs, elapsedLabel: formatElapsedShort(elapsedMs) };
+  }
+
+  // No timestamp: the only defensible signal left is that the booking's day has already passed.
+  if (bookingDate) {
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate()
+    ).padStart(2, "0")}`;
+    if (String(bookingDate).slice(0, 10) < todayStr) {
+      return { isStale: true, elapsedMs: null, elapsedLabel: null };
+    }
+  }
+
+  return NOT_STALE;
+}
+
+export const ALL_15MIN_SLOTS: string[] = (() => {
+  const slots: string[] = [];
+  for (let h = 9; h <= 21; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      if (h === 21 && m > 0) break;
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+  }
+  return slots;
+})();
+
+export function normaliseTo24hSlot(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.trim();
+  const match = cleaned.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/i);
+  if (!match) return null;
+  let hh = parseInt(match[1], 10);
+  const mm = parseInt(match[2], 10);
+  const ampm = match[3]?.toUpperCase();
+  if (ampm === 'PM' && hh !== 12) hh += 12;
+  if (ampm === 'AM' && hh === 12) hh = 0;
+  
+  const totalMins = hh * 60 + mm;
+  const rounded = Math.round(totalMins / 15) * 15;
+  const rh = Math.floor(rounded / 60);
+  const rm = rounded % 60;
+  return `${String(rh).padStart(2, '0')}:${String(rm).padStart(2, '0')}`;
+}
+
+export type Category = string;
+
+export interface ServiceItem {
+  id: number;
+  en: string;
+  ar: string;
+  img: string;
+  cat: Category;
+  unit: string;
+  price?: number;
+  createdAt?: string;
+  sortOrder?: number;
+  /** Free-text legacy field, e.g. "1:30 Hours" or "30 mins". Prefer duration_minutes. */
+  duration?: string;
+  /**
+   * Session length in minutes. Added 2026-07-25 (task 0.8) because `duration` is
+   * unvalidated free text that silently parsed to 30 for anything unexpected.
+   * Read it via getServiceDurationMinutes(), never directly.
+   */
+  duration_minutes?: number | null;
+  descriptionEn?: string;
+  descriptionAr?: string;
+  isShared?: boolean;
+  islaser?: boolean;
+  is_laser?: boolean;
+  enableReminder?: boolean;
+  visible?: boolean;
+  active?: boolean;
+  /** DEC-111: false = usable in the admin but not offered on the public website. Missing means shown. */
+  showOnWebsite?: boolean;
+  branchPricing?: Array<{
+    name: string;
+    price: number;
+    visible: boolean;
+    status: boolean;
+    isDefault?: boolean;
+    promotion?: {
+      enabled: boolean;
+      type: "percentage" | "fixed";
+      value: number;
+      startDate?: string;
+      endDate?: string;
+    };
+  }>;
+}
+
+export const SERVICES: ServiceItem[] = [];
+
+export const CATEGORY_LABELS: Record<string, { en: string; ar: string }> = {};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type BranchLike = { id: number | string; name?: string; name_en?: string; name_ar?: string };
+
+/**
+ * Resolve whatever the caller passed — a branch id or a branch name — to the branch NAME,
+ * which is what `branchPricing[].name` is keyed by.
+ *
+ * This previously did:
+ *
+ *     if (typeof v === "string" && isNaN(Number(v))) targetBranchName = v;
+ *
+ * Branch ids are UUIDs, and a UUID is a non-numeric string, so the UUID itself was used as
+ * the branch name and never matched any `branchPricing` entry. The `branchesList` lookup
+ * underneath was unreachable for UUID ids, and it compared `Number(b.id) === Number(v)` —
+ * `NaN === NaN`, false — so it would not have matched either. Between the two,
+ * branch-specific pricing has never been applied anywhere in the app. See RISK-011.
+ */
+function resolveBranchName(
+  branchNameOrId?: string | number | null,
+  branchesList?: BranchLike[] | null
+): string | null {
+  if (branchNameOrId === undefined || branchNameOrId === null) return null;
+
+  const key = String(branchNameOrId).trim();
+  if (!key) return null;
+
+  if (branchesList && branchesList.length > 0) {
+    // Ids are UUIDs — compare as strings, never through Number().
+    const byId = branchesList.find((b) => String(b.id) === key);
+    if (byId) return byId.name || byId.name_en || byId.name_ar || null;
+
+    // The caller may equally have passed a name already.
+    const lower = key.toLowerCase();
+    const byName = branchesList.find(
+      (b) =>
+        b.name?.toLowerCase() === lower ||
+        b.name_en?.toLowerCase() === lower ||
+        b.name_ar?.toLowerCase() === lower
+    );
+    if (byName) return byName.name || byName.name_en || byName.name_ar || null;
+  }
+
+  // With no list to resolve against, only a plain name is usable. A UUID or a numeric id is
+  // an identifier we cannot translate, and must not be passed off as a name.
+  if (UUID_RE.test(key) || !isNaN(Number(key))) return null;
+
+  return key;
+}
+
+export function getEffectiveServicePrice(
+  service: { price?: number; branchPricing?: any[] | null } | null | undefined,
+  branchNameOrId?: string | number | null,
+  branchesList?: BranchLike[] | null
+): number {
+  if (!service) return 0;
+
+  const targetBranchName = resolveBranchName(branchNameOrId, branchesList);
+
+  let bpItem: any = null;
+  if (targetBranchName && service.branchPricing && Array.isArray(service.branchPricing)) {
+    bpItem = service.branchPricing.find(
+      (bp) => bp && bp.name && bp.name.toLowerCase() === targetBranchName!.toLowerCase()
+    );
+  }
+
+  // Fallback to default branch pricing
+  if (!bpItem && service.branchPricing && Array.isArray(service.branchPricing)) {
+    bpItem = service.branchPricing.find((bp) => bp && bp.isDefault);
+  }
+
+  const basePrice = bpItem ? Number(bpItem.price) : Number(service.price ?? 0);
+
+  // Apply promotion if enabled
+  if (bpItem && bpItem.promotion && bpItem.promotion.enabled) {
+    const promo = bpItem.promotion;
+
+    // Compare date strings using Egypt local time
+    const now = new Date();
+    const egyptTimeStr = now.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+    const todayStr = egyptTimeStr.slice(0, 10); // YYYY-MM-DD
+
+    let isDateActive = true;
+    if (promo.startDate && todayStr < promo.startDate) {
+      isDateActive = false;
+    }
+    if (promo.endDate && todayStr > promo.endDate) {
+      isDateActive = false;
+    }
+
+    if (isDateActive) {
+      let finalPrice = basePrice;
+      const val = Number(promo.value) || 0;
+      if (promo.type === "percentage") {
+        finalPrice = basePrice * (1 - val / 100);
+      } else if (promo.type === "fixed") {
+        finalPrice = basePrice - val;
+      }
+      return Math.max(0, Math.round(finalPrice));
+    }
+  }
+
+  return basePrice;
+}
+
+export interface ServicePriceDetails {
+  basePrice: number;
+  discountedPrice: number;
+  hasPromotion: boolean;
+  promotionText?: string;
+  promotionTextAr?: string;
+}
+
+export function getServicePriceDetails(
+  service: { price?: number; branchPricing?: any[] | null } | null | undefined,
+  branchNameOrId?: string | number | null,
+  branchesList?: BranchLike[] | null
+): ServicePriceDetails {
+  const result: ServicePriceDetails = {
+    basePrice: 0,
+    discountedPrice: 0,
+    hasPromotion: false,
+  };
+
+  if (!service) return result;
+
+  const targetBranchName = resolveBranchName(branchNameOrId, branchesList);
+
+  let bpItem: any = null;
+  if (targetBranchName && service.branchPricing && Array.isArray(service.branchPricing)) {
+    bpItem = service.branchPricing.find(
+      (bp) => bp && bp.name && bp.name.toLowerCase() === targetBranchName!.toLowerCase()
+    );
+  }
+
+  // Fallback to default branch pricing or any branch with active promotion
+  if (!bpItem && service.branchPricing && Array.isArray(service.branchPricing)) {
+    const now = new Date();
+    const egyptTimeStr = now.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+    const todayStr = egyptTimeStr.slice(0, 10);
+
+    const activePromoBranch = service.branchPricing.find((bp) => {
+      if (bp && bp.promotion && bp.promotion.enabled) {
+        const promo = bp.promotion;
+        let isDateActive = true;
+        if (promo.startDate && todayStr < promo.startDate) isDateActive = false;
+        if (promo.endDate && todayStr > promo.endDate) isDateActive = false;
+        return isDateActive;
+      }
+      return false;
+    });
+
+    if (activePromoBranch) {
+      bpItem = activePromoBranch;
+    } else {
+      bpItem = service.branchPricing.find((bp) => bp && bp.isDefault);
+    }
+  }
+
+  const basePrice = bpItem ? Number(bpItem.price) : Number(service.price ?? 0);
+  result.basePrice = basePrice;
+  result.discountedPrice = basePrice;
+
+  // Apply promotion if enabled
+  if (bpItem && bpItem.promotion && bpItem.promotion.enabled) {
+    const promo = bpItem.promotion;
+
+    // Compare date strings using Egypt local time
+    const now = new Date();
+    const egyptTimeStr = now.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+    const todayStr = egyptTimeStr.slice(0, 10); // YYYY-MM-DD
+
+    let isDateActive = true;
+    if (promo.startDate && todayStr < promo.startDate) {
+      isDateActive = false;
+    }
+    if (promo.endDate && todayStr > promo.endDate) {
+      isDateActive = false;
+    }
+
+    if (isDateActive) {
+      let finalPrice = basePrice;
+      const val = Number(promo.value) || 0;
+      if (promo.type === "percentage") {
+        finalPrice = basePrice * (1 - val / 100);
+        result.promotionText = `${val}% OFF`;
+        result.promotionTextAr = `خصم ${val}%`;
+      } else if (promo.type === "fixed") {
+        finalPrice = basePrice - val;
+        result.promotionText = `SAVE ${val} EGP`;
+        result.promotionTextAr = `وفر ${val} ج.م`;
+      }
+      result.discountedPrice = Math.max(0, Math.round(finalPrice));
+      result.hasPromotion = result.discountedPrice < basePrice;
+    }
+  }
+
+  return result;
+}
+
+/** Whether the public website should list this service (active, visible and not marked system-only). */
+export function isShownOnWebsite(s: Pick<ServiceItem, 'active' | 'visible' | 'showOnWebsite'>): boolean {
+  return s.active !== false && s.visible !== false && s.showOnWebsite !== false;
+}

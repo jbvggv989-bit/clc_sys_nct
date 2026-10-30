@@ -1,0 +1,881 @@
+import { NextResponse } from 'next/server';
+import { supabaseServer } from '@/lib/supabaseServer';
+import { requireAdministratorAccess } from '@/lib/access';
+import { normalizeServiceCommissions } from '@/lib/providerCommissions';
+import {
+  getEmployeeBranchIds,
+  readRequestedBranchIds,
+  validateBranchSelection,
+  type BranchSelectionResult,
+} from '@/lib/employeeBranches';
+import fs from 'fs';
+import path from 'path';
+import { SCHEDULES_FILE_PATH, getEmployeeWorkingSchedulesMap } from '@/lib/employeeSchedules';
+import { isDoctorEmployee } from '@/lib/roleWorkspace';
+import { getConfirmationMap } from '@/lib/employeeConfirmation';
+import { checkAccountAction } from '@/lib/accountActivation';
+import { setAuthUserBanned, setProviderActiveForEmployee } from '@/lib/accountAccess';
+
+
+// Mirrors the rule enforced at /auth/setup (src/app/auth/setup/page.tsx) so an admin-set password
+// and a self-set one can never diverge in strength.
+const STRONG_PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+/**
+ * RISK-069 / DEC-107: an admin may assign and edit any role up to and including `admin`, but only a
+ * superadmin may grant `superadmin` — the one tier an admin must never be able to mint for anyone,
+ * itself included.
+ *
+ * Shared by POST and PATCH deliberately. PATCH carried this check and POST did not, so an admin who
+ * could not promote an existing employee could just create a new one at `superadmin` instead --
+ * with a password of their choosing, since the account is created already confirmed. The role
+ * dropdown hides the superadmin option from admins, but that is a UI filter, not a guard.
+ */
+function deniesRoleGrant(callerRole: string, targetRole: unknown): boolean {
+  if (typeof targetRole !== 'string' || !targetRole) return false;
+  return targetRole.trim().toLowerCase() === 'superadmin' && callerRole !== 'superadmin';
+}
+
+/**
+ * DEC-110: validate a requested branch assignment against the live `branches` table.
+ *
+ * `alreadyAssigned` is the employee's stored assignment (empty for a new hire). Branches in it may stay
+ * even if they have since gone inactive; any other branch must be active.
+ */
+async function resolveBranchAssignment(raw: unknown[], alreadyAssigned: string[]): Promise<BranchSelectionResult> {
+  const candidateIds = raw
+    .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+    .map((v) => v.trim());
+
+  let branchRows: { id: string; status: string | null }[] = [];
+  if (candidateIds.length > 0) {
+    const { data, error } = await supabaseServer
+      .from('branches')
+      .select('id, status')
+      .in('id', candidateIds);
+    if (error) {
+      // 22P02 = invalid_text_representation: the caller sent something that is not a uuid.
+      if ((error as any).code === '22P02') return { ok: false, error: 'One or more branch ids are not valid.' };
+      throw error;
+    }
+    branchRows = data || [];
+  }
+  return validateBranchSelection(raw, branchRows, alreadyAssigned);
+}
+
+async function saveEmployeeWorkingSchedule(employeeKey: string, schedule: any, aliasKeys: (string | null | undefined)[] = []) {
+  if (!employeeKey || !schedule) return;
+  try {
+    const map = await getEmployeeWorkingSchedulesMap();
+    map[employeeKey] = schedule;
+    for (const ak of aliasKeys) {
+      if (ak) {
+        map[ak] = schedule;
+        map[ak.toLowerCase()] = schedule;
+      }
+    }
+
+    // 1. Write to local JSON file
+    try {
+      const dir = path.dirname(SCHEDULES_FILE_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(SCHEDULES_FILE_PATH, JSON.stringify(map, null, 2), 'utf-8');
+    } catch (fErr) {
+      console.warn('Error writing employee_schedules.json:', fErr);
+    }
+
+    // 2. Write to Supabase page_settings
+    await supabaseServer
+      .from('page_settings')
+      .upsert({
+        key: 'employee_working_schedules',
+        value: map,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+  } catch (err) {
+    console.warn('Error saving employee_working_schedules to page_settings:', err);
+  }
+}
+
+export async function GET(req: Request) {
+  const access = await requireAdministratorAccess(req);
+  if ('error' in access) return NextResponse.json({ error: access.error }, { status: access.status });
+  try {
+    const { data: employees, error } = await supabaseServer
+      .from('employee_accounts')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Active vs Invited comes from Supabase Auth. Look each employee up by id inside a short deadline
+    // instead of listing every auth user (first page only, no time limit): see employeeConfirmation.ts.
+    const { map: confirmedMap, complete: confirmationComplete } = await getConfirmationMap(
+      (id) => supabaseServer.auth.admin.getUserById(id),
+      (employees || []).map((e: any) => e.auth_user_id),
+    );
+    if (!confirmationComplete) {
+      console.warn('GET /api/employees: some email confirmations could not be read in time; they show as Invited for now.');
+    }
+
+    const schedulesMap = await getEmployeeWorkingSchedulesMap();
+
+    const enrichedEmployees = (employees || []).map((emp: any) => {
+      const savedSched = emp.working_days_hours 
+        || schedulesMap[emp.id] 
+        || schedulesMap[emp.employee_id] 
+        || (emp.email ? schedulesMap[emp.email.toLowerCase()] : null) 
+        || (emp.name ? schedulesMap[emp.name.toLowerCase()] : null) 
+        || null;
+
+      return {
+        ...emp,
+        // DEC-110: always present, primary first, even for rows written before branch_ids existed.
+        branch_ids: getEmployeeBranchIds(emp),
+        working_days_hours: savedSched,
+        workingDaysHours: savedSched,
+        requiredTargetAmount: emp.required_target_amount !== null ? Number(emp.required_target_amount) : 0,
+        bonusPercentage: emp.bonus_percentage !== null ? Number(emp.bonus_percentage) : 0,
+        targetType: emp.target_type || 'reservations',
+        bonusType: emp.bonus_type || 'percentage',
+        email_confirmed_at: emp.auth_user_id ? confirmedMap.get(emp.auth_user_id) : null
+      };
+    });
+
+    return NextResponse.json(enrichedEmployees);
+  } catch (err: any) {
+    console.error('GET /api/employees error:', err);
+    return NextResponse.json({ error: err.message || 'Database error' }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const access = await requireAdministratorAccess(req);
+  if ('error' in access) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  try {
+    const body = await req.json();
+    const { email, name, roleName, phone, department, shift, salary, nationalId, nationalIdFront, nationalIdBack, address, contractFile, contractFileName, requiredTargetAmount, bonusPercentage, targetType, bonusType, password: rawPassword } = body;
+
+    if (!email || !name || !roleName) {
+      return NextResponse.json(
+        { error: 'Full name, email address, and role are all required.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName  = name.trim();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 });
+    }
+
+    const { data: roleData, error: roleError } = await supabaseServer
+       .from('roles')
+       .select('name, workspace')
+       .eq('name', roleName)
+       .maybeSingle();
+
+    if (roleError) throw roleError;
+    if (!roleData) {
+      return NextResponse.json(
+        { error: `Role '${roleName}' does not exist. Please create it first.` },
+        { status: 400 }
+      );
+    }
+
+    if (deniesRoleGrant(access.access.role, roleName)) {
+      return NextResponse.json(
+        { error: 'Only the superadmin can grant superadmin access.' },
+        { status: 403 }
+      );
+    }
+
+    // DEC-110: branches are validated BEFORE the auth user is created, so a bad branch never leaves an
+    // orphaned auth account behind. A request that names no branch at all (the Role Management
+    // "provision" form) still creates a branch-less account, exactly as before; a request that names
+    // branches must name at least one valid, active one.
+    const branchRequest = readRequestedBranchIds(body);
+    let branchIdsToSave: string[] = [];
+    if (branchRequest.requested) {
+      const resolved = await resolveBranchAssignment(branchRequest.raw, []);
+      if (!resolved.ok) {
+        return NextResponse.json({ error: resolved.error, field: 'branchIds' }, { status: 400 });
+      }
+      branchIdsToSave = resolved.ids;
+    }
+    const primaryBranchId: string | null = branchIdsToSave[0] ?? null;
+
+    const { data: existingEmp, error: existError } = await supabaseServer
+      .from('employee_accounts')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (existError) throw existError;
+    if (existingEmp) {
+      return NextResponse.json(
+        { error: `An account with the email '${cleanEmail}' already exists.` },
+        { status: 400 }
+      );
+    }
+
+    const { data: customerCheck, error: custCheckError } = await supabaseServer
+      .from('customers')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (custCheckError) throw custCheckError;
+    if (customerCheck) {
+      return NextResponse.json(
+        { error: `This email is already registered as a customer account and cannot be added as an employee.` },
+        { status: 400 }
+      );
+    }
+
+    // Two ways to create the auth user:
+    //
+    //   password given -> create it outright, already confirmed. The account is usable the moment
+    //                     this request returns: `email_confirmed_at` is set, so the roster shows
+    //                     Active rather than Invited, and the person can sign in with the password
+    //                     the admin hands them. They change it themselves later from
+    //                     Profile -> Password.
+    //   no password    -> the original invite flow: Supabase emails a link, the invitee sets their
+    //                     own password at /auth/setup, and only then does the account confirm.
+    //
+    // The password path exists because the invite path is only as reliable as the project's SMTP.
+    // On Supabase's built-in sender, invites to non-team addresses are throttled and quietly fail
+    // to arrive, which strands every new hire on Invited with no way to sign in. Reception and
+    // doctors are onboarded in person anyway, so requiring a working mailbox is a poor gate.
+    let authUserId: string | undefined;
+
+    if (rawPassword) {
+      if (typeof rawPassword !== 'string' || !STRONG_PASSWORD_RE.test(rawPassword)) {
+        return NextResponse.json(
+          {
+            error:
+              'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.',
+            field: 'password',
+          },
+          { status: 400 }
+        );
+      }
+
+      const { data: createdUser, error: createError } = await supabaseServer.auth.admin.createUser({
+        email: cleanEmail,
+        password: rawPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: cleanName,
+          role: roleName,
+        },
+      });
+
+      if (createError) throw createError;
+      authUserId = createdUser.user?.id;
+      if (!authUserId) {
+        throw new Error('Failed to retrieve user ID from the created account.');
+      }
+    } else {
+      const requestUrl = new URL(req.url);
+      const siteUrl = requestUrl.origin;
+      console.log('Sending invitation to:', cleanEmail, 'with redirectTo:', `${siteUrl}/auth/callback?next=/auth/setup`);
+      const { data: inviteData, error: inviteError } = await supabaseServer.auth.admin.inviteUserByEmail(
+        cleanEmail,
+        {
+          redirectTo: `${siteUrl}/auth/callback?next=/auth/setup`,
+          data: {
+            full_name: cleanName,
+            role: roleName,
+          },
+        }
+      );
+
+      if (inviteError) throw inviteError;
+
+      authUserId = inviteData.user?.id;
+      if (!authUserId) {
+        throw new Error('Failed to retrieve user ID from invitation.');
+      }
+    }
+
+    const workingDaysHours = body.workingDaysHours !== undefined ? body.workingDaysHours : (body.working_days_hours || null);
+
+    // DEC-114: redundant (so stored as false) for a doctor-workspace role, which is a doctor already.
+    const alsoDoctor = body.isAlsoDoctor === true && roleData.workspace !== 'doctor';
+
+    let newEmployee: any = null;
+    let insertError: any = null;
+
+    try {
+      const insertPayload: Record<string, any> = {
+        auth_user_id: authUserId,
+        employee_id: cleanEmail,
+        email: cleanEmail,
+        name: cleanName,
+        role_name: roleName,
+        phone: phone || null,
+        department: department || 'Reception',
+        shift: shift || 'Day',
+        salary: salary ? Number(salary) : 0,
+        national_id: nationalId || null,
+        national_id_front: nationalIdFront || null,
+        national_id_back: nationalIdBack || null,
+        address: address || null,
+        branch_id: primaryBranchId,
+        branch_ids: branchIdsToSave,
+        contract_file: contractFile || null,
+        contract_file_name: contractFileName || null,
+        required_target_amount: requiredTargetAmount ? Number(requiredTargetAmount) : 0,
+        bonus_percentage: bonusPercentage ? Number(bonusPercentage) : 0,
+        target_type: targetType || 'reservations',
+        bonus_type: bonusType || 'percentage',
+      };
+      if (workingDaysHours) {
+        insertPayload.working_days_hours = workingDaysHours;
+      }
+      // Only written when true so a database that has not got the column yet still creates normal staff.
+      if (alsoDoctor) insertPayload.is_also_doctor = true;
+
+      const res = await supabaseServer
+        .from('employee_accounts')
+        .insert(insertPayload)
+        .select()
+        .single();
+      newEmployee = res.data;
+      insertError = res.error;
+    } catch (e) {
+      insertError = e;
+    }
+
+    if (insertError) {
+      // Fallback without working_days_hours if column does not exist on table
+      const fallbackPayload = {
+        auth_user_id: authUserId,
+        employee_id: cleanEmail,
+        email: cleanEmail,
+        name: cleanName,
+        role_name: roleName,
+        phone: phone || null,
+        department: department || 'Reception',
+        shift: shift || 'Day',
+        salary: salary ? Number(salary) : 0,
+        national_id: nationalId || null,
+        national_id_front: nationalIdFront || null,
+        national_id_back: nationalIdBack || null,
+        address: address || null,
+        branch_id: primaryBranchId,
+        branch_ids: branchIdsToSave,
+        contract_file: contractFile || null,
+        contract_file_name: contractFileName || null,
+        required_target_amount: requiredTargetAmount ? Number(requiredTargetAmount) : 0,
+        bonus_percentage: bonusPercentage ? Number(bonusPercentage) : 0,
+        target_type: targetType || 'reservations',
+        bonus_type: bonusType || 'percentage',
+        // A database without working_days_hours (the dev project) always lands here, so the flag
+        // has to be carried on this path too or an also-a-doctor hire is saved without it.
+        ...(alsoDoctor ? { is_also_doctor: true } : {}),
+      };
+
+      const resFallback = await supabaseServer
+        .from('employee_accounts')
+        .insert(fallbackPayload)
+        .select()
+        .single();
+
+      newEmployee = resFallback.data;
+      insertError = resFallback.error;
+    }
+
+    if (insertError || !newEmployee) {
+      if (authUserId) await supabaseServer.auth.admin.deleteUser(authUserId);
+      throw insertError || new Error('Failed to create employee account');
+    }
+
+    if (workingDaysHours) {
+      await saveEmployeeWorkingSchedule(
+        newEmployee.id,
+        workingDaysHours,
+        [newEmployee.employee_id, cleanEmail, cleanName]
+      );
+    }
+
+    const mapped = newEmployee ? {
+      ...newEmployee,
+      branch_ids: getEmployeeBranchIds(newEmployee),
+      working_days_hours: workingDaysHours || newEmployee.working_days_hours || null,
+      workingDaysHours: workingDaysHours || newEmployee.working_days_hours || null,
+      requiredTargetAmount: newEmployee.required_target_amount !== null ? Number(newEmployee.required_target_amount) : 0,
+      bonusPercentage: newEmployee.bonus_percentage !== null ? Number(newEmployee.bonus_percentage) : 0,
+      targetType: newEmployee.target_type || 'reservations',
+      bonusType: newEmployee.bonus_type || 'percentage'
+    } : null;
+
+    // Sync with providers table when the role's workspace is 'doctor' (DEC-113) or the account is
+    // flagged as also a doctor (DEC-114). The department label no longer decides this.
+    const isDoctor = roleData.workspace === 'doctor' || alsoDoctor;
+    if (isDoctor) {
+      try {
+        const providerPayload = {
+          name: cleanName,
+          services: Array.isArray(body.services) ? body.services : [],
+          rating: body.rating ? Number(body.rating) : 5,
+          phone: phone || null,
+          specialty: body.specialty || null,
+          national_id: nationalId || null,
+          branch_id: primaryBranchId,
+          fixed_salary: salary ? Number(salary) : 0,
+          commission_type: body.commission_type || 'none',
+          commission_value: body.commission_value ? Number(body.commission_value) : 0,
+          commission_base: body.commission_base || 'gross',
+          commission_fixed_component: body.commission_fixed_component ? Number(body.commission_fixed_component) : 0,
+          service_commissions: normalizeServiceCommissions(body.service_commissions),
+          working_days_hours: workingDaysHours,
+          bookings_count: 0,
+          more_count: Math.max(0, (body.services || []).length - 2)
+        };
+
+        const cleanNationalId = typeof nationalId === 'string' ? nationalId.trim() : '';
+        const cleanPhone = typeof phone === 'string' ? phone.trim() : '';
+
+        let existingProviderId: string | null = null;
+        for (const [column, value] of [['national_id', cleanNationalId], ['phone', cleanPhone]] as const) {
+          if (!value) continue;
+          const { data: matches, error: matchError } = await supabaseServer
+            .from('providers')
+            .select('id')
+            .eq(column, value)
+            .limit(2);
+          if (matchError) throw matchError;
+          if (!matches || matches.length === 0) continue;
+          if (matches.length > 1) {
+            throw new Error(
+              `More than one doctor already has ${column} '${value}'. Resolve the duplicate in Doctors before adding this employee.`
+            );
+          }
+          existingProviderId = matches[0].id;
+          break;
+        }
+
+        if (existingProviderId) {
+          const { error: updateError } = await supabaseServer
+            .from('providers')
+            .update(providerPayload)
+            .eq('id', existingProviderId);
+          if (updateError) throw updateError;
+        } else {
+          const { error: providerInsertError } = await supabaseServer
+            .from('providers')
+            .insert(providerPayload);
+          if (providerInsertError) throw providerInsertError;
+        }
+      } catch (provErr: any) {
+        await supabaseServer.from('employee_accounts').delete().eq('id', newEmployee.id);
+        if (authUserId) await supabaseServer.auth.admin.deleteUser(authUserId);
+        console.error('Failed to sync doctor employee to providers table:', provErr);
+        return NextResponse.json(
+          {
+            error:
+              provErr?.message ||
+              'The employee was created but could not be registered as a doctor, so nothing was saved. Please try again.',
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json(mapped, { status: 201 });
+  } catch (err: any) {
+    console.error('POST /api/employees error:', err);
+    return NextResponse.json({ error: err.message || 'Database error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  const access = await requireAdministratorAccess(req);
+  if ('error' in access) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  try {
+    const body = await req.json();
+    const { id, roleName, name, phone, department, shift, salary, nationalId, nationalIdFront, nationalIdBack, address, contractFile, contractFileName, requiredTargetAmount, bonusPercentage, targetType, bonusType, resendInvite } = body;
+    const branchRequest = readRequestedBranchIds(body);
+    const workingDaysHours = body.workingDaysHours !== undefined ? body.workingDaysHours : body.working_days_hours;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Employee ID is required.' }, { status: 400 });
+    }
+
+    const { data: employee, error: fetchError } = await supabaseServer
+      .from('employee_accounts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee account not found.' }, { status: 404 });
+    }
+
+    // DEC-117: Active / Inactive. Handled on its own and returned right away, so it can never be
+    // mixed into a profile edit by accident.
+    if (typeof body.isActive === 'boolean') {
+      const wantActive: boolean = body.isActive;
+      const check = checkAccountAction({ employeeId: access.access.employee?.id }, employee, wantActive ? 'activate' : 'deactivate');
+      if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status });
+
+      // Lift the sign-in ban BEFORE marking active, so a failure never leaves an "active" account
+      // that still cannot sign in. Marking inactive goes the other way round: the flag (which every
+      // request checks) first, the ban second.
+      if (wantActive && !(await setAuthUserBanned(employee.auth_user_id, false))) {
+        return NextResponse.json(
+          { error: 'Could not re-enable this account\'s sign-in. Try again in a moment.' },
+          { status: 502 }
+        );
+      }
+
+      const { data: changed, error: activeErr } = await supabaseServer
+        .from('employee_accounts')
+        .update({ is_active: wantActive })
+        .eq('id', employee.id)
+        .select()
+        .single();
+      if (activeErr) throw activeErr;
+
+      const authSynced = wantActive ? true : await setAuthUserBanned(employee.auth_user_id, true);
+      // DEC-118: a doctor's account being switched off takes them off the booking lists (and on again with it).
+      const providerSync = await setProviderActiveForEmployee(employee, wantActive);
+      return NextResponse.json({ ...changed, authSynced, providerSync });
+    }
+
+    // Superadmin-only: set a brand new password for an employee whose login no longer works
+    // (forgotten password, or any other reason). Handled on its own and returned right away,
+    // same as isActive above, so it can never be mixed into an unrelated profile edit.
+    if (typeof body.newPassword === 'string') {
+      if (access.access.role !== 'superadmin') {
+        return NextResponse.json(
+          { error: 'Only the superadmin can set a new password for another account.' },
+          { status: 403 }
+        );
+      }
+      if (!employee.auth_user_id) {
+        return NextResponse.json(
+          { error: 'This account has no linked login yet — resend the invite instead.' },
+          { status: 400 }
+        );
+      }
+      if (!STRONG_PASSWORD_RE.test(body.newPassword)) {
+        return NextResponse.json(
+          {
+            error: 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.',
+            field: 'newPassword',
+          },
+          { status: 400 }
+        );
+      }
+
+      const { error: pwError } = await supabaseServer.auth.admin.updateUserById(employee.auth_user_id, {
+        password: body.newPassword,
+        email_confirm: true,
+      });
+      if (pwError) {
+        return NextResponse.json({ error: pwError.message || 'Failed to set the new password.' }, { status: 502 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (!resendInvite && (roleName || typeof body.isAlsoDoctor === 'boolean' || name !== undefined || phone !== undefined || department !== undefined || shift !== undefined || salary !== undefined || nationalId !== undefined || nationalIdFront !== undefined || nationalIdBack !== undefined || address !== undefined || branchRequest.requested || requiredTargetAmount !== undefined || bonusPercentage !== undefined || targetType !== undefined || bonusType !== undefined || workingDaysHours !== undefined)) {
+      const updates: Record<string, any> = {};
+      if (typeof body.isAlsoDoctor === 'boolean') updates.is_also_doctor = body.isAlsoDoctor;
+      if (roleName) {
+        if (employee.employee_id === 'superadmin') {
+          return NextResponse.json({ error: 'Cannot modify the role of the system owner account.' }, { status: 400 });
+        }
+        if (deniesRoleGrant(access.access.role, roleName)) {
+          return NextResponse.json({ error: 'Only the superadmin can grant superadmin access.' }, { status: 403 });
+        }
+        // The mirror of the grant rule: an admin must not be able to demote or re-role a superadmin
+        // account either (only the built-in owner account was protected from that before).
+        if (String(employee.role_name || '').trim().toLowerCase() === 'superadmin' && access.access.role !== 'superadmin') {
+          return NextResponse.json({ error: 'Only the superadmin can change the role of a superadmin account.' }, { status: 403 });
+        }
+        const { data: roleExists, error: roleCheckError } = await supabaseServer
+          .from('roles')
+          .select('name')
+          .eq('name', roleName)
+          .maybeSingle();
+
+        if (roleCheckError) throw roleCheckError;
+        if (!roleExists) {
+          return NextResponse.json({ error: `Role '${roleName}' does not exist.` }, { status: 400 });
+        }
+        updates.role_name = roleName;
+      }
+
+      // DEC-110: validate a branch change before anything is written. Branches the employee already has
+      // may stay even if now inactive; anything newly added must be active. Empty is rejected.
+      let patchedPrimaryBranchId: string | undefined;
+      if (branchRequest.requested) {
+        const resolved = await resolveBranchAssignment(branchRequest.raw, getEmployeeBranchIds(employee));
+        if (!resolved.ok) {
+          return NextResponse.json({ error: resolved.error, field: 'branchIds' }, { status: 400 });
+        }
+        updates.branch_id = resolved.primary;
+        updates.branch_ids = resolved.ids;
+        patchedPrimaryBranchId = resolved.primary;
+      }
+
+      if (name !== undefined) updates.name = name;
+      if (phone !== undefined) updates.phone = phone;
+      if (department !== undefined) updates.department = department;
+      if (shift !== undefined) updates.shift = shift;
+      if (salary !== undefined) updates.salary = Number(salary);
+      if (nationalId !== undefined) updates.national_id = nationalId;
+      if (nationalIdFront !== undefined) updates.national_id_front = nationalIdFront;
+      if (nationalIdBack !== undefined) updates.national_id_back = nationalIdBack;
+      if (address !== undefined) updates.address = address;
+      if (contractFile !== undefined) updates.contract_file = contractFile;
+      if (contractFileName !== undefined) updates.contract_file_name = contractFileName;
+      if (requiredTargetAmount !== undefined) updates.required_target_amount = Number(requiredTargetAmount);
+      if (bonusPercentage !== undefined) updates.bonus_percentage = Number(bonusPercentage);
+      if (targetType !== undefined) updates.target_type = targetType;
+      if (bonusType !== undefined) updates.bonus_type = bonusType;
+
+      let updatedEmp: any = null;
+      let updateError: any = null;
+
+      if (workingDaysHours !== undefined) {
+        try {
+          const res = await supabaseServer
+            .from('employee_accounts')
+            .update({ ...updates, working_days_hours: workingDaysHours })
+            .eq('id', id)
+            .select()
+            .single();
+          updatedEmp = res.data;
+          updateError = res.error;
+        } catch (e) {
+          updateError = e;
+        }
+      }
+
+      if (!updatedEmp && Object.keys(updates).length > 0) {
+        const res = await supabaseServer
+          .from('employee_accounts')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
+        updatedEmp = res.data;
+        updateError = res.error;
+      }
+
+      if (updateError && !updatedEmp) throw updateError;
+
+      // Always persist working schedule to page_settings
+      if (workingDaysHours !== undefined) {
+        await saveEmployeeWorkingSchedule(
+          id,
+          workingDaysHours,
+          [employee.employee_id, employee.email, name || employee.name]
+        );
+      }
+
+      if (roleName && employee.auth_user_id) {
+        await supabaseServer.auth.admin.updateUserById(
+          employee.auth_user_id,
+          { user_metadata: { role: roleName } }
+        ).catch((err: any) => {
+          console.warn("Failed to update user auth metadata role:", err);
+        });
+      }
+
+      const effectiveSched = workingDaysHours !== undefined ? workingDaysHours : (updatedEmp?.working_days_hours || employee.working_days_hours || null);
+
+      const mapped = updatedEmp || employee ? {
+        ...(updatedEmp || employee),
+        branch_ids: getEmployeeBranchIds(updatedEmp || employee),
+        working_days_hours: effectiveSched,
+        workingDaysHours: effectiveSched,
+        requiredTargetAmount: (updatedEmp || employee).required_target_amount !== null ? Number((updatedEmp || employee).required_target_amount) : 0,
+        bonusPercentage: (updatedEmp || employee).bonus_percentage !== null ? Number((updatedEmp || employee).bonus_percentage) : 0,
+        targetType: (updatedEmp || employee).target_type || 'reservations',
+        bonusType: (updatedEmp || employee).bonus_type || 'percentage'
+      } : null;
+
+      // Sync updated employee to providers table when their (new or existing) role is a doctor-workspace role (DEC-113)
+      const effectiveRole = roleName !== undefined ? roleName : employee.role_name;
+      const effectiveAlsoDoctor = typeof body.isAlsoDoctor === 'boolean' ? body.isAlsoDoctor : employee.is_also_doctor;
+      const isDoctor = await isDoctorEmployee(effectiveRole, effectiveAlsoDoctor);
+
+      if (isDoctor) {
+        try {
+          const docName = name !== undefined ? name : employee.name;
+          const docPhone = phone !== undefined ? phone : employee.phone;
+          const docSalary = salary !== undefined ? salary : employee.salary;
+          const docBranchId = patchedPrimaryBranchId !== undefined ? patchedPrimaryBranchId : employee.branch_id;
+          const docNationalId = nationalId !== undefined ? nationalId : employee.national_id;
+
+          const { data: existingProvider } = await supabaseServer
+            .from('providers')
+            .select('id')
+            .or(`name.ilike.${docName},phone.eq.${docPhone || 'none'}`)
+            .maybeSingle();
+
+          const providerPayload: Record<string, any> = {
+            name: docName,
+            ...(body.services !== undefined ? { services: body.services } : {}),
+            ...(body.specialty !== undefined ? { specialty: body.specialty } : {}),
+            ...(body.rating !== undefined ? { rating: Number(body.rating) } : {}),
+            ...(workingDaysHours !== undefined ? { working_days_hours: workingDaysHours } : {}),
+            ...(body.commission_type !== undefined ? { commission_type: body.commission_type } : {}),
+            ...(body.commission_value !== undefined ? { commission_value: Number(body.commission_value) } : {}),
+            ...(body.commission_base !== undefined ? { commission_base: body.commission_base } : {}),
+            ...(body.commission_fixed_component !== undefined ? { commission_fixed_component: Number(body.commission_fixed_component) } : {}),
+            ...(body.service_commissions !== undefined ? { service_commissions: normalizeServiceCommissions(body.service_commissions) } : {}),
+            ...(docPhone !== undefined ? { phone: docPhone } : {}),
+            ...(docNationalId !== undefined ? { national_id: docNationalId } : {}),
+            ...(docBranchId !== undefined ? { branch_id: docBranchId || null } : {}),
+            ...(docSalary !== undefined ? { fixed_salary: Number(docSalary) } : {})
+          };
+
+          if (existingProvider) {
+            await supabaseServer.from('providers').update(providerPayload).eq('id', existingProvider.id);
+          } else {
+            await supabaseServer.from('providers').insert({
+              name: docName,
+              services: body.services || [],
+              rating: body.rating ? Number(body.rating) : 5,
+              phone: docPhone || null,
+              specialty: body.specialty || null,
+              national_id: docNationalId || null,
+              branch_id: docBranchId || null,
+              fixed_salary: docSalary ? Number(docSalary) : 0,
+              commission_type: body.commission_type || 'none',
+              commission_value: body.commission_value ? Number(body.commission_value) : 0,
+              commission_base: body.commission_base || 'gross',
+              commission_fixed_component: body.commission_fixed_component ? Number(body.commission_fixed_component) : 0,
+              service_commissions: normalizeServiceCommissions(body.service_commissions),
+              working_days_hours: workingDaysHours || null,
+              bookings_count: 0,
+              more_count: Math.max(0, (body.services || []).length - 2)
+            });
+          }
+        } catch (provErr) {
+          console.error('Failed to sync updated doctor employee to providers table:', provErr);
+        }
+      }
+
+      return NextResponse.json(mapped);
+    }
+
+    // 2. Resend invitation to an employee whose invite expired (fallback if roleName not provided)
+    const requestUrl = new URL(req.url);
+    const siteUrl = requestUrl.origin;
+
+    if (employee.auth_user_id) {
+      await supabaseServer.auth.admin.deleteUser(employee.auth_user_id).catch(() => {});
+    }
+
+    const { data: inviteData, error: inviteError } = await supabaseServer.auth.admin.inviteUserByEmail(
+      employee.email,
+      {
+        redirectTo: `${siteUrl}/auth/callback?next=/auth/setup`,
+        data: {
+          full_name: employee.name,
+          role: employee.role_name,
+        },
+      }
+    );
+
+    if (inviteError) throw inviteError;
+
+    const newAuthUserId = inviteData.user?.id;
+    if (newAuthUserId) {
+      await supabaseServer
+        .from('employee_accounts')
+        .update({ auth_user_id: newAuthUserId })
+        .eq('id', id);
+    }
+
+    return NextResponse.json({ message: 'Invitation re-sent successfully.' });
+  } catch (err: any) {
+    console.error('PATCH /api/employees error:', err);
+    return NextResponse.json({ error: err.message || 'Database error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  // DEC-117 (owner's decision, 2026-10-22): an admin may delete other accounts, which used to be
+  // superadmin-only. What an admin can reach is limited by checkAccountAction: never a superadmin
+  // account, never their own, never the last active admin.
+  const access = await requireAdministratorAccess(req);
+  if ('error' in access) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    const mode = searchParams.get('mode') || 'hard';
+
+    if (!id) {
+      return NextResponse.json({ error: 'Employee account ID is required' }, { status: 400 });
+    }
+
+    const { data: employee, error: fetchError } = await supabaseServer
+      .from('employee_accounts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!employee) {
+      return NextResponse.json({ error: 'Employee account not found' }, { status: 404 });
+    }
+
+    const check = checkAccountAction({ employeeId: access.access.employee?.id }, employee, 'delete');
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: check.status });
+
+    if (mode === 'soft') {
+      // Soft delete = Inactive (DEC-117): the role and every historical record stay, access stops,
+      // and it can be switched back on. (It used to overwrite role_name with 'inactive'.)
+      const { data: updated, error: softErr } = await supabaseServer
+        .from('employee_accounts')
+        .update({ is_active: false })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (softErr) throw softErr;
+      await setAuthUserBanned(employee.auth_user_id, true);
+      await setProviderActiveForEmployee(employee, false);
+      return NextResponse.json({ message: 'Employee account deactivated successfully', data: updated });
+    }
+
+    if (employee.auth_user_id) {
+      const { error: deleteAuthError } = await supabaseServer.auth.admin.deleteUser(employee.auth_user_id);
+      if (deleteAuthError) {
+        console.warn('Failed to delete auth user, proceeding with database record removal:', deleteAuthError.message);
+      }
+    }
+
+    const { error: deleteDbError } = await supabaseServer
+      .from('employee_accounts')
+      .delete()
+      .eq('id', id);
+
+    if (deleteDbError) throw deleteDbError;
+
+    // The provider row stays (it may have bookings and payroll history) but must stop being offered.
+    await setProviderActiveForEmployee(employee, false);
+
+    return NextResponse.json({ message: 'Employee account permanently deleted successfully' });
+  } catch (err: any) {
+    console.error('DELETE /api/employees error:', err);
+    return NextResponse.json({ error: err.message || 'Database error' }, { status: 500 });
+  }
+}

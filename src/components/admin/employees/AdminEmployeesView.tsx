@@ -1,0 +1,3713 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CLIENT } from "@/config/client";
+import {
+  Plus,
+  Search,
+  Info,
+  Pencil,
+  Trash2,
+  ArrowLeft,
+  Stethoscope,
+  AlertTriangle,
+  Clock,
+  Upload,
+  FileText,
+  Camera,
+  X,
+  MoreVertical,
+  Filter,
+  Calendar,
+  CheckCircle,
+  Briefcase,
+  MapPin,
+  Phone,
+  Mail,
+  DollarSign,
+  TrendingUp,
+  Printer,
+  Download,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  Eye,
+  Building,
+  CalendarDays,
+  Award,
+  User,
+  Users,
+  Shield,
+  Target,
+  Activity,
+  BarChart3,
+  CircleDollarSign,
+  Loader2,
+} from "lucide-react";
+import { Branch } from "@/types";
+import EmployeeBranchPicker from "@/components/admin/employees/EmployeeBranchPicker";
+import {
+  branchesOfferedFor,
+  formatEmployeeBranchNames,
+  getEmployeeBranchIds,
+  resolveEditBranchSelection,
+} from "@/lib/employeeBranches";
+import { compressImage } from "@/lib/image";
+import { clearFetchCache } from "@/lib/fetchCache";
+import { DoctorServiceCommissionEditor, ServiceCommissionEntry, DefaultCommissionType } from "@/components/admin/services/DoctorServiceCommissionEditor";
+import { adminTranslations } from "@/components/admin/translations";
+import { mayOverlap, type ShiftKind } from "@/lib/shiftOverlap";
+import EmployeeActiveSwitch from "./EmployeeActiveSwitch";
+
+interface AdminEmployeesViewProps {
+  // Shared with Role Management invite form
+  newEmployeeName: string;
+  setNewEmployeeName: (v: string) => void;
+  newEmployeeEmail: string;
+  setNewEmployeeEmail: (v: string) => void;
+  newEmployeeRole: string;
+  setNewEmployeeRole: (v: string) => void;
+
+  // Shared with HR / page.tsx navigation-to-profile
+  viewingEmployee: any | null;
+  setViewingEmployee: (v: any | null) => void;
+  editingEmployee: any | null;
+  setEditingEmployee: (v: any | null) => void;
+  isEditingEmployeeModalOpen: boolean;
+  setIsEditingEmployeeModalOpen: (v: boolean) => void;
+
+  // Shared global data / handlers
+  branches: Branch[];
+  rolesList: any[];
+  departmentsList: string[];
+  employeesList: any[];
+  loadingRolesAndEmployees: boolean;
+  attendanceList: any[];
+  loadingAttendance: boolean;
+  providers: any[];
+  fetchProviders: () => Promise<void> | void;
+  customerAvatars: Record<string, string>;
+  handleAvatarUpload: (key: string, file: File) => Promise<void> | void;
+  handleAvatarRemove: (key: string) => void;
+  allServicesList: { id: number; en: string; ar?: string }[];
+  session: any;
+  adminDbId?: string;
+  adminEmail?: string;
+  adminRole?: string | null;
+  fetchHrAttendance: () => Promise<void> | void;
+  handleDeleteEmployee: (id: string) => Promise<void> | void;
+  handleToggleEmployeeActive: (id: string, makeActive: boolean) => Promise<void> | void;
+  handleResendInvitation: (id: string) => Promise<void> | void;
+  fetchRolesAndEmployees: () => Promise<void> | void;
+  getDoctorFirstReservationDate: (docName: string, resList: any[]) => string | null;
+  allReservations: any[];
+  parseEgyptianNationalId: (id: string) => any;
+  employeeProfileActiveTab: string;
+  setEmployeeProfileActiveTab: (v: string) => void;
+  hasPermission?: (perm: string) => boolean;
+  lang: "en" | "ar";
+  t: (typeof adminTranslations)["en"]["employees"];
+}
+
+export default function AdminEmployeesView({
+  newEmployeeName,
+  setNewEmployeeName,
+  newEmployeeEmail,
+  setNewEmployeeEmail,
+  newEmployeeRole,
+  setNewEmployeeRole,
+  viewingEmployee,
+  setViewingEmployee,
+  editingEmployee,
+  setEditingEmployee,
+  isEditingEmployeeModalOpen,
+  setIsEditingEmployeeModalOpen,
+  employeeProfileActiveTab,
+  setEmployeeProfileActiveTab,
+  hasPermission,
+  branches,
+  rolesList,
+  departmentsList,
+  employeesList,
+  loadingRolesAndEmployees,
+  attendanceList,
+  loadingAttendance,
+  providers,
+  fetchProviders,
+  customerAvatars,
+  handleAvatarUpload,
+  handleAvatarRemove,
+  allServicesList,
+  session,
+  adminDbId,
+  adminEmail,
+  adminRole,
+  fetchHrAttendance,
+  handleDeleteEmployee,
+  handleToggleEmployeeActive,
+  handleResendInvitation,
+  fetchRolesAndEmployees,
+  getDoctorFirstReservationDate,
+  allReservations,
+  parseEgyptianNationalId,
+  lang,
+  t,
+}: AdminEmployeesViewProps) {
+  // DEC-113: the doctor-only sections (schedule, services, commissions) follow the chosen role's
+  // workspace, not the words "doc" in a role or department name.
+  const selectedRoleIsDoctor = rolesList.find((r: any) => r.name === newEmployeeRole)?.workspace === "doctor";
+  // DEC-114: an admin (or any standard role) can also be a doctor without changing their role.
+  const [newEmployeeIsAlsoDoctor, setNewEmployeeIsAlsoDoctor] = useState(false);
+  const isDoctorEmployee = selectedRoleIsDoctor || newEmployeeIsAlsoDoctor;
+  // Optional. When filled, POST /api/employees creates a confirmed account with this password
+  // instead of emailing an invite, so the hire can sign in straight away.
+  const [newEmployeePassword, setNewEmployeePassword] = useState("");
+  const [newEmployeePhone, setNewEmployeePhone] = useState("");
+  const [newEmployeeDepartment, setNewEmployeeDepartment] = useState("Receptionist");
+  const [newEmployeeShift, setNewEmployeeShift] = useState("Day");
+  const [newEmployeeShiftStart, setNewEmployeeShiftStart] = useState("09:00");
+  const [newEmployeeShiftEnd, setNewEmployeeShiftEnd] = useState("17:00");
+
+  // Superadmin-only: set a brand new password for an employee whose login no longer works.
+  // See PATCH /api/employees (newPassword) — the role check is enforced there, this is UI only.
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<any | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [showResetPasswordValue, setShowResetPasswordValue] = useState(false);
+  const [resetPasswordSaving, setResetPasswordSaving] = useState(false);
+  const STRONG_PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+  async function handleConfirmResetPassword() {
+    if (!resetPasswordTarget) return;
+    if (!STRONG_PASSWORD_RE.test(resetPasswordValue)) {
+      alert(
+        lang === "ar"
+          ? "لازم الباسورد يكون 8 حروف على الأقل ويحتوي على حرف كبير وحرف صغير ورقم ورمز."
+          : "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol."
+      );
+      return;
+    }
+    setResetPasswordSaving(true);
+    try {
+      const res = await fetch("/api/employees", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ id: resetPasswordTarget.id, newPassword: resetPasswordValue }),
+      });
+      if (res.ok) {
+        alert(
+          lang === "ar"
+            ? `تم تعيين باسورد جديد لـ ${resetPasswordTarget.name || resetPasswordTarget.email} بنجاح.`
+            : `New password set for ${resetPasswordTarget.name || resetPasswordTarget.email}.`
+        );
+        setResetPasswordTarget(null);
+        setResetPasswordValue("");
+        setShowResetPasswordValue(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || (lang === "ar" ? "فشل تعيين الباسورد الجديد." : "Failed to set the new password."));
+      }
+    } catch (err: any) {
+      alert((lang === "ar" ? "خطأ أثناء تعيين الباسورد: " : "Error setting the password: ") + err.message);
+    } finally {
+      setResetPasswordSaving(false);
+    }
+  }
+
+  const parseTime12Hour = (time12: string): string => {
+    if (!time12) return "09:00";
+    const clean = time12.trim().toUpperCase();
+    const match = clean.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+    if (!match) return "09:00";
+    const [_, hoursStr, minutesStr, ampm] = match;
+    let hours = parseInt(hoursStr, 10);
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+    const hoursFormatted = hours < 10 ? '0' + hours : hours;
+    return `${hoursFormatted}:${minutesStr}`;
+  };
+
+  const parseShiftString = (shiftStr: string): { start: string; end: string } => {
+    if (!shiftStr || shiftStr === "Day" || shiftStr === "Night") {
+      if (shiftStr === "Night") {
+        return { start: "20:00", end: "08:00" };
+      }
+      return { start: "09:00", end: "17:00" };
+    }
+    const parts = shiftStr.split(/\s+to\s+/i);
+    if (parts.length === 2) {
+      return {
+        start: parseTime12Hour(parts[0]),
+        end: parseTime12Hour(parts[1])
+      };
+    }
+    return { start: "09:00", end: "17:00" };
+  };
+
+  const formatTime12Hour = (time24: string): string => {
+    if (!time24) return "12:00 AM";
+    const [hoursStr, minutesStr] = time24.split(":");
+    let hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+    if (isNaN(hours) || isNaN(minutes)) return "12:00 AM";
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const minutesFormatted = minutes < 10 ? '0' + minutes : minutes;
+    const hoursFormatted = hours < 10 ? '0' + hours : hours;
+    return `${hoursFormatted}:${minutesFormatted} ${ampm}`;
+  };
+
+  const updateShiftState = (shiftStr: string) => {
+    setNewEmployeeShift(shiftStr);
+    const parsed = parseShiftString(shiftStr);
+    setNewEmployeeShiftStart(parsed.start);
+    setNewEmployeeShiftEnd(parsed.end);
+  };
+
+  const formatEmployeeDisplayHours = (shiftStr?: string): string => {
+    if (!shiftStr || shiftStr === "Day") return t.doctorSection.dayHours;
+    if (shiftStr === "Night") return t.doctorSection.nightHours;
+    if (shiftStr.includes("to") || shiftStr.includes("–") || shiftStr.includes("-")) {
+      const parts = shiftStr.split(/\s*(?:to|–|-)\s*/i);
+      if (parts.length === 2 && parts[0] && parts[1]) {
+        return `${formatTime12Hour(parseTime12Hour(parts[0]))} - ${formatTime12Hour(parseTime12Hour(parts[1]))}`;
+      }
+    }
+    return shiftStr;
+  };
+
+  const formatEmployeeShiftTypeDetails = (shiftStr?: string): string => {
+    if (!shiftStr || shiftStr === "Day") return t.doctorSection.shiftTypeDetails(false);
+    if (shiftStr === "Night") return t.doctorSection.shiftTypeDetails(true);
+    return shiftStr;
+  };
+
+  const formatEmployeeBreakTime = (shiftStr?: string): string => {
+    if (!shiftStr || shiftStr === "Day") return t.doctorSection.dayBreak;
+    if (shiftStr === "Night") return t.doctorSection.nightBreak;
+    return "01:00 PM - 02:00 PM";
+  };
+
+  const computeShiftSummary = (workingDays: Record<string, { isOpen: boolean; start: string; end: string; shifts?: Array<{ start: string; end: string }> }>): string => {
+    if (!workingDays || typeof workingDays !== 'object') return "Day";
+    const openDays = Object.values(workingDays).filter(d => d && d.isOpen);
+    if (openDays.length === 0) return "Off";
+    
+    const hasMultipleShifts = openDays.some(d => d.shifts && d.shifts.length > 1);
+    if (hasMultipleShifts) {
+      return "Multi-Shift Schedule";
+    }
+    
+    const first = openDays[0];
+    const firstStart = first.shifts?.[0]?.start || first.start || "09:00";
+    const firstEnd = first.shifts?.[0]?.end || first.end || "17:00";
+    const allSame = openDays.every(d => {
+      const s = d.shifts?.[0]?.start || d.start || "09:00";
+      const e = d.shifts?.[0]?.end || d.end || "17:00";
+      return s === firstStart && e === firstEnd;
+    });
+    
+    if (allSame) {
+      return `${formatTime12Hour(firstStart)} to ${formatTime12Hour(firstEnd)}`;
+    }
+    return "Multi-Shift Schedule";
+  };
+
+  const loadEmployeeWorkingSchedule = (emp: any, matchProv?: any, branchIdToUse?: string) => {
+    const targetBranch = branchIdToUse || emp?.branch_id || (matchProv?.workingDaysHours?.branch_ids?.[0]) || "";
+    const rawObj = matchProv?.workingDaysHours || emp?.working_days_hours || emp?.workingDaysHours;
+
+    let rawWdh: any = null;
+    if (rawObj && typeof rawObj === 'object') {
+      if (rawObj.branch_schedules) {
+        const bs = rawObj.branch_schedules;
+        rawWdh = (targetBranch && bs[targetBranch]?.in_person)
+          || (targetBranch && bs[targetBranch])
+          || (Object.keys(bs).length > 0 ? (bs[Object.keys(bs)[0]]?.in_person || bs[Object.keys(bs)[0]]) : null);
+      } else if (rawObj.in_person) {
+        rawWdh = rawObj.in_person;
+      } else {
+        rawWdh = rawObj;
+      }
+    }
+
+    if (rawWdh && typeof rawWdh === 'object' && ('Sunday' in rawWdh || 'Monday' in rawWdh)) {
+      const normalized: Record<string, { isOpen: boolean; start: string; end: string; shifts?: Array<{ start: string; end: string }> }> = {};
+      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      for (const d of days) {
+        const item = rawWdh[d] || { isOpen: d !== "Friday", start: "09:00", end: "17:00" };
+        const shifts = (item.shifts && Array.isArray(item.shifts) && item.shifts.length > 0)
+          ? item.shifts
+          : [{ start: item.start || "09:00", end: item.end || "17:00" }];
+        normalized[d] = {
+          isOpen: !!item.isOpen,
+          start: shifts[0]?.start || item.start || "09:00",
+          end: shifts[0]?.end || item.end || "17:00",
+          shifts: shifts
+        };
+      }
+      return normalized;
+    }
+
+    const parsed = parseShiftString(emp?.shift || "Day");
+    return {
+      Sunday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Monday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Tuesday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Wednesday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Thursday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Friday: { isOpen: false, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] },
+      Saturday: { isOpen: true, start: parsed.start, end: parsed.end, shifts: [{ start: parsed.start, end: parsed.end }] }
+    };
+  };
+
+  const handleShiftStartChange = (val: string) => {
+    setNewEmployeeShiftStart(val);
+    const formattedStart = formatTime12Hour(val);
+    const formattedEnd = formatTime12Hour(newEmployeeShiftEnd);
+    setNewEmployeeShift(`${formattedStart} to ${formattedEnd}`);
+  };
+
+  const handleShiftEndChange = (val: string) => {
+    setNewEmployeeShiftEnd(val);
+    const formattedStart = formatTime12Hour(newEmployeeShiftStart);
+    const formattedEnd = formatTime12Hour(val);
+    setNewEmployeeShift(`${formattedStart} to ${formattedEnd}`);
+  };
+  const buildAddress = (line1: string, line2: string, city: string, gov: string, postal: string, country: string) => {
+    return JSON.stringify({ line1, line2, city, governorate: gov, postalCode: postal, country });
+  };
+
+  const parseAddress = (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && "line1" in parsed) return parsed;
+    } catch {}
+    // Legacy plain-text fallback
+    return { line1: raw, line2: "", city: "", governorate: "", postalCode: "", country: "Egypt" };
+  };
+
+  const applyAddressToState = (raw: string | null | undefined) => {
+    const p = parseAddress(raw || "");
+    setNewEmployeeAddressLine1(p.line1 || "");
+    setNewEmployeeAddressLine2(p.line2 || "");
+    setNewEmployeeCity(p.city || "");
+    setNewEmployeeGovernorateProp(p.governorate || "");
+    setNewEmployeePostalCode(p.postalCode || "");
+    setNewEmployeeCountry(p.country || "Egypt");
+    setNewEmployeeAddress(raw || "");
+  };
+
+  const commitAddressState = (line1: string, line2: string, city: string, gov: string, postal: string, country: string) => {
+    setNewEmployeeAddress(buildAddress(line1, line2, city, gov, postal, country));
+  };
+  const [newEmployeeSalary, setNewEmployeeSalary] = useState("0");
+  const [newEmployeeNationalId, setNewEmployeeNationalId] = useState("");
+  const [newEmployeeNationalIdFront, setNewEmployeeNationalIdFront] = useState("");
+  const [newEmployeeNationalIdBack, setNewEmployeeNationalIdBack] = useState("");
+  const [newEmployeeAddress, setNewEmployeeAddress] = useState("");
+  const [newEmployeeAddressLine1, setNewEmployeeAddressLine1] = useState("");
+  const [newEmployeeAddressLine2, setNewEmployeeAddressLine2] = useState("");
+  const [newEmployeeCity, setNewEmployeeCity] = useState("");
+  const [newEmployeeGovernorateProp, setNewEmployeeGovernorateProp] = useState("");
+  const [newEmployeePostalCode, setNewEmployeePostalCode] = useState("");
+  const [newEmployeeCountry, setNewEmployeeCountry] = useState("Egypt");
+  const [newEmployeeBranchId, setNewEmployeeBranchId] = useState("");
+  const [newEmployeeContract, setNewEmployeeContract] = useState("");
+  const [newEmployeeContractName, setNewEmployeeContractName] = useState("");
+  const [newEmployeeAdditionalFiles, setNewEmployeeAdditionalFiles] = useState<Array<{ file: string, name: string }>>([]);
+  const [employeeFilterDepartment, setEmployeeFilterDepartment] = useState("All");
+  const [employeeFilterShift, setEmployeeFilterShift] = useState("All");
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
+  const [newEmployeeRequiredTargetAmount, setNewEmployeeRequiredTargetAmount] = useState("0");
+  const [newEmployeeBonusPercentage, setNewEmployeeBonusPercentage] = useState("0");
+  const [newEmployeeSpecialty, setNewEmployeeSpecialty] = useState("");
+  const [newEmployeeSelectedServices, setNewEmployeeSelectedServices] = useState<string[]>([]);
+  const [newEmployeeRating, setNewEmployeeRating] = useState("5");
+  const [newEmployeeCommissionType, setNewEmployeeCommissionType] = useState("none");
+  const [newEmployeeCommissionValue, setNewEmployeeCommissionValue] = useState("0");
+  const [newEmployeeCommissionBase, setNewEmployeeCommissionBase] = useState<"gross" | "net_of_materials">("gross");
+  const [newEmployeeCommissionFixedComponent, setNewEmployeeCommissionFixedComponent] = useState("0");
+  const [newEmployeeServiceCommissions, setNewEmployeeServiceCommissions] = useState<ServiceCommissionEntry[]>([]);
+  const [newEmployeeScheduleTab, setNewEmployeeScheduleTab] = useState<"in_person" | "online">("in_person");
+  const [newEmployeeBranchIds, setNewEmployeeBranchIds] = useState<string[]>([]);
+  // DEC-110: the branches the employee being edited already holds. An inactive one among them stays
+  // listed in the picker (instead of silently disappearing); empty when adding a new employee.
+  const [newEmployeeOriginalBranchIds, setNewEmployeeOriginalBranchIds] = useState<string[]>([]);
+  const [newEmployeeWorkingDaysHours, setNewEmployeeWorkingDaysHours] = useState<Record<string, { isOpen: boolean; start: string; end: string; shifts?: Array<{ start: string; end: string }> }>>({
+    Sunday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Monday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Tuesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Wednesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Thursday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Friday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Saturday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] }
+  });
+  const [newEmployeeOnlineWorkingDaysHours, setNewEmployeeOnlineWorkingDaysHours] = useState<Record<string, { isOpen: boolean; start: string; end: string; shifts?: Array<{ start: string; end: string }> }>>({
+    Sunday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Monday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Tuesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Wednesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Thursday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Friday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+    Saturday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] }
+  });
+  const [newEmployeeBranchSchedules, setNewEmployeeBranchSchedules] = useState<Record<string, { in_person: any; online: any }>>({});
+  const [newEmployeeSelectedScheduleBranchId, setNewEmployeeSelectedScheduleBranchId] = useState<string>("");
+  function checkShiftOverlaps(
+    branchIds: string[],
+    branchSchedules: Record<string, { in_person: any; online: any }>,
+    currentActiveBranchId: string,
+    currentInPerson: any,
+    currentOnline: any,
+    branchList: any[]
+  ): { hasOverlap: boolean; message?: string } {
+    const fullBranchSchedules: Record<string, { in_person: any; online: any }> = { ...branchSchedules };
+    if (currentActiveBranchId) {
+      fullBranchSchedules[currentActiveBranchId] = {
+        in_person: currentInPerson,
+        online: currentOnline
+      };
+    }
+
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    function timeToMin(tStr: string): number {
+      if (!tStr) return 0;
+      const [h, m] = tStr.split(":").map(Number);
+      return (h || 0) * 60 + (m || 0);
+    }
+
+    for (const day of days) {
+      const allActiveShifts: Array<{
+        branchId: string;
+        branchName: string;
+        kind: ShiftKind;
+        type: string;
+        startMin: number;
+        endMin: number;
+        startStr: string;
+        endStr: string;
+      }> = [];
+
+      for (const bId of branchIds) {
+        const bSched = fullBranchSchedules[bId];
+        if (!bSched) continue;
+        const bObj = branchList.find((b) => b.id === bId);
+        const bName = bObj ? (bObj.name_en || bObj.name_ar || bId) : "Branch";
+
+        // 1. In-Clinic shifts
+        const inPersonDay = bSched.in_person?.[day];
+        if (inPersonDay && inPersonDay.isOpen) {
+          const shifts = (inPersonDay.shifts && inPersonDay.shifts.length > 0)
+            ? inPersonDay.shifts
+            : [{ start: inPersonDay.start || "09:00", end: inPersonDay.end || "17:00" }];
+
+          for (const s of shifts) {
+            const sMin = timeToMin(s.start);
+            const eMin = timeToMin(s.end);
+            if (eMin <= sMin) {
+              return {
+                hasOverlap: true,
+                message: t.doctorSection.overlapInvalidDuration(t.dayNames[day as keyof typeof t.dayNames] || day, bName, t.doctorSection.inClinic, s.end, s.start)
+              };
+            }
+            allActiveShifts.push({
+              branchId: bId,
+              branchName: bName,
+              kind: 'in_clinic',
+              type: t.doctorSection.inClinic,
+              startMin: sMin,
+              endMin: eMin,
+              startStr: s.start,
+              endStr: s.end
+            });
+          }
+        }
+
+        // 2. Online Consultations shifts
+        const onlineDay = bSched.online?.[day];
+        if (onlineDay && onlineDay.isOpen) {
+          const shifts = (onlineDay.shifts && onlineDay.shifts.length > 0)
+            ? onlineDay.shifts
+            : [{ start: onlineDay.start || "09:00", end: onlineDay.end || "17:00" }];
+
+          for (const s of shifts) {
+            const sMin = timeToMin(s.start);
+            const eMin = timeToMin(s.end);
+            if (eMin <= sMin) {
+              return {
+                hasOverlap: true,
+                message: t.doctorSection.overlapInvalidDuration(t.dayNames[day as keyof typeof t.dayNames] || day, bName, t.doctorSection.onlineConsultations, s.end, s.start)
+              };
+            }
+            allActiveShifts.push({
+              branchId: bId,
+              branchName: bName,
+              kind: 'online',
+              type: t.doctorSection.onlineConsultations,
+              startMin: sMin,
+              endMin: eMin,
+              startStr: s.start,
+              endStr: s.end
+            });
+          }
+        }
+      }
+
+      // Check pairwise overlaps on this day
+      for (let i = 0; i < allActiveShifts.length; i++) {
+        for (let j = i + 1; j < allActiveShifts.length; j++) {
+          const s1 = allActiveShifts[i];
+          const s2 = allActiveShifts[j];
+
+          if (mayOverlap(s1, s2)) continue;
+          if (s1.startMin < s2.endMin && s1.endMin > s2.startMin) {
+            return {
+              hasOverlap: true,
+              message: t.doctorSection.overlapDetected(
+                t.dayNames[day as keyof typeof t.dayNames] || day,
+                s1.branchName,
+                s1.type,
+                s1.startStr,
+                s1.endStr,
+                s2.branchName,
+                s2.type,
+                s2.startStr,
+                s2.endStr
+              )
+            };
+          }
+        }
+      }
+    }
+
+    return { hasOverlap: false };
+  }
+  function handleEmployeeBranchScheduleTabChange(targetBranchId: string) {
+    if (!targetBranchId || targetBranchId === (newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0])) return;
+    const currentBranchId = newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0];
+
+    const updatedSchedules = {
+      ...newEmployeeBranchSchedules,
+      [currentBranchId]: {
+        in_person: newEmployeeWorkingDaysHours,
+        online: newEmployeeOnlineWorkingDaysHours
+      }
+    };
+    setNewEmployeeBranchSchedules(updatedSchedules);
+
+    const defaultDaySched = {
+      Sunday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Monday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Tuesday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Wednesday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Thursday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Friday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+      Saturday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] }
+    };
+
+    const targetSched = updatedSchedules[targetBranchId] || {
+      in_person: defaultDaySched,
+      online: defaultDaySched
+    };
+
+    setNewEmployeeWorkingDaysHours(targetSched.in_person || defaultDaySched);
+    setNewEmployeeOnlineWorkingDaysHours(targetSched.online || defaultDaySched);
+    setNewEmployeeSelectedScheduleBranchId(targetBranchId);
+  }
+  // DEC-110: single place that keeps `newEmployeeBranchIds` (ordered, first = primary) and the
+  // legacy `newEmployeeBranchId` (the primary) in step.
+  const applyBranchSelection = (ids: string[]) => {
+    setNewEmployeeBranchIds(ids);
+    setNewEmployeeBranchId(ids[0] || "");
+  };
+  function handleBranchSelectionChange(nextIds: string[]) {
+    const activeId = newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0];
+    applyBranchSelection(nextIds);
+    // The branch whose schedule is open on screen was just unticked: move to another ticked one.
+    if (nextIds.length > 0 && activeId && !nextIds.includes(activeId)) {
+      handleEmployeeBranchScheduleTabChange(nextIds[0]);
+    }
+  }
+  const computeEditBranchIds = (emp: any, matchProv?: any): string[] => {
+    const providerIds = Array.isArray(matchProv?.workingDaysHours?.branch_ids) ? matchProv.workingDaysHours.branch_ids : [];
+    return resolveEditBranchSelection(emp, branches, providerIds);
+  };
+  const [viewingEmployeeNotes, setViewingEmployeeNotes] = useState<any[]>([]);
+  const [loadingEmployeeNotes, setLoadingEmployeeNotes] = useState(false);
+  const [viewingEmployeeBookings, setViewingEmployeeBookings] = useState<any[]>([]);
+  const [loadingEmployeeBookings, setLoadingEmployeeBookings] = useState(false);
+  const [newEmployeeNoteText, setNewEmployeeNoteText] = useState("");
+  const [attendanceInsightMonth, setAttendanceInsightMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
+  function handleExportAttendanceInsights(employee: any, monthStr: string, records: any[]) {
+    if (!employee) return;
+    const fileName = `${t.csvExport.fileNamePrefix}_${(employee.name || t.profile.staffMemberFallback).replace(/\s+/g, "_")}_${monthStr}.csv`;
+    
+    let csv = `${t.csvExport.attendanceReport}\n`;
+    csv += `${t.csvExport.employee},${employee.name || t.profile.staffMemberFallback}\n`;
+    csv += `${t.csvExport.staffId},${employee.employee_id || t.csvExport.docNotAvailable}\n`;
+    csv += `${t.csvExport.department},${employee.department || t.csvExport.docNotAvailable}\n`;
+    csv += `${t.csvExport.role},${employee.role_name || t.csvExport.docNotAvailable}\n`;
+    csv += `${t.csvExport.month},${monthStr}\n\n`;
+
+    csv += `${t.csvExport.date},${t.csvExport.shift},${t.csvExport.scheduledIn},${t.csvExport.scheduledOut},${t.csvExport.actualCheckIn},${t.csvExport.actualCheckOut},${t.csvExport.status},${t.csvExport.workedMin},${t.csvExport.lateMin},${t.csvExport.earlyLeaveMin},${t.csvExport.overtimeMin},${t.csvExport.midShiftLeaveMin}\n`;
+
+    records.forEach((r: any) => {
+      const inTime = r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString("en-US") : '—';
+      const outTime = r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString("en-US") : '—';
+      csv += `"${r.date}","${employee.shift || t.csvExport.fallbackShift}","${r.scheduled_in || t.csvExport.fallbackScheduledIn}","${r.scheduled_out || t.csvExport.fallbackScheduledOut}","${inTime}","${outTime}","${r.status || t.csvExport.fallbackStatus}",${r.worked_minutes || 0},${r.late_minutes || 0},${r.early_leave_minutes || 0},${r.overtime_minutes || 0},${r.combined_mid_shift_duration_minutes || 0}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  useEffect(() => {
+    if (!viewingEmployee) {
+      setViewingEmployeeNotes([]);
+      setViewingEmployeeBookings([]);
+      return;
+    }
+
+    const loadRefData = async () => {
+      setLoadingEmployeeNotes(true);
+      setLoadingEmployeeBookings(true);
+      try {
+        const [notesRes, bookingsRes] = await Promise.all([
+          fetch(`/api/employees/notes?employeeId=${viewingEmployee.id}`, {
+            headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          }),
+          fetch(`/api/reservations?createdByEmployeeId=${viewingEmployee.id}`, {
+            headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+          })
+        ]);
+
+        if (notesRes.ok) {
+          const notes = await notesRes.json();
+          setViewingEmployeeNotes(notes || []);
+        }
+        if (bookingsRes.ok) {
+          const bookings = await bookingsRes.json();
+          setViewingEmployeeBookings(bookings || []);
+        }
+        fetchHrAttendance();
+      } catch (err) {
+        console.error("Failed to load employee profile data:", err);
+      } finally {
+        setLoadingEmployeeNotes(false);
+        setLoadingEmployeeBookings(false);
+      }
+    };
+
+    loadRefData();
+  }, [viewingEmployee]);
+  function handlePrintEmployeeProfile(emp: any) {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert(t.form.popupBlocked);
+      return;
+    }
+
+    const addedOn = emp.created_at
+      ? new Date(emp.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+      : "—";
+
+    const monthlySalary = Number(emp.salary || 0);
+    const dailySalary = Math.round(monthlySalary / 20);
+    const hourlySalary = (monthlySalary / (20 * 8)).toFixed(2);
+    
+    const addressDetails = emp.address || "—";
+    
+    const familyName = emp.name ? emp.name.split(" ").slice(-1)[0] : "Saif";
+    const emergencyName = `Ahmed ${familyName}`;
+    const emergencyPhone = "01098765432";
+    
+    const notesStr = "Excellent communication skills and very cooperative.";
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${t.printProfile.title(emp.name || t.profile.staffMemberFallback)}</title>
+        <style>
+          body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--cr-dark);
+            margin: 0;
+            padding: 40px;
+            background-color: #fff;
+          }
+          .letterhead {
+            text-align: center;
+            border-bottom: 2px solid var(--cr-primary);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .logo {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: var(--cr-primary);
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .tagline {
+            font-size: 12px;
+            color: #8A9A81;
+            margin: 5px 0 0 0;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+          }
+          .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+          }
+          .profile-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--cr-dark);
+            margin: 0;
+          }
+          .profile-subtitle {
+            font-size: 14px;
+            color: var(--color-brand-secondary);
+            margin: 2px 0 0 0;
+          }
+          .section {
+            margin-bottom: 25px;
+            border: 1px solid #E6E9EB;
+            border-radius: 12px;
+            padding: 18px;
+          }
+          .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--cr-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid #E6E9EB;
+            padding-bottom: 8px;
+            margin-top: 0;
+            margin-bottom: 15px;
+          }
+          .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 30px;
+          }
+          .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px 30px;
+          }
+          .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+          }
+          .label {
+            font-weight: bold;
+            color: var(--color-brand-secondary);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            margin-bottom: 3px;
+          }
+          .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--cr-dark);
+          }
+          .value.green {
+            color: #15803d;
+          }
+          .footer {
+            margin-top: 60px;
+            border-top: 1px solid #E6E9EB;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .clinic-info {
+            font-size: 10px;
+            color: #8A9A81;
+            line-height: 1.5;
+          }
+          @media print {
+            body { padding: 0; }
+            @page { margin: 15mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="letterhead">
+          <h1 class="logo">${t.printProfile.letterhead}</h1>
+          <p class="tagline">${t.printProfile.tagline}</p>
+        </div>
+
+        <div class="profile-header">
+          <div>
+            <h2 class="profile-name">${emp.name || t.printProfile.staffMember}</h2>
+            <p class="profile-subtitle">${t.printProfile.subtitle}</p>
+          </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.basicInfo}</h3>
+          <div class="grid-3">
+            <div>
+              <div class="label">{t.profile.employeeId}</div>
+              <div class="value">${emp.employee_id || t.printProfile.docNotAvailable}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.fullName}</div>
+              <div class="value">${emp.name || t.printProfile.docNotAvailable}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.email}</div>
+              <div class="value">${emp.email || t.printProfile.docNotAvailable}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.phone}</div>
+              <div class="value">${emp.phone || t.printProfile.docNotAvailable}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.role}</div>
+              <div class="value">${emp.role_name || t.printProfile.docNotAvailable}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.accountStatus}</div>
+              <div class="value">${emp.email_confirmed_at ? t.profile.statusActive : t.profile.statusPending}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.department}</div>
+              <div class="value">${emp.department || t.table.fallbackDept}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.addedOn}</div>
+              <div class="value">${addedOn}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Work Information -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.workInfo}</h3>
+          <div class="grid-3">
+            <div>
+              <div class="label">{t.profile.jobTitle}</div>
+              <div class="value">${emp.role_name || t.printProfile.receptionist}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.shiftType}</div>
+              <div class="value">${t.profile.shiftLabel(emp.shift)}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.shiftDetails}</div>
+              <div class="value">${formatEmployeeShiftTypeDetails(emp.shift)}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.workingDays}</div>
+              <div class="value">${t.profile.workingDaysDefault}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.workingHours}</div>
+              <div class="value">${formatEmployeeDisplayHours(emp.shift)}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.breakTime}</div>
+              <div class="value">${formatEmployeeBreakTime(emp.shift)}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.monthlySalary}</div>
+              <div class="value">${monthlySalary.toLocaleString("en-US")}${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.dailySalary}</div>
+              <div class="value">${dailySalary.toLocaleString("en-US")}${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.hourlySalary}</div>
+              <div class="value">${hourlySalary}${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.employmentType}</div>
+              <div class="value">${t.profile.fullTime}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.joiningDate}</div>
+              <div class="value">${addedOn}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.probationPeriod}</div>
+              <div class="value">${t.profile.completed}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payroll Information -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.payrollInfo}</h3>
+          <div class="grid-3">
+            <div>
+              <div class="label">{t.profile.basicSalary}</div>
+              <div class="value">${monthlySalary.toLocaleString("en-US")}${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.bonuses}</div>
+              <div class="value">200${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.deductions}</div>
+              <div class="value">150${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.netSalary}</div>
+              <div class="value green">${(monthlySalary + 200 - 150).toLocaleString("en-US")}${t.printProfile.currencySuffix}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.paymentStatus}</div>
+              <div class="value">${t.profile.paid}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.lastPaymentDate}</div>
+              <div class="value">May 5, 2026</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Information -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.attendanceInfo}</h3>
+          <div class="grid-3">
+            <div>
+              <div class="label">${t.profile.checkIn}</div>
+              <div class="value">${emp.shift === "Night" ? "04:58 PM" : "08:58 AM"}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.checkOut}</div>
+              <div class="value">${emp.shift === "Night" ? "01:02 AM" : "05:02 PM"}</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.totalWorkingHours}</div>
+              <div class="value">8h 4m</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.lateDays}</div>
+              <div class="value">1 Day</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.absenceDays}</div>
+              <div class="value">0 Day</div>
+            </div>
+            <div>
+              <div class="label">{t.profile.overtimeHours}</div>
+              <div class="value">2h 15m</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Information -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.contactInfo}</h3>
+          <div class="grid-2">
+            <div>
+              <div class="label">{t.profile.homeAddress}</div>
+              <div class="value">${addressDetails}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.emergencyName}</div>
+              <div class="value">${emergencyName}</div>
+            </div>
+            <div>
+              <div class="label">${t.profile.emergencyPhone}</div>
+              <div class="value">${emergencyPhone}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="section">
+          <h3 class="section-title">${t.printProfile.internalNotes}</h3>
+          <div class="value" style="font-weight: normal; font-style: italic;">
+            ${notesStr}
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="clinic-info">
+            <strong>${CLIENT.nameShort} Clinic Cairo</strong><br/>
+            El-Ghad St, Pyramids, Giza<br/>
+            Tel: +20 100 000 0000 | info@revera.com
+          </div>
+          <div style="font-size: 11px; color: var(--color-brand-secondary);">
+            Generated on: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  const handleOpenEditEmployee = (emp: any) => {
+    const matchProv = providers.find(p => (p.name && emp.name && p.name.trim().toLowerCase() === emp.name.trim().toLowerCase()) || (p.phone && emp.phone && p.phone === emp.phone));
+    const effectiveSalary = matchProv ? (matchProv.fixedSalary ?? matchProv.fixed_salary ?? emp.salary ?? 0) : (emp.salary || 0);
+    setEditingEmployee(emp);
+    setNewEmployeeName(emp.name || "");
+    setNewEmployeeEmail(emp.email || "");
+    setNewEmployeeRole(emp.role_name || "");
+    setNewEmployeePhone(emp.phone || "");
+    setNewEmployeeIsAlsoDoctor(emp.is_also_doctor === true);
+    setNewEmployeeDepartment(emp.department || "Reception");
+    updateShiftState(emp.shift || "Day");
+    setNewEmployeeSalary(String(effectiveSalary));
+    setNewEmployeeNationalId(emp.national_id || "");
+    setNewEmployeeNationalIdFront(emp.national_id_front || "");
+    setNewEmployeeNationalIdBack(emp.national_id_back || "");
+    applyAddressToState(emp.address || "");
+    const rawContract = emp.contract_file || "";
+    let contractUrl = "";
+    let additionalList: any[] = [];
+    try {
+      if (rawContract.startsWith('{')) {
+        const parsed = JSON.parse(rawContract);
+        contractUrl = parsed.contract || "";
+        additionalList = parsed.additional || [];
+      } else {
+        contractUrl = rawContract;
+      }
+    } catch (e) {
+      contractUrl = rawContract;
+    }
+    setNewEmployeeContract(contractUrl);
+    setNewEmployeeContractName(emp.contract_file_name || "");
+    setNewEmployeeAdditionalFiles(additionalList);
+    setNewEmployeeRequiredTargetAmount(String(emp.requiredTargetAmount || 0));
+    setNewEmployeeBonusPercentage(String(emp.bonusPercentage || 0));
+    setNewEmployeeSpecialty(matchProv?.specialty || "");
+    setNewEmployeeSelectedServices(matchProv?.services || []);
+    setNewEmployeeRating(String(matchProv?.rating || 5));
+    setNewEmployeeCommissionType(matchProv?.commissionType || "none");
+    setNewEmployeeCommissionValue(String(matchProv?.commissionValue || 0));
+    setNewEmployeeCommissionBase((matchProv?.commissionBase as "gross" | "net_of_materials") || "gross");
+    setNewEmployeeCommissionFixedComponent(String(matchProv?.commissionFixedComponent || 0));
+    setNewEmployeeServiceCommissions(Array.isArray(matchProv?.serviceCommissions) ? matchProv.serviceCommissions : []);
+    const bIds = computeEditBranchIds(emp, matchProv);
+    applyBranchSelection(bIds);
+    setNewEmployeeOriginalBranchIds(getEmployeeBranchIds(emp));
+    setNewEmployeeSelectedScheduleBranchId(bIds[0] || "");
+    const sched = loadEmployeeWorkingSchedule(emp, matchProv, bIds[0]);
+    setNewEmployeeWorkingDaysHours(sched);
+    const onlineSched = (bIds[0] && matchProv?.workingDaysHours?.branch_schedules?.[bIds[0]]?.online) || matchProv?.workingDaysHours?.online || sched;
+    setNewEmployeeOnlineWorkingDaysHours(onlineSched);
+    const existingBranchSchedules = emp?.working_days_hours?.branch_schedules
+      || emp?.workingDaysHours?.branch_schedules
+      || matchProv?.workingDaysHours?.branch_schedules
+      || (bIds[0] ? { [bIds[0]]: { in_person: sched, online: onlineSched } } : {});
+    setNewEmployeeBranchSchedules(existingBranchSchedules);
+    setIsEditingEmployeeModalOpen(true);
+  };
+
+  const filteredEmployees = employeesList.filter((emp: any) => {
+    const isSuperadmin =
+      emp.role_name === 'superadmin' ||
+      emp.employee_id === 'superadmin';
+    if (isSuperadmin) return false;
+    if (employeeFilterDepartment !== "All" && emp.department !== employeeFilterDepartment) return false;
+    if (employeeFilterShift !== "All") {
+      const empShift = (emp.shift || "").toLowerCase();
+      const filterVal = employeeFilterShift.toLowerCase();
+      if (filterVal === "day") {
+        if (!empShift.includes("day") && !empShift.includes("am") && (empShift.includes("night") || empShift.includes("pm"))) {
+          return false;
+        }
+      } else if (filterVal === "night") {
+        if (!empShift.includes("night") && !empShift.includes("pm")) {
+          return false;
+        }
+      } else if (emp.shift !== employeeFilterShift) {
+        return false;
+      }
+    }
+    if (employeeSearchQuery.trim()) {
+      const q = employeeSearchQuery.toLowerCase();
+      if (
+        !emp.name?.toLowerCase().includes(q) &&
+        !emp.email?.toLowerCase().includes(q) &&
+        !emp.phone?.toLowerCase().includes(q) &&
+        !emp.employee_id?.toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-6 animate-fadeIn" dir={lang === "ar" ? "rtl" : "ltr"}>
+      {!viewingEmployee && !isEditingEmployeeModalOpen && (
+        <>
+          {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-4xl font-semibold text-[var(--cr-dark)]">{t.heading}</h2>
+          <p className="mt-2 text-sm text-[var(--color-brand-secondary)]">{t.subtitle}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setEditingEmployee(null);
+            setNewEmployeeName("");
+            setNewEmployeeEmail("");
+            // No invented role name: the select is required, so an empty default makes the person choose.
+            setNewEmployeeRole(rolesList.find((r: any) => r.workspace !== "doctor")?.name || "");
+            setNewEmployeePassword("");
+            setNewEmployeePhone("");
+            setNewEmployeeIsAlsoDoctor(false);
+            setNewEmployeeDepartment(departmentsList[0] || "");
+            updateShiftState("Day");
+            setNewEmployeeSalary("0");
+            setNewEmployeeNationalId("");
+            setNewEmployeeNationalIdFront("");
+            setNewEmployeeNationalIdBack("");
+            applyAddressToState("");
+            setNewEmployeeContract("");
+            setNewEmployeeContractName("");
+            setNewEmployeeAdditionalFiles([]);
+            setNewEmployeeRequiredTargetAmount("0");
+            setNewEmployeeBonusPercentage("0");
+            setNewEmployeeSpecialty("");
+            setNewEmployeeSelectedServices([]);
+            setNewEmployeeRating("5");
+            setNewEmployeeCommissionType("none");
+            setNewEmployeeCommissionValue("0");
+            setNewEmployeeCommissionBase("gross");
+            setNewEmployeeCommissionFixedComponent("0");
+            setNewEmployeeServiceCommissions([]);
+            setNewEmployeeScheduleTab("in_person");
+            // DEC-110: only an ACTIVE branch may be pre-ticked for a new employee.
+            const defaultBranchId = branchesOfferedFor(branches)[0]?.id || "";
+            applyBranchSelection(defaultBranchId ? [defaultBranchId] : []);
+            setNewEmployeeOriginalBranchIds([]);
+            setNewEmployeeSelectedScheduleBranchId(defaultBranchId);
+            const defaultDays = {
+              Sunday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Monday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Tuesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Wednesday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Thursday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Friday: { isOpen: false, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] },
+              Saturday: { isOpen: true, start: "09:00", end: "17:00", shifts: [{ start: "09:00", end: "17:00" }] }
+            };
+            setNewEmployeeBranchSchedules(defaultBranchId ? { [defaultBranchId]: { in_person: defaultDays, online: defaultDays } } : {});
+            setNewEmployeeWorkingDaysHours(defaultDays);
+            setNewEmployeeOnlineWorkingDaysHours(defaultDays);
+            setIsEditingEmployeeModalOpen(true);
+          }}
+          className={`${(!hasPermission || hasPermission("employees.create")) ? "flex" : "hidden"} rounded-2xl bg-[var(--cr-primary)] px-5 py-3 text-sm font-bold text-[var(--color-brand-light)] hover:bg-[#2e3a26] transition items-center gap-2 shadow-md shrink-0`}
+        >
+          <Plus size={16} />
+          {t.addEmployeeBtn}
+        </button>
+      </div>
+    
+      {/* Filters & Search */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 bg-white p-5 rounded-3xl border border-[var(--cr-primary)]/10 shadow-sm">
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+            <Search size={15} />
+          </span>
+          <input
+            type="text"
+            placeholder={t.searchPlaceholder}
+            value={employeeSearchQuery}
+            onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+            className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] pl-10 pr-4 py-2.5 text-xs font-semibold text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+          />
+        </div>
+        <select
+          value={employeeFilterDepartment}
+          onChange={(e) => setEmployeeFilterDepartment(e.target.value)}
+          className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+        >
+          <option value="All">{t.allDepartments}</option>
+          {departmentsList.map((dept) => (
+            <option key={dept} value={dept}>{dept}</option>
+          ))}
+        </select>
+        <select
+          value={employeeFilterShift}
+          onChange={(e) => setEmployeeFilterShift(e.target.value)}
+          className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+        >
+          <option value="All">{t.allShifts}</option>
+          <option value="Day">{t.dayShift}</option>
+          <option value="Night">{t.nightShift}</option>
+        </select>
+        <div className="flex items-center justify-end text-xs font-semibold text-[var(--color-brand-secondary)] px-2">
+          {loadingRolesAndEmployees ? t.loading : t.totalEmployees(employeesList.filter((emp: any) => emp.role_name !== 'superadmin' && emp.employee_id !== 'superadmin').length)}
+        </div>
+      </div>
+    
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-[var(--cr-primary)]/10 bg-white shadow-sm [scrollbar-width:thin]">
+        <table className="w-full min-w-[800px] text-sm">
+          <thead>
+            <tr className="border-b border-[var(--cr-primary)]/10 bg-[#F9F9F7]">
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.employeeInfo}</th>
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.phone}</th>
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.department}</th>
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.branch}</th>
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.shift}</th>
+              <th className="px-5 py-3 text-start text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.salary}</th>
+              <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.status}</th>
+              <th className="px-5 py-3 text-end text-[11px] font-semibold uppercase tracking-widest text-[var(--color-brand-secondary)] whitespace-nowrap">{t.table.actions}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--cr-primary)]/5">
+            {loadingRolesAndEmployees ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-sm text-[var(--color-brand-secondary)] font-medium">
+                  {t.table.loadingEmployees}
+                </td>
+              </tr>
+            ) : filteredEmployees.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-sm text-[var(--color-brand-secondary)] font-medium">
+                  {t.table.noMatches}
+                </td>
+              </tr>
+            ) : (
+              filteredEmployees.map((emp: any) => {
+                const isSuperadmin = emp.employee_id === "superadmin";
+                const matchProv = providers.find(p => (p.name && emp.name && p.name.trim().toLowerCase() === emp.name.trim().toLowerCase()) || (p.phone && emp.phone && p.phone === emp.phone));
+                const effectiveSalary = matchProv ? (matchProv.fixedSalary ?? matchProv.fixed_salary ?? emp.salary ?? 0) : (emp.salary || 0);
+                return (
+                  <tr key={emp.id} className={`transition hover:bg-[#F9F9F7] ${emp.is_active === false ? "opacity-60" : ""}`}>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-xs font-bold font-serif overflow-hidden shrink-0">
+                          {customerAvatars[emp.id || emp.employee_id] || emp.photo_url || emp.avatar_url ? (
+                            <img src={customerAvatars[emp.id || emp.employee_id] || emp.photo_url || emp.avatar_url} alt={emp.name} className="h-full w-full object-cover" />
+                          ) : (
+                            <span>{emp.name ? emp.name.charAt(0).toUpperCase() : "E"}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-[var(--cr-dark)] text-sm">{emp.name || <span className="italic text-gray-400">{t.table.noName}</span>}</div>
+                          <div className="text-xs text-[var(--color-brand-secondary)]">{emp.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap text-xs font-medium text-[var(--cr-dark)]">{emp.phone || t.table.noPhone}</td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className="inline-block rounded-lg bg-[var(--cr-accent)]/15 px-2.5 py-1 text-xs font-semibold text-[#8B7544]">
+                        {emp.department || t.table.fallbackDept}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className="inline-block rounded-lg bg-[var(--cr-primary)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--cr-primary)]">
+                        {formatEmployeeBranchNames(emp, branches, lang) || t.table.noBranch}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className={`inline-block rounded-lg px-2.5 py-1 text-xs font-semibold ${(emp.shift || "").toLowerCase().includes("night") || (emp.shift || "").toLowerCase().includes("pm") ? "bg-indigo-50 text-indigo-700 border border-indigo-150" : "bg-amber-50 text-amber-700 border border-amber-150"}`}>
+                        {t.profile.shiftLabel(emp.shift)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-[var(--cr-dark)]">
+                      {Number(effectiveSalary).toLocaleString("en-US") + t.table.salarySuffix}
+                    </td>
+                    <td className="px-5 py-4 text-center whitespace-nowrap">
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-bold border ${emp.is_active === false ? "bg-slate-100 text-slate-600 border-slate-200" : emp.email_confirmed_at ? "bg-green-50 text-green-700 border-green-200/50" : "bg-amber-50 text-amber-700 border-amber-200/50"}`}>
+                        {emp.is_active === false ? t.table.inactiveBadge : emp.email_confirmed_at ? t.table.activeBadge : t.table.invitedBadge}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {(!hasPermission || hasPermission("employees.action_view_info")) && (
+                          <button
+                            type="button"
+                            onClick={() => setViewingEmployee(emp)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)]"
+                            title={t.actions.viewInfo}
+                          >
+                            <Info size={14} />
+                          </button>
+                        )}
+                        {!isSuperadmin && (
+                          <>
+                            {(!hasPermission || hasPermission("employees.action_edit")) && (
+                              <EmployeeActiveSwitch
+                                active={emp.is_active !== false}
+                                disabled={Boolean(adminEmail) && String(emp.email || "").toLowerCase() === String(adminEmail).toLowerCase()}
+                                label={emp.is_active === false ? t.actions.activate : t.actions.deactivate}
+                                onChange={(next) => handleToggleEmployeeActive(emp.id, next)}
+                              />
+                            )}
+                            {(!hasPermission || hasPermission("employees.action_edit")) && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditEmployee(emp)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)]"
+                                title={t.actions.editEmployee}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                            )}
+                            {adminRole === "superadmin" && (
+                              <button
+                                type="button"
+                                onClick={() => { setResetPasswordTarget(emp); setResetPasswordValue(""); setShowResetPasswordValue(false); }}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--cr-primary)]/15 text-[var(--color-brand-secondary)] transition hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)]"
+                                title={lang === "ar" ? "تعيين باسورد جديد" : "Set New Password"}
+                              >
+                                <Lock size={13} />
+                              </button>
+                            )}
+                            {emp.is_active !== false && !emp.email_confirmed_at && (!hasPermission || hasPermission("employees.action_resend_invite")) && (
+                              <button
+                                type="button"
+                                onClick={() => handleResendInvitation(emp.id)}
+                                className="inline-flex h-7 px-2.5 items-center justify-center rounded-full border border-amber-200/60 bg-amber-50/50 text-xs font-semibold text-amber-700 transition hover:bg-amber-100/80"
+                                title={t.actions.resend}
+                              >
+                                {t.actions.resend}
+                              </button>
+                            )}
+                            {(!hasPermission || hasPermission("employees.action_delete")) && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteEmployee(emp.id)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200/60 text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                                title={t.actions.revoke}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Adaptive Cards */}
+      <div className="block md:hidden space-y-3">
+        {loadingRolesAndEmployees ? (
+          <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-8 text-center text-sm text-[var(--color-brand-secondary)] font-medium">
+            {t.table.loadingEmployees}
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-8 text-center text-sm text-[var(--color-brand-secondary)] font-medium">
+            {t.table.noMatches}
+          </div>
+        ) : (
+          filteredEmployees.map((emp: any) => {
+            const isSuperadmin = emp.employee_id === "superadmin";
+            const matchProv = providers.find(p => (p.name && emp.name && p.name.trim().toLowerCase() === emp.name.trim().toLowerCase()) || (p.phone && emp.phone && p.phone === emp.phone));
+            const effectiveSalary = matchProv ? (matchProv.fixedSalary ?? matchProv.fixed_salary ?? emp.salary ?? 0) : (emp.salary || 0);
+
+            return (
+              <div key={emp.id} className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 shadow-xs space-y-3">
+                {/* Header: Avatar, Name/Email, Status */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-sm font-bold font-serif overflow-hidden shrink-0">
+                      {customerAvatars[emp.id || emp.employee_id] || emp.photo_url || emp.avatar_url ? (
+                        <img src={customerAvatars[emp.id || emp.employee_id] || emp.photo_url || emp.avatar_url} alt={emp.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span>{emp.name ? emp.name.charAt(0).toUpperCase() : "E"}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-[var(--cr-dark)] text-sm truncate">{emp.name || <span className="italic text-gray-400">{t.table.noName}</span>}</div>
+                      <div className="text-xs text-[var(--color-brand-secondary)] truncate">{emp.email}</div>
+                    </div>
+                  </div>
+                  <span className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold border ${emp.is_active === false ? "bg-slate-100 text-slate-600 border-slate-200" : emp.email_confirmed_at ? "bg-green-50 text-green-700 border-green-200/50" : "bg-amber-50 text-amber-700 border-amber-200/50"}`}>
+                    {emp.is_active === false ? t.table.inactiveBadge : emp.email_confirmed_at ? t.table.activeBadge : t.table.invitedBadge}
+                  </span>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--cr-primary)]/5">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.table.department}</span>
+                    <span className="inline-block rounded-lg bg-[var(--cr-accent)]/15 px-2 py-0.5 text-xs font-semibold text-[#8B7544] truncate max-w-full">
+                      {emp.department || t.table.fallbackDept}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.table.branch}</span>
+                    <span className="inline-block rounded-lg bg-[var(--cr-primary)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--cr-primary)] truncate max-w-full">
+                      {formatEmployeeBranchNames(emp, branches, lang) || t.table.noBranch}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.table.shift}</span>
+                    <span className={`inline-block rounded-lg px-2 py-0.5 text-xs font-semibold ${(emp.shift || "").toLowerCase().includes("night") || (emp.shift || "").toLowerCase().includes("pm") ? "bg-indigo-50 text-indigo-700 border border-indigo-150" : "bg-amber-50 text-amber-700 border border-amber-150"}`}>
+                      {t.profile.shiftLabel(emp.shift)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-brand-secondary)] block mb-0.5">{t.table.phone}</span>
+                    <span className="font-mono text-xs font-medium text-[var(--cr-dark)]">{emp.phone || t.table.noPhone}</span>
+                  </div>
+                  <div className="col-span-2 flex items-center justify-between pt-1">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-brand-secondary)]">{t.table.salary}:</span>
+                    <span className="text-xs font-bold text-[var(--cr-dark)]">
+                      {Number(effectiveSalary).toLocaleString("en-US") + t.table.salarySuffix}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions Row */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--cr-primary)]/5">
+                  {(!hasPermission || hasPermission("employees.action_view_info")) && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingEmployee(emp)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-brand-secondary)] transition hover:border-[var(--cr-accent)] hover:text-[var(--cr-primary)]"
+                    >
+                      <Info size={13} /> {t.actions.viewInfo}
+                    </button>
+                  )}
+                  {!isSuperadmin && (
+                    <>
+                      {(!hasPermission || hasPermission("employees.action_edit")) && (
+                        <label className="mr-auto inline-flex items-center gap-2 text-xs font-semibold text-[var(--color-brand-secondary)]">
+                          <EmployeeActiveSwitch
+                            active={emp.is_active !== false}
+                            disabled={Boolean(adminEmail) && String(emp.email || "").toLowerCase() === String(adminEmail).toLowerCase()}
+                            label={emp.is_active === false ? t.actions.activate : t.actions.deactivate}
+                            onChange={(next) => handleToggleEmployeeActive(emp.id, next)}
+                          />
+                          {emp.is_active === false ? t.table.inactiveBadge : t.table.activeBadge}
+                        </label>
+                      )}
+                      {(!hasPermission || hasPermission("employees.action_edit")) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditEmployee(emp)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:border-[var(--cr-accent)] hover:bg-[var(--color-brand-light)]"
+                        >
+                          <Pencil size={13} /> {t.actions.editEmployee}
+                        </button>
+                      )}
+                      {adminRole === "superadmin" && (
+                        <button
+                          type="button"
+                          onClick={() => { setResetPasswordTarget(emp); setResetPasswordValue(""); setShowResetPasswordValue(false); }}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] transition hover:border-[var(--cr-accent)] hover:bg-[var(--color-brand-light)]"
+                        >
+                          <Lock size={13} /> {lang === "ar" ? "باسورد جديد" : "New Password"}
+                        </button>
+                      )}
+                      {!emp.email_confirmed_at && (!hasPermission || hasPermission("employees.action_resend_invite")) && (
+                        <button
+                          type="button"
+                          onClick={() => handleResendInvitation(emp.id)}
+                          className="inline-flex items-center gap-1 rounded-xl border border-amber-200/60 bg-amber-50/50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100/80"
+                        >
+                          {t.actions.resend}
+                        </button>
+                      )}
+                      {(!hasPermission || hasPermission("employees.action_delete")) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEmployee(emp.id)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-red-200/60 text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                          title={t.actions.revoke}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </>
+    )}
+    
+      {/* Add / Edit Employee Modal */}
+      {isEditingEmployeeModalOpen && (
+        <div className="space-y-6 animate-fadeIn">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingEmployeeModalOpen(false);
+                setEditingEmployee(null);
+              }}
+              className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] outline-none transition uppercase tracking-wider"
+            >
+              <ArrowLeft size={14} /> {t.modal.backToEmployees}
+            </button>
+          </div>
+          <div className="w-full bg-white rounded-3xl border border-[var(--cr-primary)]/10 p-4 sm:p-8 shadow-sm">
+            <h3 className="text-2xl font-bold text-[var(--cr-dark)] mb-1">
+              {editingEmployee ? t.modal.editTitle : t.modal.addTitle}
+            </h3>
+            <p className="text-xs text-[var(--color-brand-secondary)] mb-6">
+              {editingEmployee
+                ? t.modal.editSubtitle
+                : t.modal.addSubtitle}
+            </p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newEmployeeName.trim() || !newEmployeeRole) {
+                  alert(t.form.nameRequired);
+                  return;
+                }
+                // DEC-110: an employee must belong to at least one branch.
+                if (newEmployeeBranchIds.length === 0) {
+                  alert(t.form.branchRequired);
+                  return;
+                }
+                try {
+                  const activeBranchId = newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0] || newEmployeeBranchId;
+                  const isDoctor = isDoctorEmployee;
+
+                  // 1. Validate Shift Overlaps
+                  if (isDoctor) {
+                    const overlapCheck = checkShiftOverlaps(
+                      newEmployeeBranchIds,
+                      newEmployeeBranchSchedules,
+                      activeBranchId,
+                      newEmployeeWorkingDaysHours,
+                      newEmployeeOnlineWorkingDaysHours,
+                      branches
+                    );
+
+                    if (overlapCheck.hasOverlap) {
+                      alert(overlapCheck.message);
+                      return;
+                    }
+                  } else {
+                    const singleBranchId = newEmployeeBranchId || activeBranchId || (branches.length > 0 ? branches[0].id : "branch-1");
+                    const overlapCheck = checkShiftOverlaps(
+                      [singleBranchId],
+                      {},
+                      singleBranchId,
+                      newEmployeeWorkingDaysHours,
+                      {},
+                      branches
+                    );
+
+                    if (overlapCheck.hasOverlap) {
+                      alert(overlapCheck.message);
+                      return;
+                    }
+                  }
+
+                  // 2. Compute human-readable shift string and compile schedule
+                  const computedShift = computeShiftSummary(newEmployeeWorkingDaysHours);
+
+                  const compiledBranchSchedules: Record<string, { in_person: any; online: any }> = isDoctor ? {
+                    ...newEmployeeBranchSchedules,
+                    [activeBranchId]: {
+                      in_person: newEmployeeWorkingDaysHours,
+                      online: newEmployeeOnlineWorkingDaysHours
+                    }
+                  } : Object.fromEntries(
+                    // Non-doctors have one weekly schedule; it applies at every branch they are on.
+                    (newEmployeeBranchIds.length > 0 ? newEmployeeBranchIds : [newEmployeeBranchId || activeBranchId]).map((bId) => [
+                      bId,
+                      { in_person: newEmployeeWorkingDaysHours, online: {} },
+                    ])
+                  ) as Record<string, { in_person: any; online: any }>;
+
+                  if (isDoctor) {
+                    for (const bId of newEmployeeBranchIds) {
+                      if (!compiledBranchSchedules[bId]) {
+                        compiledBranchSchedules[bId] = {
+                          in_person: newEmployeeWorkingDaysHours,
+                          online: newEmployeeOnlineWorkingDaysHours
+                        };
+                      }
+                    }
+                  }
+
+                  const finalWorkingDaysHours = {
+                    branch_ids: newEmployeeBranchIds.length > 0 ? newEmployeeBranchIds : [newEmployeeBranchId || activeBranchId],
+                    branch_schedules: compiledBranchSchedules
+                  };
+
+                  if (editingEmployee) {
+                    const res = await fetch("/api/employees", {
+                      method: "PATCH",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${session?.access_token || ""}`
+                      },
+                      body: JSON.stringify({
+                        id: editingEmployee.id,
+                        name: newEmployeeName.trim(),
+                        roleName: newEmployeeRole,
+                        isAlsoDoctor: !selectedRoleIsDoctor && newEmployeeIsAlsoDoctor,
+                        phone: newEmployeePhone.trim(),
+                        department: newEmployeeDepartment,
+                        shift: computedShift,
+                        salary: Number(newEmployeeSalary),
+                        nationalId: newEmployeeNationalId.trim() || null,
+                        nationalIdFront: newEmployeeNationalIdFront || null,
+                        nationalIdBack: newEmployeeNationalIdBack || null,
+                        address: buildAddress(newEmployeeAddressLine1.trim(), newEmployeeAddressLine2.trim(), newEmployeeCity.trim(), newEmployeeGovernorateProp.trim(), newEmployeePostalCode.trim(), newEmployeeCountry.trim()) || null,
+                        branchIds: newEmployeeBranchIds,
+                        contractFile: newEmployeeAdditionalFiles.length > 0 
+                          ? JSON.stringify({ contract: newEmployeeContract || "", additional: newEmployeeAdditionalFiles }) 
+                          : (newEmployeeContract || null),
+                        contractFileName: newEmployeeContractName || null,
+                        requiredTargetAmount: Number(newEmployeeRequiredTargetAmount),
+                        bonusPercentage: Number(newEmployeeBonusPercentage),
+                        specialty: newEmployeeSpecialty,
+                        services: newEmployeeSelectedServices,
+                        rating: Number(newEmployeeRating || 5),
+                        commission_type: newEmployeeCommissionType,
+                        commission_value: Number(newEmployeeCommissionValue || 0),
+                        commission_base: newEmployeeCommissionBase,
+                        commission_fixed_component: Number(newEmployeeCommissionFixedComponent || 0),
+                        service_commissions: newEmployeeServiceCommissions,
+                        workingDaysHours: finalWorkingDaysHours
+                      }),
+                    });
+                    if (res.ok) {
+                      setIsEditingEmployeeModalOpen(false);
+                      setEditingEmployee(null);
+                      clearFetchCache();
+                      await Promise.all([
+                        fetchRolesAndEmployees ? fetchRolesAndEmployees() : Promise.resolve(),
+                        fetchProviders ? fetchProviders() : Promise.resolve()
+                      ]);
+                    } else {
+                      const d = await res.json();
+                      alert(d.error || t.form.updateFailed);
+                    }
+                  } else {
+                    if (!newEmployeeEmail.trim()) {
+                      alert(t.form.emailRequired);
+                      return;
+                    }
+                    // Same rule the server enforces; checked here too so a weak password is caught
+                    // before the request rather than coming back as a 400.
+                    if (newEmployeePassword && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(newEmployeePassword)) {
+                      alert(t.form.passwordTooWeak);
+                      return;
+                    }
+                    const res = await fetch("/api/employees", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${session?.access_token || ''}`,
+                      },
+                      body: JSON.stringify({
+                        email: newEmployeeEmail.trim().toLowerCase(),
+                        password: newEmployeePassword || undefined,
+                        name: newEmployeeName.trim(),
+                        roleName: newEmployeeRole,
+                        isAlsoDoctor: !selectedRoleIsDoctor && newEmployeeIsAlsoDoctor,
+                        phone: newEmployeePhone.trim(),
+                        department: newEmployeeDepartment,
+                        shift: computedShift,
+                        salary: Number(newEmployeeSalary),
+                        nationalId: newEmployeeNationalId.trim() || null,
+                        nationalIdFront: newEmployeeNationalIdFront || null,
+                        nationalIdBack: newEmployeeNationalIdBack || null,
+                        address: buildAddress(newEmployeeAddressLine1.trim(), newEmployeeAddressLine2.trim(), newEmployeeCity.trim(), newEmployeeGovernorateProp.trim(), newEmployeePostalCode.trim(), newEmployeeCountry.trim()) || null,
+                        branchIds: newEmployeeBranchIds,
+                        contractFile: newEmployeeAdditionalFiles.length > 0 
+                          ? JSON.stringify({ contract: newEmployeeContract || "", additional: newEmployeeAdditionalFiles }) 
+                          : (newEmployeeContract || null),
+                        contractFileName: newEmployeeContractName || null,
+                        requiredTargetAmount: Number(newEmployeeRequiredTargetAmount),
+                        bonusPercentage: Number(newEmployeeBonusPercentage),
+                        specialty: newEmployeeSpecialty,
+                        services: newEmployeeSelectedServices,
+                        rating: Number(newEmployeeRating || 5),
+                        commission_type: newEmployeeCommissionType,
+                        commission_value: Number(newEmployeeCommissionValue || 0),
+                        commission_base: newEmployeeCommissionBase,
+                        commission_fixed_component: Number(newEmployeeCommissionFixedComponent || 0),
+                        service_commissions: newEmployeeServiceCommissions,
+                        workingDaysHours: finalWorkingDaysHours
+                      }),
+                    });
+                    if (res.ok) {
+                      setNewEmployeePassword("");
+                      setIsEditingEmployeeModalOpen(false);
+                      setEditingEmployee(null);
+                      clearFetchCache();
+                      await Promise.all([
+                        fetchRolesAndEmployees ? fetchRolesAndEmployees() : Promise.resolve(),
+                        fetchProviders ? fetchProviders() : Promise.resolve()
+                      ]);
+                    } else {
+                      const d = await res.json();
+                      alert(d.error || t.form.inviteFailed);
+                    }
+                  }
+                } catch (err: any) {
+                  alert(err.message || t.form.errorOccurred);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.fullName} {t.form.required}</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder={t.form.fullNamePlaceholder}
+                    value={newEmployeeName}
+                    onChange={(e) => setNewEmployeeName(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.emailAddress} {editingEmployee ? "" : t.form.required}</label>
+                  <input
+                    type="email"
+                    required={!editingEmployee}
+                    disabled={!!editingEmployee}
+                    placeholder={t.form.emailPlaceholder}
+                    value={newEmployeeEmail}
+                    onChange={(e) => setNewEmployeeEmail(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {!editingEmployee && (
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.initialPassword}</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    placeholder={t.form.initialPasswordPlaceholder}
+                    value={newEmployeePassword}
+                    onChange={(e) => setNewEmployeePassword(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--color-brand-secondary)]">{t.form.initialPasswordHint}</p>
+                </div>
+              )}
+    
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.phoneNumber}</label>
+                  <input
+                    type="text"
+                    placeholder={t.form.phonePlaceholder}
+                    value={newEmployeePhone}
+                    onChange={(e) => setNewEmployeePhone(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.systemRole} {t.form.required}</label>
+                  <select
+                    required
+                    value={newEmployeeRole}
+                    onChange={(e) => setNewEmployeeRole(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-primary)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    <option value="" disabled>{t.form.selectRole}</option>
+                    {rolesList.map((role: any) => (
+                      <option key={role.name} value={role.name}>
+                        {role.name}{role.workspace === "doctor" ? ` (${t.form.doctorWorkspaceTag})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {!rolesList.some((r: any) => r.workspace === "doctor") && (
+                    <p className="mt-1.5 text-[11px] text-amber-700">{t.form.noDoctorRoleHint}</p>
+                  )}
+                </div>
+              </div>
+
+              <EmployeeBranchPicker
+                branches={branches}
+                selectedIds={newEmployeeBranchIds}
+                originalIds={newEmployeeOriginalBranchIds}
+                onChange={handleBranchSelectionChange}
+                lang={lang}
+                labels={t.form}
+              />
+    
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.department}</label>
+                  <select
+                    value={newEmployeeDepartment}
+                    onChange={(e) => setNewEmployeeDepartment(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-primary)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                  >
+                    {departmentsList.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+    
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.form.salary}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newEmployeeSalary}
+                    onChange={(e) => setNewEmployeeSalary(e.target.value)}
+                    className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                  />
+                </div>
+              </div>
+    
+              {/* DEC-114: a non-doctor role (admin, superadmin...) can also treat patients */}
+              {!selectedRoleIsDoctor && (
+                <label className="flex items-start gap-3 rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newEmployeeIsAlsoDoctor}
+                    onChange={(e) => setNewEmployeeIsAlsoDoctor(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--cr-primary)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-[var(--cr-dark)]">{t.form.alsoDoctorLabel}</span>
+                    <span className="block text-[11px] text-[var(--color-brand-secondary)] mt-0.5">{t.form.alsoDoctorHint}</span>
+                  </span>
+                </label>
+              )}
+
+              {/* Doctor / Medical Profile Fields */}
+              {isDoctorEmployee && (
+                <div className="rounded-2xl border border-[var(--cr-accent)]/30 bg-[var(--color-brand-light)] p-5 space-y-5 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--cr-primary)] border-b border-[var(--cr-accent)]/20 pb-3">
+                    <Stethoscope size={16} className="text-[var(--cr-accent)]" />
+                    {t.doctorSection.title}
+                  </div>
+    
+                  {/* Row 1: Specialty & Rating */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">
+                        Medical Specialty
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={t.doctorSection.specialtyPlaceholder}
+                        value={newEmployeeSpecialty}
+                        onChange={(e) => setNewEmployeeSpecialty(e.target.value)}
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                      />
+                    </div>
+    
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">
+                        Doctor Rating (1 - 5 Stars)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={newEmployeeRating}
+                        onChange={(e) => setNewEmployeeRating(e.target.value)}
+                        className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                      />
+                    </div>
+                  </div>
+    
+    
+    
+                  {/* Row 3 (assigned branches) now lives in the shared branch picker above the Department field (DEC-110). */}
+
+                  {/* Row 4: Doctor Schedule Grid with Branch Selector, In-Clinic vs Online Consultations tabs & Multi-shift per day */}
+                  <div>
+                    {/* Branch Selector Bar when doctor is assigned to multiple branches */}
+                    {newEmployeeBranchIds.length > 1 && (
+                      <div className="mb-3 p-3 rounded-2xl bg-[var(--cr-primary)]/5 border border-[var(--cr-primary)]/15 space-y-1.5">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                          Configure Schedule For Specific Branch:
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {newEmployeeBranchIds.map((bId) => {
+                            const bObj = branches.find((b) => b.id === bId);
+                            const bName = bObj ? bObj.name_en : bId;
+                            const isCurrentActive = bId === (newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0]);
+    
+                            return (
+                              <button
+                                key={bId}
+                                type="button"
+                                onClick={() => handleEmployeeBranchScheduleTabChange(bId)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                  isCurrentActive
+                                    ? "bg-[var(--cr-accent)] text-white shadow-sm"
+                                    : "bg-white text-[var(--cr-primary)] border border-[var(--cr-primary)]/15 hover:bg-gray-50"
+                                }`}
+                              >
+                                <span>{bName}</span>
+                                {isCurrentActive && <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded-md">{t.profile.activeScheduleBadge}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+    
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)]">
+                        {newEmployeeBranchIds.length > 1 ? (
+                          <>Doctor Weekly Shifts ({branches.find(b => b.id === (newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0]))?.name_en || "Active Branch"})</>
+                        ) : (
+                          <>Doctor Weekly Shifts &amp; Working Days Schedule</>
+                        )}
+                      </label>
+    
+                      {/* Tab Selector: In-Clinic vs Online Consultations */}
+                      <div className="inline-flex rounded-xl bg-white border border-[var(--cr-primary)]/15 p-0.5 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => setNewEmployeeScheduleTab("in_person")}
+                          className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            newEmployeeScheduleTab === "in_person"
+                              ? "bg-[var(--cr-primary)] text-white shadow-xs"
+                              : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)]"
+                          }`}
+                        >
+                          In-Clinic
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewEmployeeScheduleTab("online")}
+                          className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            newEmployeeScheduleTab === "online"
+                              ? "bg-[var(--cr-primary)] text-white shadow-xs"
+                              : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-dark)]"
+                          }`}
+                        >
+                          Online Consultations
+                        </button>
+                      </div>
+                    </div>
+    
+                    <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-3">
+                      {(() => {
+                        const activeSched = newEmployeeScheduleTab === "in_person" ? newEmployeeWorkingDaysHours : newEmployeeOnlineWorkingDaysHours;
+                        const setActiveSched = newEmployeeScheduleTab === "in_person" ? setNewEmployeeWorkingDaysHours : setNewEmployeeOnlineWorkingDaysHours;
+    
+                        return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                          const sched = activeSched[day] || { isOpen: false, start: "09:00", end: "17:00" };
+                          return (
+                            <div key={day} className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-[var(--cr-primary)]/5 pb-2.5 last:border-0 last:pb-0">
+                              <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                                <input
+                                  type="checkbox"
+                                  checked={sched.isOpen}
+                                  onChange={(e) => {
+                                    setActiveSched({
+                                      ...activeSched,
+                                      [day]: { ...sched, isOpen: e.target.checked }
+                                    });
+                                  }}
+                                  className="h-4 w-4 rounded border-[var(--cr-primary)]/15 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)] cursor-pointer"
+                                />
+                                <span className={`text-xs font-bold w-24 ${sched.isOpen ? "text-[var(--cr-dark)]" : "text-gray-400"}`}>
+                                  {day}
+                                </span>
+                              </label>
+    
+                              {sched.isOpen ? (
+                                <div className="flex flex-col gap-2 w-full sm:w-auto">
+                                  {/* Shifts list with multi-shift support */}
+                                  {((sched.shifts && sched.shifts.length > 0) ? sched.shifts : [{ start: sched.start || "09:00", end: sched.end || "17:00" }]).map((shft, shiftIdx) => (
+                                    <div key={shiftIdx} className="flex items-center gap-2">
+                                      <input
+                                        type="time"
+                                        value={shft.start}
+                                        onChange={(e) => {
+                                          const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                          currentShifts[shiftIdx] = { ...currentShifts[shiftIdx], start: e.target.value };
+                                          setActiveSched({
+                                            ...activeSched,
+                                            [day]: {
+                                              ...sched,
+                                              start: currentShifts[0].start,
+                                              end: currentShifts[0].end,
+                                              shifts: currentShifts
+                                            }
+                                          });
+                                        }}
+                                        className="rounded-lg border border-[var(--cr-primary)]/15 px-2.5 py-1 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                                      />
+                                      <span className="text-xs text-[var(--color-brand-secondary)]">to</span>
+                                      <input
+                                        type="time"
+                                        value={shft.end}
+                                        onChange={(e) => {
+                                          const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                          currentShifts[shiftIdx] = { ...currentShifts[shiftIdx], end: e.target.value };
+                                          setActiveSched({
+                                            ...activeSched,
+                                            [day]: {
+                                              ...sched,
+                                              start: currentShifts[0].start,
+                                              end: currentShifts[0].end,
+                                              shifts: currentShifts
+                                            }
+                                          });
+                                        }}
+                                        className="rounded-lg border border-[var(--cr-primary)]/15 px-2.5 py-1 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                                      />
+                                      {shiftIdx > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                            const filteredShifts = currentShifts.filter((_, i) => i !== shiftIdx);
+                                            setActiveSched({
+                                              ...activeSched,
+                                              [day]: {
+                                                ...sched,
+                                                start: filteredShifts[0].start,
+                                                end: filteredShifts[0].end,
+                                                shifts: filteredShifts
+                                              }
+                                            });
+                                          }}
+                                          className="text-red-500 hover:text-red-700 transition"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                      const newShifts = [...currentShifts, { start: "09:00", end: "17:00" }];
+                                      setActiveSched({
+                                        ...activeSched,
+                                        [day]: {
+                                          ...sched,
+                                          shifts: newShifts
+                                        }
+                                      });
+                                    }}
+                                    className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#2e3a26] transition flex items-center gap-1 mt-0.5 cursor-pointer"
+                                  >
+                                    <Plus size={12} /> Add Shift
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 italic">Off / Closed</span>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+    
+                    {/* Live Shift Overlap Warning Banner */}
+                    {(() => {
+                      const overlap = checkShiftOverlaps(
+                        newEmployeeBranchIds,
+                        newEmployeeBranchSchedules,
+                        newEmployeeSelectedScheduleBranchId || newEmployeeBranchIds[0],
+                        newEmployeeWorkingDaysHours,
+                        newEmployeeOnlineWorkingDaysHours,
+                        branches
+                      );
+                      if (overlap.hasOverlap) {
+                        return (
+                          <div className="mt-3 flex items-start gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium animate-fadeIn">
+                            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-bold block text-amber-900 mb-0.5">⚠️ Shift Overlap Warning:</span>
+                              {overlap.message}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+    
+                  {/* Row 5: Services & Commission */}
+                  <DoctorServiceCommissionEditor
+                    allServices={allServicesList}
+                    services={newEmployeeSelectedServices}
+                    commissions={newEmployeeServiceCommissions}
+                    defaultType={newEmployeeCommissionType as DefaultCommissionType}
+                    defaultValue={newEmployeeCommissionValue}
+                    defaultBase={newEmployeeCommissionBase}
+                    defaultFixedComponent={newEmployeeCommissionFixedComponent}
+                    onServicesChange={setNewEmployeeSelectedServices}
+                    onCommissionsChange={setNewEmployeeServiceCommissions}
+                    onDefaultTypeChange={setNewEmployeeCommissionType}
+                    onDefaultValueChange={setNewEmployeeCommissionValue}
+                    onDefaultBaseChange={setNewEmployeeCommissionBase}
+                    onDefaultFixedComponentChange={setNewEmployeeCommissionFixedComponent}
+                  />
+                </div>
+              )}
+    
+              {/* Shift & Target for Non-Doctor Employees (e.g. Receptionist) */}
+              {!isDoctorEmployee && (
+                <div className="rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] p-5 space-y-5 shadow-sm animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--cr-primary)]/10 pb-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--cr-primary)]">
+                      <Clock size={16} className="text-[var(--cr-accent)]" />
+                      {t.nonDoctorSection?.weeklyShifts || "Staff Weekly Shifts & Working Days Schedule"}
+                    </div>
+                    {newEmployeeBranchId && (
+                      <span className="text-[11px] font-bold text-[var(--color-brand-secondary)] bg-white px-2.5 py-1 rounded-lg border border-[var(--cr-primary)]/15 w-max max-w-full">
+                        {formatEmployeeBranchNames({ branch_id: newEmployeeBranchId, branch_ids: newEmployeeBranchIds }, branches, lang)
+                          || (lang === "ar" ? "الفرع المخصص" : "Assigned Branch")}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Weekly Shifts Grid */}
+                  <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-white p-4 space-y-3">
+                    {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                      const sched = newEmployeeWorkingDaysHours[day] || { isOpen: false, start: "09:00", end: "17:00" };
+                      return (
+                        <div key={day} className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-[var(--cr-primary)]/5 pb-2.5 last:border-0 last:pb-0">
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
+                            <input
+                              type="checkbox"
+                              checked={sched.isOpen}
+                              onChange={(e) => {
+                                setNewEmployeeWorkingDaysHours({
+                                  ...newEmployeeWorkingDaysHours,
+                                  [day]: { ...sched, isOpen: e.target.checked }
+                                });
+                              }}
+                              className="h-4 w-4 rounded border-[var(--cr-primary)]/15 text-[var(--cr-primary)] focus:ring-[var(--cr-accent)] cursor-pointer"
+                            />
+                            <span className={`text-xs font-bold w-24 ${sched.isOpen ? "text-[var(--cr-dark)]" : "text-gray-400"}`}>
+                              {t.dayNames?.[day as keyof typeof t.dayNames] || day}
+                            </span>
+                          </label>
+
+                          {sched.isOpen ? (
+                            <div className="flex flex-col gap-2 w-full sm:w-auto">
+                              {/* Shifts list with multi-shift support */}
+                              {((sched.shifts && sched.shifts.length > 0) ? sched.shifts : [{ start: sched.start || "09:00", end: sched.end || "17:00" }]).map((shft, shiftIdx) => (
+                                <div key={shiftIdx} className="flex items-center gap-2">
+                                  <input
+                                    type="time"
+                                    value={shft.start}
+                                    onChange={(e) => {
+                                      const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                      currentShifts[shiftIdx] = { ...currentShifts[shiftIdx], start: e.target.value };
+                                      setNewEmployeeWorkingDaysHours({
+                                        ...newEmployeeWorkingDaysHours,
+                                        [day]: {
+                                          ...sched,
+                                          start: currentShifts[0].start,
+                                          end: currentShifts[0].end,
+                                          shifts: currentShifts
+                                        }
+                                      });
+                                    }}
+                                    className="rounded-lg border border-[var(--cr-primary)]/15 px-2.5 py-1 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                                  />
+                                  <span className="text-xs text-[var(--color-brand-secondary)]">{t.doctorSection.shiftTo || "to"}</span>
+                                  <input
+                                    type="time"
+                                    value={shft.end}
+                                    onChange={(e) => {
+                                      const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                      currentShifts[shiftIdx] = { ...currentShifts[shiftIdx], end: e.target.value };
+                                      setNewEmployeeWorkingDaysHours({
+                                        ...newEmployeeWorkingDaysHours,
+                                        [day]: {
+                                          ...sched,
+                                          start: currentShifts[0].start,
+                                          end: currentShifts[0].end,
+                                          shifts: currentShifts
+                                        }
+                                      });
+                                    }}
+                                    className="rounded-lg border border-[var(--cr-primary)]/15 px-2.5 py-1 text-xs text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] cursor-pointer"
+                                  />
+                                  {shiftIdx > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                        const filteredShifts = currentShifts.filter((_, i) => i !== shiftIdx);
+                                        setNewEmployeeWorkingDaysHours({
+                                          ...newEmployeeWorkingDaysHours,
+                                          [day]: {
+                                            ...sched,
+                                            start: filteredShifts[0].start,
+                                            end: filteredShifts[0].end,
+                                            shifts: filteredShifts
+                                          }
+                                        });
+                                      }}
+                                      className="text-red-500 hover:text-red-700 transition cursor-pointer"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const currentShifts = (sched.shifts && sched.shifts.length > 0) ? [...sched.shifts] : [{ start: sched.start || "09:00", end: sched.end || "17:00" }];
+                                  const newShifts = [...currentShifts, { start: "09:00", end: "17:00" }];
+                                  setNewEmployeeWorkingDaysHours({
+                                    ...newEmployeeWorkingDaysHours,
+                                    [day]: {
+                                      ...sched,
+                                      shifts: newShifts
+                                    }
+                                  });
+                                }}
+                                className="text-xs font-bold text-[var(--cr-primary)] hover:text-[#2e3a26] transition flex items-center gap-1 mt-0.5 cursor-pointer"
+                              >
+                                <Plus size={12} /> {t.doctorSection.addShift || "Add Shift"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">{t.doctorSection.offClosed || "Off / Closed"}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Live Shift Overlap Warning Banner */}
+                  {(() => {
+                    const singleBranch = newEmployeeBranchId || (branches.length > 0 ? branches[0].id : "branch-1");
+                    const overlap = checkShiftOverlaps(
+                      [singleBranch],
+                      {},
+                      singleBranch,
+                      newEmployeeWorkingDaysHours,
+                      {},
+                      branches
+                    );
+                    if (overlap.hasOverlap) {
+                      return (
+                        <div className="mt-3 flex items-start gap-2 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium animate-fadeIn">
+                          <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block text-amber-900 mb-0.5">{t.doctorSection.overlapWarningTitle || "⚠️ Shift Overlap Warning:"}</span>
+                            {overlap.message}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* Target & Bonus Configuration */}
+                  <div className="border-t border-[var(--cr-primary)]/10 pt-4 space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">
+                      {t.nonDoctorSection?.targetTitle || "Target & Performance Bonus"}
+                    </h4>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">
+                          {t.nonDoctorSection?.requiredTarget || "Required Target Amount (EGP)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newEmployeeRequiredTargetAmount}
+                          onChange={(e) => setNewEmployeeRequiredTargetAmount(e.target.value)}
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">
+                          {t.nonDoctorSection?.bonusPercentage || "Bonus Percentage (%)"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={newEmployeeBonusPercentage}
+                          onChange={(e) => {
+                            const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                            setNewEmployeeBonusPercentage(String(val));
+                          }}
+                          className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+    
+              {/* --- NEW EMPLOYEE PROFILE FIELDS (National ID, Photo Uploads, Address) --- */}
+              <div className="border-t border-[var(--cr-primary)]/10 pt-4 space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.nationalId.label}</label>
+                    <input
+                      type="text"
+                      maxLength={14}
+                      placeholder={t.nationalId.placeholder}
+                      value={newEmployeeNationalId}
+                      onChange={(e) => {
+                        // only numbers
+                        const val = e.target.value.replace(/\D/g, "");
+                        setNewEmployeeNationalId(val);
+                      }}
+                      className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-2.5 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] font-mono"
+                    />
+                  </div>
+    
+                  {/* Structured Address */}
+                  <div className="sm:col-span-2">
+                    <div className="rounded-2xl border border-[var(--cr-primary)]/10 bg-[var(--color-brand-light)] p-4 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Home Address
+                      </p>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.line1} <span className="text-[var(--cr-accent)]">{t.address.required}</span></label>
+                        <input
+                          type="text"
+                          placeholder={t.address.line1Placeholder}
+                          value={newEmployeeAddressLine1}
+                          onChange={(e) => {
+                            setNewEmployeeAddressLine1(e.target.value);
+                            commitAddressState(e.target.value, newEmployeeAddressLine2, newEmployeeCity, newEmployeeGovernorateProp, newEmployeePostalCode, newEmployeeCountry);
+                          }}
+                          className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.line2} <span className="text-[#8A9A81] font-normal">{t.address.optional}</span></label>
+                        <input
+                          type="text"
+                          placeholder={t.address.line2Placeholder}
+                          value={newEmployeeAddressLine2}
+                          onChange={(e) => {
+                            setNewEmployeeAddressLine2(e.target.value);
+                            commitAddressState(newEmployeeAddressLine1, e.target.value, newEmployeeCity, newEmployeeGovernorateProp, newEmployeePostalCode, newEmployeeCountry);
+                          }}
+                          className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.city}</label>
+                          <input
+                            type="text"
+                            placeholder={t.address.cityPlaceholder}
+                            value={newEmployeeCity}
+                            onChange={(e) => {
+                              setNewEmployeeCity(e.target.value);
+                              commitAddressState(newEmployeeAddressLine1, newEmployeeAddressLine2, e.target.value, newEmployeeGovernorateProp, newEmployeePostalCode, newEmployeeCountry);
+                            }}
+                            className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.governorate}</label>
+                          <select
+                            value={newEmployeeGovernorateProp}
+                            onChange={(e) => {
+                              setNewEmployeeGovernorateProp(e.target.value);
+                              commitAddressState(newEmployeeAddressLine1, newEmployeeAddressLine2, newEmployeeCity, e.target.value, newEmployeePostalCode, newEmployeeCountry);
+                            }}
+                            className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                          >
+                            <option value="">{t.address.selectGovernorate}</option>
+                            {["Cairo","Giza","Alexandria","Aswan","Asyut","Beheira","Beni Suef","Dakahlia","Damietta","Faiyum","Gharbia","Ismailia","Kafr el-Sheikh","Luxor","Matruh","Minya","Monufia","New Valley","North Sinai","Port Said","Qalyubia","Qena","Red Sea","Sharqia","Sohag","South Sinai","Suez"].map(g => (
+                              <option key={g} value={g}>{g}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.postalCode}</label>
+                          <input
+                            type="text"
+                            placeholder={t.address.postalCodePlaceholder}
+                            value={newEmployeePostalCode}
+                            onChange={(e) => {
+                              setNewEmployeePostalCode(e.target.value);
+                              commitAddressState(newEmployeeAddressLine1, newEmployeeAddressLine2, newEmployeeCity, newEmployeeGovernorateProp, e.target.value, newEmployeeCountry);
+                            }}
+                            className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-[#8A9A81] mb-1">{t.address.country}</label>
+                          <input
+                            type="text"
+                            placeholder={t.address.countryPlaceholder}
+                            value={newEmployeeCountry}
+                            onChange={(e) => {
+                              setNewEmployeeCountry(e.target.value);
+                              commitAddressState(newEmployeeAddressLine1, newEmployeeAddressLine2, newEmployeeCity, newEmployeeGovernorateProp, newEmployeePostalCode, e.target.value);
+                            }}
+                            className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3.5 py-2 text-sm text-[var(--cr-dark)] outline-none focus:border-[var(--cr-accent)] transition"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+    
+                {/* Interactive Egyptian National ID Check */}
+                {newEmployeeNationalId.trim() && (() => {
+                  const check = parseEgyptianNationalId(newEmployeeNationalId.trim());
+                  if (check.isValid) {
+                    return (
+                      <div className="rounded-2xl bg-green-50/50 border border-green-200/50 p-3.5 space-y-1.5 text-xs">
+                        <div className="flex items-center gap-1.5 font-bold text-green-800">
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-600 text-[10px] text-white">✓</span>
+                          Egyptian National ID Check Passed
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-green-700 font-medium">
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.birthDate}</span>
+                            {check.birthDate}
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.gender}</span>
+                            {check.gender}
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.governorate}</span>
+                            {check.governorate}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="rounded-2xl bg-amber-50/50 border border-amber-200/50 p-3.5 text-xs text-amber-700 font-semibold flex items-center gap-1.5">
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white">!</span>
+                        ID Check: {check.reason}
+                      </div>
+                    );
+                  }
+                })()}
+    
+                {/* Front / Back ID Photo Uploads */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* ID Front */}
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.nationalId.frontSideLabel}</label>
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] p-4 text-center">
+                      {newEmployeeNationalIdFront ? (
+                        <div className="relative w-full group">
+                          <img
+                            src={newEmployeeNationalIdFront}
+                            alt={t.nationalId.frontSideAlt}
+                            className="h-28 w-full object-cover rounded-xl border border-[var(--cr-primary)]/10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewEmployeeNationalIdFront("")}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600 transition rounded-full h-6 w-6 flex items-center justify-center shadow font-bold text-xs"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center cursor-pointer py-4 w-full">
+                          <Upload className="h-6 w-6 text-[var(--color-brand-secondary)]/50 mb-1.5" />
+                          <span className="text-[11px] font-semibold text-[var(--cr-primary)]">{t.nationalId.uploadFront}</span>
+                          <span className="text-[9px] text-gray-400 mt-0.5">{t.nationalId.fileHint}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const compressed = await compressImage(file, 1200, 1200, 0.8);
+                                  setNewEmployeeNationalIdFront(compressed);
+                                } catch (err) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setNewEmployeeNationalIdFront(reader.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+    
+                  {/* ID Back */}
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-1.5">{t.nationalId.backSideLabel}</label>
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-[var(--color-brand-light)] p-4 text-center">
+                      {newEmployeeNationalIdBack ? (
+                        <div className="relative w-full group">
+                          <img
+                            src={newEmployeeNationalIdBack}
+                            alt={t.nationalId.backSideAlt}
+                            className="h-28 w-full object-cover rounded-xl border border-[var(--cr-primary)]/10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewEmployeeNationalIdBack("")}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600 transition rounded-full h-6 w-6 flex items-center justify-center shadow font-bold text-xs"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center cursor-pointer py-4 w-full">
+                          <Upload className="h-6 w-6 text-[var(--color-brand-secondary)]/50 mb-1.5" />
+                          <span className="text-[11px] font-semibold text-[var(--cr-primary)]">{t.nationalId.uploadBack}</span>
+                          <span className="text-[9px] text-gray-400 mt-0.5">{t.nationalId.fileHint}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const compressed = await compressImage(file, 1200, 1200, 0.8);
+                                  setNewEmployeeNationalIdBack(compressed);
+                                } catch (err) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setNewEmployeeNationalIdBack(reader.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+    
+              {/* Employment Contract Upload */}
+              <div className="border border-[var(--cr-primary)]/10 rounded-2xl bg-[#F7F7F5] p-4">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-2">{t.profile.employmentContract}</label>
+                <div className="rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-white overflow-hidden">
+                  {newEmployeeContract ? (
+                    <div className="flex items-center justify-between gap-2 p-3 bg-[var(--color-brand-tint)] rounded-2xl">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText className="h-5 w-5 text-[var(--color-brand-secondary)] shrink-0" />
+                        <span className="text-xs font-semibold text-[var(--cr-primary)] truncate">{newEmployeeContractName || "Contract File"}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setNewEmployeeContract(""); setNewEmployeeContractName(""); }}
+                        className="bg-red-500 text-white hover:bg-red-600 transition rounded-full h-5 w-5 shrink-0 flex items-center justify-center font-bold text-xs"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center cursor-pointer py-5 w-full">
+                      <Upload className="h-6 w-6 text-[var(--color-brand-secondary)]/50 mb-1.5" />
+                      <span className="text-[11px] font-semibold text-[var(--cr-primary)]">Upload Contract (PDF, Word, or Image)</span>
+                      <span className="text-[9px] text-gray-400 mt-0.5">PDF, DOCX, PNG, JPEG – up to 10MB</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewEmployeeContract(reader.result as string);
+                              setNewEmployeeContractName(file.name);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+    
+              {/* Additional Files Upload */}
+              <div className="border border-[var(--cr-primary)]/10 rounded-2xl bg-[#F7F7F5] p-4 mt-4">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand-secondary)] mb-2">{t.profile.additionalFiles}</label>
+                
+                {/* List existing/added additional files */}
+                {newEmployeeAdditionalFiles.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {newEmployeeAdditionalFiles.map((fileItem, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 p-3 bg-white border border-[var(--cr-primary)]/10 rounded-2xl">
+                        <div className="flex items-center gap-2 overflow-hidden col-span-1">
+                          <FileText className="h-5 w-5 text-[var(--color-brand-secondary)] shrink-0" />
+                          <span className="text-xs font-semibold text-[var(--cr-primary)] truncate">{fileItem.name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewEmployeeAdditionalFiles(prev => prev.filter((_, i) => i !== idx));
+                          }}
+                          className="bg-red-500 text-white hover:bg-red-600 transition rounded-full h-5 w-5 shrink-0 flex items-center justify-center font-bold text-xs"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+    
+                <div className="rounded-2xl border border-dashed border-[var(--cr-primary)]/20 bg-white overflow-hidden">
+                  <label className="flex flex-col items-center justify-center cursor-pointer py-5 w-full">
+                    <Upload className="h-6 w-6 text-[var(--color-brand-secondary)]/50 mb-1.5" />
+                    <span className="text-[11px] font-semibold text-[var(--cr-primary)]">{t.profile.uploadAdditionalFiles}</span>
+                    <span className="text-[9px] text-gray-400 mt-0.5">{t.profile.additionalFilesHint}</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          Array.from(files).forEach(file => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewEmployeeAdditionalFiles(prev => [
+                                ...prev,
+                                { file: reader.result as string, name: file.name }
+                              ]);
+                            };
+                            reader.readAsDataURL(file);
+                          });
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+    
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingEmployeeModalOpen(false)}
+                  className="rounded-2xl border border-[var(--cr-primary)]/15 px-5 py-2.5 text-sm font-semibold text-[var(--cr-primary)] hover:bg-gray-50 transition"
+                >
+                  {t.modal.cancelBtn}
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-2xl bg-[var(--cr-primary)] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#2e3a26] transition shadow-md"
+                >
+                  {editingEmployee ? t.modal.saveChangesBtn : t.modal.sendInvitationBtn}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    
+      {/* View Employee Details — Inline View */}
+      {viewingEmployee && (
+        <div className="space-y-6 animate-fadeIn">
+          {/* Back button */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setViewingEmployee(null)}
+              className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] outline-none transition uppercase tracking-wider"
+            >
+              <ArrowLeft size={14} /> {t.profile.backToEmployees}
+            </button>
+          </div>
+    
+          {/* Profile Header Banner */}
+          <div className="bg-white rounded-3xl border border-[var(--cr-primary)]/10 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="relative group shrink-0">
+                <div className="h-16 w-16 rounded-full bg-[var(--color-brand-tint)] text-[var(--cr-primary)] border border-[var(--cr-primary)]/10 flex items-center justify-center text-2xl font-bold font-serif overflow-hidden shadow-xs">
+                  {customerAvatars[viewingEmployee.id || viewingEmployee.employee_id] || viewingEmployee.photo_url || viewingEmployee.avatar_url ? (
+                    <img
+                      src={customerAvatars[viewingEmployee.id || viewingEmployee.employee_id] || viewingEmployee.photo_url || viewingEmployee.avatar_url}
+                      alt={viewingEmployee.name || t.profile.roleFallback}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span>{viewingEmployee.name ? viewingEmployee.name.charAt(0).toUpperCase() : "E"}</span>
+                  )}
+                </div>
+                <label
+                  className="absolute -bottom-1 -end-1 p-1.5 rounded-full bg-[var(--cr-primary)] text-white cursor-pointer shadow-md hover:bg-[#2e3a26] transition flex items-center justify-center"
+                  title={t.profile.uploadPhotoTitle}
+                >
+                  <Camera size={12} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      const empKey = viewingEmployee.id || viewingEmployee.employee_id;
+                      if (file && empKey) handleAvatarUpload(empKey, file);
+                    }}
+                  />
+                </label>
+                {(customerAvatars[viewingEmployee.id || viewingEmployee.employee_id] || viewingEmployee.photo_url || viewingEmployee.avatar_url) && (
+                  <button
+                    type="button"
+                    onClick={() => handleAvatarRemove(viewingEmployee.id || viewingEmployee.employee_id)}
+                    className="absolute -top-1 -end-1 p-1 rounded-full bg-red-600 text-white shadow-xs hover:bg-red-700 transition"
+                    title={t.profile.removePhotoTitle}
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-[var(--cr-dark)] leading-tight">{viewingEmployee.name || t.profile.staffMemberFallback}</h3>
+                <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5">{viewingEmployee.role_name || t.profile.roleFallback} • {t.profile.staffIdLabel} <span className="font-mono">{viewingEmployee.employee_id || t.table.noPhone}</span></p>
+                <div className="mt-2">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    viewingEmployee.email_confirmed_at ? "bg-[var(--color-brand-tint)] text-[var(--cr-primary)]" : "bg-amber-50 text-amber-700"
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${viewingEmployee.email_confirmed_at ? "bg-[var(--cr-primary)]" : "bg-amber-500"}`} />
+                    {viewingEmployee.email_confirmed_at ? t.profile.statusActive : t.profile.statusPending}
+                  </span>
+                </div>
+              </div>
+            </div>
+    
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  setEditingEmployee(viewingEmployee);
+                  setNewEmployeeName(viewingEmployee.name || "");
+                  setNewEmployeeEmail(viewingEmployee.email || "");
+                  setNewEmployeeRole(viewingEmployee.role_name || "");
+                  setNewEmployeePhone(viewingEmployee.phone || "");
+                  setNewEmployeeIsAlsoDoctor(viewingEmployee.is_also_doctor === true);
+                  setNewEmployeeDepartment(viewingEmployee.department || "Reception");
+                  updateShiftState(viewingEmployee.shift || "Day");
+                  setNewEmployeeSalary(String(viewingEmployee.salary || 0));
+                  setNewEmployeeNationalId(viewingEmployee.national_id || "");
+                  setNewEmployeeNationalIdFront(viewingEmployee.national_id_front || "");
+                  setNewEmployeeNationalIdBack(viewingEmployee.national_id_back || "");
+                  applyAddressToState(viewingEmployee.address || "");
+                  const rawContract = viewingEmployee.contract_file || "";
+                  let contractUrl = "";
+                  let additionalList: any[] = [];
+                  try {
+                    if (rawContract.startsWith('{')) {
+                      const parsed = JSON.parse(rawContract);
+                      contractUrl = parsed.contract || "";
+                      additionalList = parsed.additional || [];
+                    } else {
+                      contractUrl = rawContract;
+                    }
+                  } catch (e) {
+                    contractUrl = rawContract;
+                  }
+                  setNewEmployeeContract(contractUrl);
+                  setNewEmployeeContractName(viewingEmployee.contract_file_name || "");
+                  setNewEmployeeAdditionalFiles(additionalList);
+                  setNewEmployeeRequiredTargetAmount(String(viewingEmployee.requiredTargetAmount || 0));
+                  setNewEmployeeBonusPercentage(String(viewingEmployee.bonusPercentage || 0));
+                  const matchProv2 = providers.find(p => (p.name && viewingEmployee.name && p.name.trim().toLowerCase() === viewingEmployee.name.trim().toLowerCase()) || (p.phone && viewingEmployee.phone && p.phone === viewingEmployee.phone));
+                  setNewEmployeeSpecialty(matchProv2?.specialty || "");
+                  setNewEmployeeSelectedServices(matchProv2?.services || []);
+                  setNewEmployeeRating(String(matchProv2?.rating || 5));
+                  setNewEmployeeCommissionType(matchProv2?.commissionType || "none");
+                  setNewEmployeeCommissionValue(String(matchProv2?.commissionValue || 0));
+                  setNewEmployeeCommissionBase((matchProv2?.commissionBase as "gross" | "net_of_materials") || "gross");
+                  setNewEmployeeCommissionFixedComponent(String(matchProv2?.commissionFixedComponent || 0));
+                  setNewEmployeeServiceCommissions(Array.isArray(matchProv2?.serviceCommissions) ? matchProv2.serviceCommissions : []);
+                  const bIds = computeEditBranchIds(viewingEmployee, matchProv2);
+                  applyBranchSelection(bIds);
+                  setNewEmployeeOriginalBranchIds(getEmployeeBranchIds(viewingEmployee));
+                  const sched = loadEmployeeWorkingSchedule(viewingEmployee, matchProv2, bIds[0]);
+                  setNewEmployeeWorkingDaysHours(sched);
+                  const onlineSched = (bIds[0] && matchProv2?.workingDaysHours?.branch_schedules?.[bIds[0]]?.online) || matchProv2?.workingDaysHours?.online || sched;
+                  setNewEmployeeOnlineWorkingDaysHours(onlineSched);
+                  setViewingEmployee(null);
+                  setIsEditingEmployeeModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-xs font-bold text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)] shadow-sm"
+              >
+                <Pencil size={12} /> {t.profile.editProfileBtn}
+              </button>
+
+              {adminRole === "superadmin" && (
+                <button
+                  type="button"
+                  onClick={() => { setResetPasswordTarget(viewingEmployee); setResetPasswordValue(""); setShowResetPasswordValue(false); }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-xs font-bold text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)] shadow-sm"
+                >
+                  <Lock size={12} /> {lang === "ar" ? "تعيين باسورد جديد" : "Set New Password"}
+                </button>
+              )}
+
+              {viewingEmployee.employee_id !== "superadmin" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(t.profile.revokeConfirm)) {
+                      handleDeleteEmployee(viewingEmployee.id);
+                      setViewingEmployee(null);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50 shadow-sm"
+                >
+                  <Lock size={12} /> {t.profile.revokeAccessBtn}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handlePrintEmployeeProfile(viewingEmployee)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-4 py-2.5 text-xs font-bold text-[var(--cr-primary)] transition hover:bg-[var(--color-brand-tint)] shadow-sm"
+              >
+                <Printer size={12} /> {t.profile.printProfile}
+              </button>
+            </div>
+          </div>
+    
+          {/* Profile Sub-navigation Tabs */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-[var(--cr-primary)]/10 shadow-xs overflow-x-auto no-scrollbar w-full">
+            {([
+              { id: "basic", label: t.profile.basicInfoTab },
+              { id: "work", label: t.profile.workDetailsTab },
+              { id: "payroll", label: t.profile.payrollTab },
+              { id: "performance", label: t.profile.targetPerformanceTab },
+              { id: "attendance", label: t.profile.attendanceInsightsTab },
+              { id: "contact", label: t.profile.contactDetailsTab },
+              { id: "documents", label: t.profile.notesDocumentsTab }
+            ] as const).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setEmployeeProfileActiveTab(tab.id)}
+                className={`flex-1 flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-semibold capitalize transition-all rounded-xl outline-none whitespace-nowrap min-w-max ${
+                  employeeProfileActiveTab === tab.id
+                    ? "bg-[var(--cr-primary)] text-[var(--color-brand-light)] font-bold shadow-xs"
+                    : "text-[var(--color-brand-secondary)] hover:text-[var(--cr-primary)] hover:bg-[var(--color-brand-sand)]/60"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+    
+          {/* Tab Contents Container */}
+          <div className="bg-white rounded-3xl border border-[var(--cr-primary)]/10 p-6 shadow-sm">
+            {employeeProfileActiveTab === "basic" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-[var(--cr-primary)]/5 pb-3">
+                  <User size={16} className="text-[var(--cr-accent)]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.printProfile.basicInfo}</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.employeeId}</span>
+                    <span className="font-semibold text-[var(--cr-dark)] font-mono">{viewingEmployee.employee_id || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.fullName}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">{viewingEmployee.name || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.email}</span>
+                    <span className="font-semibold text-[var(--cr-dark)] break-all">{viewingEmployee.email || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.phone}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">{viewingEmployee.phone || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.role}</span>
+                    <div>
+                      <span className="inline-block rounded-lg bg-[var(--cr-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--cr-primary)]">
+                        {viewingEmployee.role_name || "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.table.department}</span>
+                    <div>
+                      <span className="inline-block rounded-lg bg-[var(--cr-accent)]/15 px-2.5 py-0.5 text-xs font-semibold text-[#8B7544]">
+                        {viewingEmployee.department || "Reception"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.nationalId}</span>
+                    <span className="font-semibold text-[var(--cr-dark)] font-mono">{viewingEmployee.national_id || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.dateOfBirthAge}</span>
+                    {(() => {
+                      const check = parseEgyptianNationalId(viewingEmployee.national_id || "");
+                      if (check.isValid) {
+                        return (
+                          <span className="font-semibold text-[var(--cr-dark)]">
+                            {check.dobFormatted} ({check.age} yrs)
+                          </span>
+                        );
+                      }
+                      return <span className="font-semibold text-[var(--color-brand-secondary)] italic text-xs">{t.profile.autoExtractedNote}</span>;
+                    })()}
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.accountStatus}</span>
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold ${viewingEmployee.email_confirmed_at ? "text-green-700" : "text-amber-700"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${viewingEmployee.email_confirmed_at ? "bg-green-600" : "bg-amber-500"}`} />
+                      {viewingEmployee.email_confirmed_at ? t.profile.statusActive : t.profile.statusPending}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.addedOn}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {viewingEmployee.created_at
+                        ? new Date(viewingEmployee.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {employeeProfileActiveTab === "work" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-[var(--cr-primary)]/5 pb-3">
+                  <Briefcase size={16} className="text-[var(--cr-accent)]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.printProfile.workInfo}</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.jobTitle}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">{viewingEmployee.role_name || "Receptionist"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.startDate}</span>
+                    {(() => {
+                      const autoDate = getDoctorFirstReservationDate(viewingEmployee.name, allReservations);
+                      if (autoDate) {
+                        return (
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-[var(--cr-dark)]">{autoDate}</span>
+                            <span className="text-[10px] text-[var(--cr-primary)] font-bold bg-[var(--color-brand-tint)] px-2 py-0.5 rounded-full border border-[var(--cr-primary)]/10 w-max mt-0.5">
+                              {t.profile.autoSet1stBooking}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return <span className="font-semibold text-[var(--cr-dark)]">{viewingEmployee.start_date || "—"}</span>;
+                    })()}
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.shiftType}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">{t.profile.shiftLabel(viewingEmployee.shift)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.shiftDetails}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {formatEmployeeShiftTypeDetails(viewingEmployee.shift)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.workingHours}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {formatEmployeeDisplayHours(viewingEmployee.shift)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.breakTime}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {formatEmployeeBreakTime(viewingEmployee.shift)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.employmentType}</span>
+                    <div>
+                      <span className="inline-block rounded-lg bg-[#F9F9F7] border border-[var(--cr-primary)]/10 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-brand-secondary)]">
+                        {t.profile.fullTime}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {employeeProfileActiveTab === "payroll" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-[var(--cr-primary)]/5 pb-3">
+                  <CircleDollarSign size={16} className="text-[var(--cr-accent)]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.profile.payrollCompensation}</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-sm">
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.monthlySalary}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">{Number(viewingEmployee.salary || 0).toLocaleString("en-US")}{t.table.salarySuffix}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.dailySalary}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {Math.round(Number(viewingEmployee.salary || 0) / 20).toLocaleString("en-US")}{t.table.salarySuffix}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.hourlySalary}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {(Number(viewingEmployee.salary || 0) / (20 * 8)).toFixed(2)}{t.table.salarySuffix}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.bonuses}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">200{t.table.salarySuffix}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.deductions}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">150{t.table.salarySuffix}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.lastPaymentDate}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">May 5, 2026</span>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {employeeProfileActiveTab === "performance" && (
+              <div className="space-y-4">
+                {(() => {
+                  const currentMonthStr = new Date().toISOString().slice(0, 7);
+                  const currentMonthBookings = (viewingEmployeeBookings || []).filter((b) => {
+                    const isApprovedOrCompleted = b.status === "approved" || b.status === "completed";
+                    return isApprovedOrCompleted && b.date && b.date.startsWith(currentMonthStr);
+                  });
+                  const achievedCount = currentMonthBookings.length;
+                  const targetAmount = Number(viewingEmployee.requiredTargetAmount || 0);
+                  const bonusPct = Number(viewingEmployee.bonusPercentage || 0);
+                  const baseSalary = Number(viewingEmployee.salary || 0);
+                  
+                  const progressPercent = targetAmount > 0 ? Math.min(100, Math.round((achievedCount / targetAmount) * 100)) : 0;
+                  const hasAchievedTarget = targetAmount > 0 && achievedCount >= targetAmount;
+                  const potentialBonus = hasAchievedTarget ? Math.round(baseSalary * (bonusPct / 100)) : 0;
+    
+                  return (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/5 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Target size={16} className="text-[var(--cr-accent)]" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.profile.targetPerformanceBonus}</h4>
+                        </div>
+                        {hasAchievedTarget && (
+                          <span className="bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200">
+                            {t.profile.targetMet}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                        <div>
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.requiredTargetShort}</span>
+                          <span className="font-semibold text-[var(--cr-dark)]">{targetAmount} {t.profile.reservationsLabel}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.bonusPercentageShort}</span>
+                          <span className="font-semibold text-[var(--cr-dark)]">{bonusPct}{t.profile.ofSalary}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.achievedLabel}</span>
+                          <span className="font-semibold text-[var(--cr-dark)]">
+                            {loadingEmployeeBookings ? (
+                              <span className="text-xs text-[var(--color-brand-secondary)] italic">{t.loading}</span>
+                            ) : (
+                              t.profile.reservationsSuffix(achievedCount)
+                            )}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.estimatedBonus}</span>
+                          <span className={`font-bold ${hasAchievedTarget ? "text-green-700" : "text-[var(--color-brand-secondary)]"}`}>
+                            {loadingEmployeeBookings ? (
+                              <span className="text-xs text-[var(--color-brand-secondary)] italic">{t.loading}</span>
+                            ) : (
+                              potentialBonus.toLocaleString("en-US") + t.table.salarySuffix
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {targetAmount > 0 && !loadingEmployeeBookings && (
+                        <div className="space-y-1.5 pt-2 max-w-xl">
+                          <div className="flex items-center justify-between text-xs font-semibold text-[var(--color-brand-secondary)]">
+                            <span>{t.profile.monthlyTargetProgress}</span>
+                            <span>{progressPercent}%</span>
+                          </div>
+                          <div className="w-full bg-gray-150 h-2.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 rounded-full ${hasAchievedTarget ? "bg-green-600" : "bg-[var(--cr-accent)]"}`}
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+    
+            {employeeProfileActiveTab === "attendance" && (() => {
+              const empRecords = attendanceList.filter((log: any) => {
+                const matchesEmp = log.employee_id === viewingEmployee.id || 
+                                   log.employee_db_id === viewingEmployee.id || 
+                                   log.employee_code === viewingEmployee.employee_id || 
+                                   log.employee_name === viewingEmployee.name;
+                if (!matchesEmp) return false;
+                if (attendanceInsightMonth && log.date) {
+                  return log.date.startsWith(attendanceInsightMonth);
+                }
+                return true;
+              });
+    
+              const totalWorkedMins = empRecords.reduce((sum: number, r: any) => sum + (r.worked_minutes || 0), 0);
+              const totalLateMins = empRecords.reduce((sum: number, r: any) => sum + (r.late_minutes || 0), 0);
+              const totalEarlyLeaveMins = empRecords.reduce((sum: number, r: any) => sum + (r.early_leave_minutes || 0), 0);
+              const totalOvertimeMins = empRecords.reduce((sum: number, r: any) => sum + (r.overtime_minutes || 0), 0);
+              const totalMidShiftLeaveMins = empRecords.reduce((sum: number, r: any) => sum + (r.combined_mid_shift_duration_minutes || 0), 0);
+              const lateCount = empRecords.filter((r: any) => (r.late_minutes || 0) > 0).length;
+              const absentCount = empRecords.filter((r: any) => r.status === "Absent").length;
+              const presentCount = empRecords.filter((r: any) => r.status === "Present" || r.check_in_time).length;
+    
+              const workedHrs = Math.floor(totalWorkedMins / 60);
+              const workedRMin = totalWorkedMins % 60;
+    
+              return (
+                <div className="space-y-6">
+                  {/* Top Controls & Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--cr-primary)]/10 pb-4">
+                    <div className="flex items-center gap-2">
+                      <Clock size={18} className="text-[var(--cr-accent)]" />
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-[var(--cr-primary)]">{t.profile.attendanceInsights}</h4>
+                        <p className="text-xs text-[var(--color-brand-secondary)]">{t.profile.attendanceSubtitle}</p>
+                      </div>
+                    </div>
+    
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="month"
+                        value={attendanceInsightMonth}
+                        onChange={(e) => setAttendanceInsightMonth(e.target.value)}
+                        className="px-3 py-1.5 text-xs font-semibold text-[var(--cr-primary)] bg-[#F7F9F6] border border-[var(--cr-primary)]/20 rounded-lg outline-none focus:border-[var(--cr-primary)]"
+                      />
+                      <button
+                        onClick={() => handleExportAttendanceInsights(viewingEmployee, attendanceInsightMonth, empRecords)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[var(--cr-primary)] rounded-lg hover:bg-[#323D2A] transition-all shadow-xs"
+                      >
+                        <Download size={14} />
+                        {t.profile.exportCsvBtn}
+                      </button>
+                    </div>
+                  </div>
+    
+                  {/* Stat Summary Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.totalWorked}</span>
+                      <span className="text-base font-bold text-[var(--cr-primary)]">{workedHrs}h {workedRMin}m</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.daysPresent(presentCount)}</span>
+                    </div>
+    
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.lateArrival}</span>
+                      <span className={`text-base font-bold ${totalLateMins > 0 ? 'text-amber-600' : 'text-[var(--cr-primary)]'}`}>{totalLateMins} min</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.lateIncident(lateCount)}</span>
+                    </div>
+    
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.attendanceEarlyLeave}</span>
+                      <span className={`text-base font-bold ${totalEarlyLeaveMins > 0 ? 'text-amber-600' : 'text-[var(--cr-primary)]'}`}>{totalEarlyLeaveMins} min</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.earlyDepartures}</span>
+                    </div>
+    
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.attendanceOvertime}</span>
+                      <span className="text-base font-bold text-emerald-700">{totalOvertimeMins} min</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.extraHoursWorked}</span>
+                    </div>
+
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.midShiftLeave}</span>
+                      <span className={`text-base font-bold ${totalMidShiftLeaveMins > 0 ? 'text-purple-700' : 'text-[var(--cr-primary)]'}`}>{totalMidShiftLeaveMins} min</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.permissionDuration}</span>
+                    </div>
+
+                    <div className="p-3 bg-[#F7F9F6] rounded-xl border border-[var(--cr-primary)]/10">
+                      <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-1">{t.profile.absences}</span>
+                      <span className={`text-base font-bold ${absentCount > 0 ? 'text-rose-600' : 'text-[var(--cr-primary)]'}`}>{absentCount} Days</span>
+                      <span className="block text-[10px] text-[var(--color-brand-secondary)] mt-0.5">{t.profile.unexcusedLeave}</span>
+                    </div>
+                  </div>
+
+                  {/* Daily Breakdown Table */}
+                  <div className="border border-[var(--cr-primary)]/10 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <div className="px-4 py-3 bg-[#F7F9F6] border-b border-[var(--cr-primary)]/10 flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-[var(--cr-primary)] uppercase tracking-wider">{t.profile.dailyAttendanceBreakdown}</h5>
+                      <span className="text-xs font-semibold text-[var(--color-brand-secondary)]">{t.profile.recordCount(empRecords.length)}</span>
+                    </div>
+    
+                    {loadingAttendance ? (
+                      <div className="p-8 text-center text-xs text-[var(--color-brand-secondary)] flex items-center justify-center gap-2">
+                        <Loader2 size={16} className="animate-spin text-[var(--cr-primary)]" />
+                        {t.profile.loadingAttendance}
+                      </div>
+                    ) : empRecords.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-[var(--color-brand-secondary)]">
+                        {t.profile.noAttendanceRecords(attendanceInsightMonth)}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto [scrollbar-width:thin]">
+                        <table className="w-full text-left text-xs min-w-[700px]">
+                          <thead className="bg-[#F7F9F6]/60 text-[var(--color-brand-secondary)] border-b border-[var(--cr-primary)]/10 font-bold uppercase tracking-wider text-[10px]">
+                            <tr>
+                              <th className="py-2.5 px-3">{t.profile.dateHeader}</th>
+                              <th className="py-2.5 px-3">{t.profile.shiftTimeHeader}</th>
+                              <th className="py-2.5 px-3">{t.profile.checkInHeader}</th>
+                              <th className="py-2.5 px-3">{t.profile.checkOutHeader}</th>
+                              <th className="py-2.5 px-3">{t.table.status}</th>
+                              <th className="py-2.5 px-3 text-right">{t.profile.workedHeader}</th>
+                              <th className="py-2.5 px-3 text-right">{t.profile.lateHeader}</th>
+                              <th className="py-2.5 px-3 text-right">{t.profile.earlyOutHeader}</th>
+                              <th className="py-2.5 px-3 text-right">{t.profile.overtimeHeader}</th>
+                              <th className="py-2.5 px-3 text-right">{t.profile.midShiftLeaveHeader}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[var(--cr-primary)]/5 text-[var(--cr-dark)]">
+                            {empRecords.map((r: any, idx: number) => {
+                              const inStr = r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }) : '—';
+                              const outStr = r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' }) : '—';
+                              return (
+                                <tr key={r.id || idx} className="hover:bg-[#F7F9F6]/50 transition-colors">
+                                  <td className="py-2.5 px-3 font-semibold text-[var(--cr-primary)] whitespace-nowrap">{r.date}</td>
+                                  <td className="py-2.5 px-3 text-[var(--color-brand-secondary)] whitespace-nowrap">{r.scheduled_in || t.csvExport.fallbackScheduledIn} - {r.scheduled_out || t.csvExport.fallbackScheduledOut}</td>
+                                  <td className="py-2.5 px-3 font-medium whitespace-nowrap">{inStr}</td>
+                                  <td className="py-2.5 px-3 font-medium whitespace-nowrap">{outStr}</td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      r.status === 'Absent' ? 'bg-rose-100 text-rose-800' :
+                                      (r.late_minutes || 0) > 0 ? 'bg-amber-100 text-amber-800' :
+                                      'bg-emerald-100 text-emerald-800'
+                                    }`}>
+                                      {r.status || t.csvExport.fallbackStatus}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-medium">{Math.floor((r.worked_minutes || 0) / 60)}h {(r.worked_minutes || 0) % 60}m</td>
+                                  <td className={`py-2.5 px-3 text-right font-medium ${r.late_minutes > 0 ? 'text-amber-600' : 'text-[var(--color-brand-secondary)]'}`}>{r.late_minutes || 0} m</td>
+                                  <td className={`py-2.5 px-3 text-right font-medium ${r.early_leave_minutes > 0 ? 'text-amber-600' : 'text-[var(--color-brand-secondary)]'}`}>{r.early_leave_minutes || 0} m</td>
+                                  <td className={`py-2.5 px-3 text-right font-medium ${r.overtime_minutes > 0 ? 'text-emerald-700 font-bold' : 'text-[var(--color-brand-secondary)]'}`}>{r.overtime_minutes || 0} m</td>
+                                  <td className={`py-2.5 px-3 text-right font-medium ${r.combined_mid_shift_duration_minutes > 0 ? 'text-purple-700 font-bold' : 'text-[var(--color-brand-secondary)]'}`}>{r.combined_mid_shift_duration_minutes || 0} m</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+    
+            {employeeProfileActiveTab === "contact" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-[var(--cr-primary)]/5 pb-3">
+                  <Phone size={16} className="text-[var(--cr-accent)]" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.profile.contactDetailsTitle}</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                  <div className="md:col-span-2">
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.homeAddress}</span>
+                    <span className="font-semibold text-[var(--cr-dark)] block bg-[#F9F9F7] px-3.5 py-2.5 rounded-xl border border-[var(--cr-primary)]/5 leading-relaxed max-w-xl">
+                      {viewingEmployee.address || t.profile.noAddress}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.emergencyName}</span>
+                    <span className="font-semibold text-[var(--cr-dark)]">
+                      {viewingEmployee.name ? `Ahmed ${viewingEmployee.name.split(" ").slice(-1)[0]}` : "Ahmed Ahmed"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-0.5">{t.profile.emergencyPhone}</span>
+                    <span className="font-semibold text-[var(--cr-dark)] font-mono">01098765432</span>
+                  </div>
+                </div>
+              </div>
+            )}
+    
+            {employeeProfileActiveTab === "documents" && (
+              <div className="space-y-6">
+                {/* Notes Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-[var(--cr-primary)]/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-[var(--cr-accent)]" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--cr-accent)]">{t.profile.internalNotesReminders}</h4>
+                    </div>
+                    <span className="text-[10px] font-bold text-[var(--color-brand-secondary)] bg-[#F9F9F7] px-2 py-0.5 rounded-full border border-[var(--cr-primary)]/10">
+                      {t.profile.notesCount(viewingEmployeeNotes.length)}
+                    </span>
+                  </div>
+                  
+                  {/* Notes List */}
+                  <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                    {loadingEmployeeNotes ? (
+                      <p className="text-xs text-[var(--color-brand-secondary)] italic py-2">{t.profile.loadingNotes}</p>
+                    ) : viewingEmployeeNotes.length === 0 ? (
+                      <p className="text-xs text-[var(--color-brand-secondary)]/70 italic py-2 text-center">{t.profile.noNotes}</p>
+                    ) : (
+                      viewingEmployeeNotes.map((note) => (
+                        <div key={note.id} className="text-xs bg-[var(--color-brand-light)] border border-[var(--cr-primary)]/5 rounded-xl p-3.5 space-y-1.5 relative group transition hover:border-[var(--cr-accent)]/30">
+                          <p className="text-[var(--cr-dark)] font-medium leading-relaxed break-words whitespace-pre-wrap">{note.note}</p>
+                          <div className="flex items-center justify-between text-[9px] text-[var(--color-brand-secondary)]/80 font-semibold pt-1 border-t border-[var(--cr-primary)]/5">
+                            <span>
+                              {t.profile.addedBy} {note.creator?.name || t.printProfile.staffMember} {t.profile.on} {new Date(note.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (confirm(t.profile.deleteNoteConfirm)) {
+                                  try {
+                                    const res = await fetch(`/api/employees/notes?id=${note.id}`, {
+                                      method: "DELETE",
+                                      headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+                                    });
+                                    if (res.ok) {
+                                      setViewingEmployeeNotes(prev => prev.filter(n => n.id !== note.id));
+                                    } else {
+                                      alert(t.profile.deleteNoteFailed);
+                                    }
+                                  } catch (e) {
+                                    console.error("Delete note error:", e);
+                                  }
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition duration-200"
+                            >
+                              {t.profile.deleteNoteBtn}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+    
+                  {/* Note Input */}
+                  <div className="pt-2 border-t border-[var(--cr-primary)]/5 space-y-2 max-w-xl">
+                    <textarea
+                      placeholder={t.profile.notesPlaceholder}
+                      value={newEmployeeNoteText}
+                      onChange={(e) => setNewEmployeeNoteText(e.target.value)}
+                      rows={2}
+                      className="w-full text-xs rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-3.5 py-2.5 text-[var(--cr-dark)] placeholder-[var(--color-brand-secondary)]/50 outline-none focus:border-[var(--cr-accent)] resize-none font-medium leading-relaxed"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!newEmployeeNoteText.trim()) return;
+                          try {
+                            const res = await fetch("/api/employees/notes", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${session?.access_token || ''}`,
+                              },
+                              body: JSON.stringify({
+                                employeeId: viewingEmployee.id,
+                                note: newEmployeeNoteText.trim(),
+                                createdBy: adminDbId
+                              })
+                            });
+                            if (res.ok) {
+                              const created = await res.json();
+                              setViewingEmployeeNotes(prev => [created, ...prev]);
+                              setNewEmployeeNoteText("");
+                            } else {
+                              alert(t.profile.addNoteFailed);
+                            }
+                          } catch (e) {
+                            console.error("Add note error:", e);
+                          }
+                        }}
+                        disabled={!newEmployeeNoteText.trim()}
+                        className="rounded-xl bg-[var(--cr-primary)] hover:bg-[#2e3a26] disabled:bg-gray-200 text-white disabled:text-gray-400 px-4 py-2 text-[11px] font-bold transition shadow-xs"
+                      >
+                        {t.profile.addNoteBtn}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+    
+                {/* National ID Check */}
+                {viewingEmployee.national_id && (() => {
+                  const check = parseEgyptianNationalId(viewingEmployee.national_id);
+                  if (check.isValid) {
+                    return (
+                      <div className="rounded-xl bg-green-50/50 border border-green-200/50 p-4 space-y-2 text-xs max-w-xl">
+                        <div className="flex items-center gap-1.5 font-bold text-green-800">
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-green-600 text-[10px] text-white">✓</span>
+                          Verified Egyptian National ID Check
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-green-700 font-medium">
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.birthDate}</span>
+                            {check.birthDate}
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.gender}</span>
+                            {check.gender}
+                          </div>
+                          <div>
+                            <span className="block text-[9px] uppercase tracking-wider text-green-600/75">{t.nationalId.governorate}</span>
+                            {check.governorate}
+                          </div>
+                        </div>
+                     </div>
+                     );
+                   }
+                   return null;
+                 })()}
+    
+                {/* Attachments */}
+                {(viewingEmployee.national_id_front || viewingEmployee.national_id_back || viewingEmployee.contract_file) && (
+                  <div className="space-y-3 pt-3 border-t border-[var(--cr-primary)]/5 max-w-2xl">
+                    <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider">{t.profile.attachedDocuments}</span>
+    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {viewingEmployee.national_id_front && (
+                        <div className="space-y-1">
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider text-center">{t.profile.idFrontSide}</span>
+                          <a
+                            href={viewingEmployee.national_id_front}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative rounded-xl overflow-hidden border border-[var(--cr-primary)]/15 hover:opacity-90 transition group cursor-zoom-in"
+                            title={t.profile.clickToViewFullSize}
+                          >
+                            <img
+                              src={viewingEmployee.national_id_front}
+                              alt={t.nationalId.frontSideAlt}
+                              className="h-32 w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
+                              {t.profile.viewFullSize}
+                            </div>
+                          </a>
+                        </div>
+                      )}
+                      {viewingEmployee.national_id_back && (
+                        <div className="space-y-1">
+                          <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider text-center">{t.profile.idBackSide}</span>
+                          <a
+                            href={viewingEmployee.national_id_back}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block relative rounded-xl overflow-hidden border border-[var(--cr-primary)]/15 hover:opacity-90 transition group cursor-zoom-in"
+                            title={t.profile.clickToViewFullSize}
+                          >
+                            <img
+                              src={viewingEmployee.national_id_back}
+                              alt={t.nationalId.backSideAlt}
+                              className="h-32 w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-wider">
+                              {t.profile.viewFullSize}
+                            </div>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+    
+                    {viewingEmployee.contract_file && (() => {
+                      const raw = viewingEmployee.contract_file;
+                      let contractUrl = "";
+                      let additionalList: any[] = [];
+                      try {
+                        if (raw.startsWith("{")) {
+                          const parsed = JSON.parse(raw);
+                          contractUrl = parsed.contract || "";
+                          additionalList = parsed.additional || [];
+                        } else {
+                          contractUrl = raw;
+                        }
+                      } catch (e) {
+                        contractUrl = raw;
+                      }
+                      return (
+                        <div className="space-y-3 pt-2">
+                          {contractUrl && (
+                            <div>
+                              <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-2">{t.profile.employmentContract}</span>
+                              <a
+                                href={contractUrl}
+                                download={viewingEmployee.contract_file_name || "contract"}
+                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-tint)] px-4 py-2.5 text-xs font-semibold text-[var(--cr-primary)] hover:bg-[#d9e0d3] transition shadow-xs"
+                              >
+                                <FileText className="h-4 w-4 text-[var(--color-brand-secondary)]" />
+                                {viewingEmployee.contract_file_name || t.profile.downloadContract}
+                              </a>
+                            </div>
+                          )}
+                          {additionalList.length > 0 && (
+                            <div>
+                              <span className="block text-[10px] font-bold text-[var(--color-brand-secondary)] uppercase tracking-wider mb-2">{t.profile.additionalFiles}</span>
+                              <div className="flex flex-wrap gap-2">
+                                {additionalList.map((fileItem, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={fileItem.file}
+                                    download={fileItem.name}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2 text-xs font-semibold text-[var(--cr-primary)] hover:bg-gray-50 transition shadow-xs"
+                                  >
+                                    <FileText className="h-3.5 w-3.5 text-[var(--color-brand-secondary)]" />
+                                    {fileItem.name}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Superadmin: Set New Password modal */}
+      {resetPasswordTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[var(--cr-primary)]/15 space-y-5 relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-[#1E3A2B]">
+                <div className="h-9 w-9 rounded-2xl bg-[var(--color-brand-tint)] flex items-center justify-center text-[var(--cr-primary)] shrink-0">
+                  <Lock size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[var(--cr-dark)]">
+                    {lang === "ar" ? "تعيين باسورد جديد" : "Set New Password"}
+                  </h3>
+                  <p className="text-[11px] text-[var(--color-brand-secondary)] font-medium">
+                    {resetPasswordTarget.name || resetPasswordTarget.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { if (!resetPasswordSaving) { setResetPasswordTarget(null); setResetPasswordValue(""); } }}
+                disabled={resetPasswordSaving}
+                className="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[var(--color-brand-secondary)]">
+                {lang === "ar" ? "الباسورد الجديد" : "New Password"}
+              </label>
+              <div className="relative">
+                <input
+                  type={showResetPasswordValue ? "text" : "password"}
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  autoFocus
+                  className="w-full rounded-xl border border-[var(--cr-primary)]/15 bg-white px-3 py-2.5 pr-10 text-sm font-medium text-[var(--cr-dark)] outline-none focus:border-[var(--cr-primary)]"
+                  placeholder={lang === "ar" ? "اكتب الباسورد الجديد" : "Type the new password"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPasswordValue((v) => !v)}
+                  className="absolute inset-y-0 right-2.5 flex items-center text-[var(--color-brand-secondary)]"
+                  tabIndex={-1}
+                >
+                  {showResetPasswordValue ? <Eye size={15} /> : <Lock size={14} />}
+                </button>
+              </div>
+              <p className="text-[11px] text-[var(--color-brand-secondary)]">
+                {lang === "ar"
+                  ? "8 حروف على الأقل، وفيها حرف كبير وحرف صغير ورقم ورمز."
+                  : "At least 8 characters, with an uppercase letter, a lowercase letter, a number, and a symbol."}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--cr-primary)]/10">
+              <button
+                type="button"
+                onClick={() => { setResetPasswordTarget(null); setResetPasswordValue(""); }}
+                disabled={resetPasswordSaving}
+                className="px-4 py-2.5 rounded-xl border border-[var(--cr-primary)]/20 bg-white font-bold text-xs text-[var(--cr-dark)] hover:bg-[var(--color-brand-light)] transition disabled:opacity-50"
+              >
+                {lang === "ar" ? "إلغاء" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetPassword}
+                disabled={resetPasswordSaving || !resetPasswordValue}
+                className="px-5 py-2.5 rounded-xl bg-[#1E3A2B] text-white font-extrabold text-xs hover:bg-[#162C20] transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {resetPasswordSaving ? <Loader2 size={14} className="animate-spin" /> : null}
+                {lang === "ar" ? "تأكيد" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

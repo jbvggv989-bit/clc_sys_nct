@@ -1,0 +1,2341 @@
+# API_CONTRACT.md — Revera Clinics API Endpoints
+
+> **Last Updated:** 2026-10-21 (audit: every route handler on `dev` is now documented, 84 of 84; the entries after the `Routes documented late` heading were added then; `/api/health/supabase`, `/api/auth/me` and `/api/roles` corrected)
+> **Base:** Next.js App Router API routes under `/app/api/`
+> **Auth:** every route checks access in its own handler (staff, administrator, superadmin, finance permission, HR role, or the caller's own identity); a few are public on purpose (catalog reads, availability). `SECURITY.md` §3 is the method-by-method table; this file names the gate in each entry only where it matters. All routes use the Supabase service role key server-side.
+> **Previous content was for a different project — discarded entirely**
+
+---
+
+## Conventions
+
+- All routes return JSON.
+- Errors return `{ "error": "message" }` with appropriate HTTP status.
+- All routes are under `/api/` (relative to the app root).
+- No versioning prefix.
+
+---
+
+## GET /api/health/supabase
+
+Administrator only. Diagnostics: checks which Supabase env vars are present and which variable name supplied each, and does a one-row `services` read to confirm the connection. Secret values are never echoed; only the URL has a short `valuePreview`.
+
+**Response:** `{ ok, connected, timestamp, checks: { supabaseUrl: { present, source, valuePreview }, supabaseSecret: { present, source }, supabasePublishable: { present, source } }, sample }`; on failure `{ ok: false, connected: false, error, checks }` with `500`.
+
+---
+
+## GET /api/reception/dashboard
+
+Returns Reception Dashboard metrics for today including shift status, live elapsed work duration, overview KPIs (`todayBookingsCount`, `pendingApprovalCount`, `expectedPayments`, `upcomingConfirmationsCount`), performance metrics (`completedCount`, `cancelledCount`, `noShowsCount`), real payment breakdown across `transactions` and `payments` (`cash`, `visa`, `instapay`, `wallet`, `totalPayments`), pending uncompleted bookings count (`pendingBookingsCount`), and enriched today's bookings list.
+
+**Query Params:** `employeeId` (optional), `email` (optional), `branchId` (optional)
+
+**Response:**
+```json
+{
+  "success": true,
+  "receptionist": { "id": "string", "name": "string", "role": "string", "branch": "string", "email": "string" },
+  "shift": {
+    "status": "not_started" | "in_progress" | "completed",
+    "scheduledStart": "string",
+    "scheduledEnd": "string",
+    "actualStartingTime": "string",
+    "actualEndingTime": "string",
+    "totalWorkingHours": "string",
+    "elapsedSeconds": number,
+    "gpsShiftEnabled": boolean
+  },
+  "overview": {
+    "todayBookingsCount": number,
+    "pendingApprovalCount": number,
+    "expectedPayments": number,
+    "upcomingConfirmationsCount": number
+  },
+  "performance": {
+    "completedCount": number,
+    "cancelledCount": number,
+    "noShowsCount": number
+  },
+  "payments": {
+    "cash": number,
+    "visa": number,
+    "instapay": number,
+    "wallet": number,
+    "totalPayments": number
+  },
+  "pendingBookingsCount": number,
+  "bookings": {
+    "today": [
+      {
+        "id": "string",
+        "time": "string",
+        "patientName": "string",
+        "patientPhone": "string",
+        "doctorName": "string",
+        "doctorSpecialty": "string",
+        "doctorImage": "string",
+        "service": "string",
+        "status": "string",
+        "paymentStatus": "Paid" | "Unpaid" | "Partial",
+        "raw": object
+      }
+    ]
+  }
+}
+```
+
+---
+
+## POST /api/reception/dashboard
+
+Starts or ends receptionist daily shift attendance persisted to `hr_attendance` with GPS boundary checks and multi-session interval tracking.
+
+**Body:** `{ action: "start_shift" | "end_shift", employeeId?: string, email?: string, latitude?: number, longitude?: number, accuracy?: number }`
+
+**Response:** `{ success: true, action: "start_shift" | "end_shift", attendance: object }`
+
+
+---
+
+## GET /api/branches
+
+**Cache (RISK-137 / DEC-131):** an anonymous GET answers `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`; a request with any `Authorization` header answers `private, no-store`. Error responses carry no cache header. A CMS edit can take up to 60 s to reach visitors.
+
+Returns all branches ordered by `sort_order`.
+
+**Response:** `Branch[]`
+
+---
+
+## POST /api/branches
+
+Create or update a branch. If body contains `id`, updates that branch. Otherwise creates new.
+
+**Body:** Branch fields (name_en, name_ar, address_en, address_ar, phone, maps_embed, maps_link, status, sort_order, service_hours)
+
+**Response:** Created or updated `Branch`
+
+---
+
+## DELETE /api/branches?id={id}
+
+Deletes a branch by ID.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/categories
+
+**Cache (RISK-137 / DEC-131):** an anonymous GET answers `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`; a request with any `Authorization` header answers `private, no-store`. Error responses carry no cache header. A CMS edit can take up to 60 s to reach visitors.
+
+Returns all categories ordered by `sort_order`.
+
+**Response:** `CategoryRow[]` — `{ key, en, ar, sortOrder }`
+
+---
+
+## POST /api/categories
+
+Upsert one or many categories.
+
+**Body:** Single category object OR array of category objects (`{ key, en, ar, sortOrder }`)
+
+**Response:** Upserted category/categories
+
+---
+
+## DELETE /api/categories?key={key}
+
+Deletes a category by its key.
+
+**Response:** `{ success: true, message: "Category deleted" }`
+
+---
+
+## GET /api/services
+
+**Cache (RISK-137 / DEC-131):** an anonymous GET answers `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`; a request with any `Authorization` header answers `private, no-store`. Error responses carry no cache header. A CMS edit can take up to 60 s to reach visitors.
+
+Returns all services ordered by `sort_order`.
+
+**Response:** `ServiceRow[]` — `{ id, en, ar, img, cat, unit, price, sortOrder, duration, duration_minutes, descriptionEn, descriptionAr, isShared, enableReminder, branchPricing, islaser, visible, active, createdAt }`
+
+`duration_minutes` (nullable, integer) — **Added 2026-07-25**, prefer this over the legacy free-text
+`duration`; see `DB_SCHEMA.md`.
+`islaser` / `is_laser` (boolean) — **Added 2026-09-20** (DEC-064), marks service as laser equipment service requiring device linking and enabling 3-tier laser payment options at booking and doctor sessions.
+
+---
+
+## POST /api/services
+
+Upsert one or many services. `id` is only included on an existing service being re-saved — see
+`services.id`'s note in `DB_SCHEMA.md` (RISK-033: this column's identity mode matters for upsert).
+
+**Body:** Single service object OR array (all fields from ServiceRow including `islaser` / `is_laser`)
+
+**Response:** Upserted service(s)
+
+---
+
+## DELETE /api/services?id={id}
+
+Deletes a service by numeric ID.
+
+**Response:** `{ success: true, message: "Service deleted" }`
+
+---
+
+## GET /api/providers
+
+**Two responses, chosen by the caller (RISK-140 / DEC-134).** No `Authorization` header, a junk or
+expired token, a valid token of a non-staff user and an inactive staff account get the **public
+projection**. A valid staff token gets the **full response**. If the token check itself fails (500/503)
+the route returns that error, never a reduced list.
+
+**Public response:** `PublicProvider[]` — exactly `{ id, name, specialty, image, services, rating,
+active, branchId, workingDaysHours }`, built by `mapPublicProvider` (`src/lib/publicProvider.ts`) as an
+allow-list. `workingDaysHours` keeps only `branch_ids`, `branch_schedules[branchId]`, the `in_person` /
+`online` maps and, per weekday, `isOpen`, `start`, `end`, `shifts[{start,end}]`; the `email`,
+`employment_type`, `languages`, `session_type` that POST/PATCH stash in that column are dropped.
+No phone, email, national id, salary, commission, age, gender, start date or booking count. Reads only
+the `providers` table and writes nothing. **Cache:** `Cache-Control: public, s-maxage=60,
+stale-while-revalidate=300` + `Vary: Authorization` for a request with no `Authorization` header;
+`private, no-store` when one is present. The local-JSON fallback goes through the same allow-list and is
+never cached.
+
+**Full (staff) response, cache `private, no-store`:** returns all providers ordered by name. Auto-syncs
+any `employee_accounts` row that is a doctor (doctor-workspace role or `is_also_doctor`, DEC-113/114)
+into `providers` if missing (staff callers only; it used to run on every public view). Falls back to
+`data/providers.json` on DB error (empty by default).
+
+**Response (staff):** `ProviderRow[]` — `{ id, name, bookings, services, more, rating, image, phone, email,
+employmentType, languages, sessionType, active, gender, age, specialty, nationalId,
+workingDaysHours, branchId, startDate, fixedSalary, commissionType, commissionValue,
+commissionBase, commissionFixedComponent, serviceCommissions }`. Note: `email`/`employmentType`/
+`languages`/`sessionType` have no dedicated columns — they're read out of the `working_days_hours`
+JSONB blob if present there (see POST/PATCH below), falling back to defaults otherwise.
+
+---
+
+## POST /api/providers
+
+Creates a new provider. Requires `requireStaffAccess`. Falls back to `data/providers.json` on DB
+error (this fallback throws on Vercel's read-only filesystem — a DB error here surfaces as a real
+500, not a silent success).
+
+**Body:** `{ name, services?, rating?, more?, image?, phone?, email?, employmentType?,
+employment_type?, languages?, sessionType?, session_type?, gender?, age?, specialty?, nationalId?,
+workingDaysHours?, branchId?, startDate?, fixedSalary?, commissionType?, commissionValue?,
+commissionBase?, commissionFixedComponent?, serviceCommissions? }`. `email`/`employmentType`/
+`languages`/`sessionType` are stashed into the `working_days_hours` JSONB column (no dedicated
+columns exist for them — see RISK-075). Also syncs `fixedSalary`/`phone`/`nationalId` to a matching
+`employee_accounts` row if an unambiguous name/phone match is found (does **not** sync `active` —
+see DEC-045).
+
+**Response:** Created provider, status 201
+
+---
+
+## PATCH /api/providers?id={id}
+
+Updates a provider by `id` only (**not** a by-name fallback — removed in RISK-075 since
+`providers.name` has no unique constraint). Requires `requireStaffAccess`.
+
+**Body:** any subset of the POST body fields above, plus `active?` (boolean — the only field with a
+real dedicated column; see `active` in DB_SCHEMA.md's `providers` table). Sending `workingDaysHours`
+replaces the schedule; omitting it merges any of the four stashed extras into the *existing* stored
+schedule rather than wiping it.
+
+**Response:** Updated provider. **404** if `id` doesn't match any provider (both on the Supabase
+path and the JSON fallback path — the JSON fallback no longer fabricates a phantom record on a
+miss).
+
+---
+
+## DELETE /api/providers?id={id}
+
+Deletes a provider. **Corrected 2026-09-30 (was stale):** both soft (deactivate) and hard (permanent)
+delete require `requireSuperadminAccess` — an `admin` is refused, not just non-staff (since commit
+`0976a72`, 2026-09-10; see `SECURITY.md` and `RISKS.md` RISK-078). Falls back to JSON file on DB error.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/page-settings
+
+**Cache (RISK-137 / DEC-131):** only the stripped anonymous body of a database read is cached (`public, s-maxage=60, stale-while-revalidate=300`, `Vary: Authorization`). Any request with an `Authorization` header (the full staff blob included) answers `private, no-store`; the seeded-default and JSON-file fallback bodies carry no cache header.
+
+Returns the `value` JSONB of the `page_settings` row with `key='home'`. Seeds defaults if empty. Falls back to `data/page_settings.json` on DB error.
+
+**Response:** Page settings object (hero slides, about content, etc.)
+
+---
+
+## POST /api/page-settings
+
+Upserts the `page_settings` row (`key='home'`, `value=body`). Falls back to JSON file on DB error.
+
+**Body:** Full page settings object
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/reservations
+
+Returns reservations. Filterable by query params.
+
+**Query params:**
+- `status` — 'pending', 'approved', 'rejected', 'confirmed', 'checked_in', 'started', 'completed', 'cancelled', 'no_show'
+- `serviceId` — numeric service ID
+- `date` — YYYY-MM-DD
+- `branchId` — UUID
+- `phone` — Patient phone filter (returns only matched bookings)
+- `customerId` — UUID customer identifier filter
+- `doctorId` — UUID provider ID or employee account ID (resolves linked provider ID and matches composite `provider_id` or `doctor_name`)
+- `doctorName` — Doctor display name filter (supports prefix stripping e.g. "Dr.", "د.", "دكتور" and composite `provider_id` + `doctor_name` matching)
+
+**Response:** `ReservationRow[]` — `{ id, serviceId, serviceIds, date, requestedTime, name, email, phone, notes, doctorNotes, receptionNotes, status, timeSlot, sessionType, createdAt, isManual, branchId, customerId, amountPaid, amountLeft, roomId, rooms, createdByEmployeeId, services, doctorName, providerId, followUpDate, startedAt, actualDurationMinutes, attachedProducts }`
+
+---
+
+## POST /api/reservations
+
+Creates a new reservation. Status is `'pending'`, or `'pending_deposit'` when a deposit
+percentage is configured and the booking isn't manual (`isManual` not set).
+
+**Body:** `{ serviceId, additionalServiceIds?, date, requestedTime?, name, email?, phone, notes?, sessionType?, branchId?, doctorName?, createdByEmployeeId?, isManual?, customerId? }`
+
+Required: serviceId, date, name, phone. `email` is optional.
+
+`additionalServiceIds` (optional, `number[]`) — CORRUPT-U06/RISK-081: lets a single session book
+more than one service. `serviceId` stays the required "primary" service; price and duration are
+summed across `[serviceId, ...additionalServiceIds]` and written to the `service_ids` array column
+(deduped, `serviceId` first). Pass the same combined set as `serviceIds` (comma-separated) to
+`GET /api/availability` first so slot computation reflects the combined duration and requires one
+doctor + room covering every selected service.
+
+`customerId`, if provided and it resolves to a real existing customer, links the reservation to
+that customer directly — bypassing the phone-based lookup/creation below entirely (used by the
+admin "Select Existing Patient" search picker). Otherwise the customer is looked up by phone
+(normalized via `normalizeEgyptMobile()`, trims + `+20`/`20` prefix — RISK-032) or created if no
+match.
+
+**Closed-day guard (RISK-034):** rejected with `400` if `date` falls on a weekday the branch (or,
+absent a branch, the default clinic hours) has marked closed — unless `isManual` is `true` (staff
+manual bookings can override to schedule a deliberate one-off exception).
+
+**Response:** Created reservation, status 201
+
+---
+
+## GET /api/reservations/previous
+
+Health & diagnostic endpoint for historical bookings and System Test Suite (`TC-038`). Returns metadata and recent historical booking entries.
+
+**Response:** `{ status: "ok", message: string, count: number, historicalBookings: ReservationRow[] }`
+
+---
+
+## POST /api/reservations/previous
+
+Creates a historical/previous booking that occurred before joining Revera Clinics. Does not create an upcoming active appointment, schedule conflict, or doctor slot reservation.
+
+**Body:** `{ patientPhone: string, patientName: string, date: string, doctorId?: string, doctorName?: string, serviceId?: number, serviceIds?: number[], serviceName?: string, paymentType?: string, branchId?: string, notes?: string, amountPaid?: number, invoiceValue?: number, products?: Array<{ id: string, name?: string, price?: number }>, productIds?: string[], productId?: string, productName?: string, packages?: Array<{ packageId: string, customerPackageId?: string, isNewPackage?: boolean, pulsesUsed?: number, pulsesRemaining?: number, price?: number }> }`
+
+- Required: `patientPhone`, `patientName`, `date`.
+- Multi-Product Support: Accepts `products` (array of product objects), `productIds` (array of UUIDs), or legacy single `productId`/`productName`. Each product is itemized in `reservation_products` and recorded in `product_sales`.
+- Phone validation: Validates Egyptian (`01[0125]XXXXXXXX`) or international mobile format. Returns 400 with `"Please enter a valid phone number."` on invalid phone.
+- Patient matching: Looks up `customers` by phone. If matched, links `customer_id` and increments `number_of_bookings`. If not matched, auto-creates a new patient in `customers` (`active = true`, `number_of_bookings = 1`) and links the new ID.
+- Booking status: Saved with `status = 'completed'`, `is_manual = true`, `is_historical = true`, and preserving original historical `date`.
+
+**Response:** `{ success: true, message: string, booking: object, customer: object, isNewPatient: boolean }`
+
+---
+
+## PATCH /api/reservations/previous
+
+Requires `requireSuperadminAccess`. Edits an existing historical/previous booking. Recomputes financial ledgers, updates attached services, multi-product line items in `reservation_products` and `product_sales`, and syncs patient packages and notes.
+
+**Body:** `{ id: string, patientPhone: string, patientName: string, date: string, doctorId?: string, doctorName?: string, serviceId?: number, serviceIds?: number[], paymentType?: string, branchId?: string, notes?: string, amountPaid?: number, invoiceValue?: number, products?: Array<{ id: string, name?: string, price?: number }>, productIds?: string[], productId?: string, productName?: string, packages?: Array<any> }`
+
+**Response:** `{ success: true, message: string, booking: object }`
+
+
+---
+
+## PATCH /api/reservations?id={id}
+
+Updates a reservation. Supports three modes:
+
+**Approve:** `{ action: "approve", timeSlot, doctorName?, date? }`
+- `date` (optional) lets staff change the appointment date at approval time — not just the time
+  slot — reusing the same field the `postpone` action already accepts. Defaults to the
+  reservation's existing `date` if omitted. Added so a request landing on an unavailable/closed
+  day (RISK-034) doesn't leave staff stuck with no valid slot to approve.
+- Validates room availability for the (possibly new) date and time slot; assigns a compatible
+  clinical room
+- Sets status to 'approved', assigns `timeSlot`, `date`, `doctorName`/`providerId`, `roomId`
+
+**Reject:** `{ action: "reject" }`
+- Sets status to 'rejected'
+
+**Cancel:** `{ action: "cancel" }`
+- Requires a staff bearer token. Blocked once the booking is `completed`; idempotent (re-firing on an already-`cancelled`/`no_show` booking is a no-op).
+- Refunds any deposit already paid (`amount_paid`) to `customers.wallet_balance`, then sets the reservation's `amount_paid`/`amount_left` to 0 and status to `'cancelled'` (RISK-029). Does nothing if `amount_paid` is 0 (e.g. no deposit was ever collected).
+
+**No-show:** `{ action: "no_show" }`
+- Same guards as Cancel. Forfeits any deposit already paid — adds it to `customers.spent_amount` instead of refunding it — sets `amount_left` to 0 (nothing further owed for an undelivered service), and status to `'no_show'`. `amount_paid` is left as-is (it was kept, not refunded).
+
+**Postpone:** `{ action: "postpone", date?, timeSlot?, followUpDate? }`
+- Requires a staff bearer token. Blocked if the booking is `completed`, `cancelled`, or `no_show`.
+- If `date` is given: this is a real reschedule — updates `date` (and `time_slot` if `timeSlot` is also given), clears `follow_up_date`, and returns the booking to `'approved'` if it was `'postponed'`. No money moves.
+- Else if `followUpDate` is given: sets status to `'postponed'` and stores `follow_up_date` as a reminder — the existing `date`/`time_slot` are left untouched but should be treated as stale until the booking is actually rescheduled via the path above.
+- One of `date` or `followUpDate` is required.
+
+**Generic update (includes checkout/wallet adjustments & service replacement):** `{ status?, notes?, doctorName?, sessionType?, serviceId?, serviceIds?, service_name?, changedBy?, amountPaid?, amountLeft?, walletDeposit?, walletWithdrawal?, consumptionOverrides?, redeemedServiceIds?, date? }`
+- `serviceId` / `serviceIds` / `service_name`: Replaces the booked clinical service. Resolves effective branch pricing for the target branch, recalculates total invoice price, preserves 100% of previously paid amounts (`amount_paid`), automatically recomputes `amount_left = Math.max(0, derivedTotalCost + attachedProductsCost - effectivePaid)`, and appends an audit record to `notes`: `[Service Changed by {changedBy} on {timestamp}]: {oldService} ({oldPrice} EGP) ➔ {newService} ({newPrice} EGP)`.
+- `date` (paired with `timeSlot`) reschedules the booking directly, independent of the `postpone` action above — this is the general-purpose "edit booking date/time" path.
+- Requires a staff bearer token and updates any combination of those fields
+- Transitioning to status `'completed'` triggers patient balance ledger calculations and an additive invoice, invoice-line, and payment write. If `amountLeft` is omitted, `amount_left` is automatically derived as `Math.max(0, totalCost - amountPaid)` and saved to the reservation, properly incrementing `customer.outstanding` by the unpaid remainder until payment is settled.
+- A later `amountPaid` change on an already-`completed` reservation appends one more payment row to that reservation's existing invoice, rather than creating a duplicate invoice or duplicate service lines, updating `customer.outstanding` down and `customer.spent_amount` up.
+- `consumptionOverrides` (optional, shaped as `{ [serviceId]: { [productId]: qty } }`, task 2.11): when the completed booking's services have configured `service_consumables`/`service_devices` recipes, the additive Phase 2 side effects create `consumption_entries`/`stock_movements` rows and snapshot material + device pulse COGS and provider commission onto the corresponding `invoice_lines`. A per-line costing failure (e.g. an unconfigured device rating) is logged and leaves only that line's `cogs_snapshot`/`commission_snapshot` `NULL` — it does not affect other lines on the same checkout or fail the checkout itself
+- `redeemedServiceIds` (optional, `number[]`, RISK-035): service IDs in this checkout that are being paid for by redeeming an existing package entitlement, not charged again here. Those lines are still written (list `unit_price`, a `discount` equal to the full price, `line_total: 0`) so the visit stays on the invoice for the audit trail and its `cogs_snapshot`/`commission_snapshot` are still costed normally — only the *revenue* is suppressed, since it was already recognised by `POST /api/packages/consume` (task 1.13). The frontend must send this — the server has no other way to know which lines in a multi-service booking are package redemptions. Before this field existed, every redeemed line was invoiced at full price anyway, double-counting revenue against the correct `package_revenue_recognitions` entry and creating a phantom unpaid receivable.
+
+**Public deposit self-report exception:** A booking in `pending_deposit` may be updated without a
+staff token only with `{ status: "pending", amountPaid, amountLeft, notes? }`. This supports the
+public booking payment-declaration flow; every other PATCH shape requires staff access.
+
+**Response:** Updated reservation
+
+---
+
+## DELETE /api/reservations?id={id}
+
+Superadmin only. `mode=soft` cancels the booking and changes nothing else. `mode=hard` (the default) permanently deletes ONE booking and, in the same call (DEC-133), the booking's payment rows (`transactions`, except wallet-type rows), its ledger invoice(s) with their payments and lines, gives back package sessions it consumed through `consume_customer_package_session`, and takes the booking's share out of the patient's `spent_amount` / `outstanding` / `number_of_bookings` (never below 0). Wallet is not touched. Pass `id=all` to delete all reservations (no cascade: payments and patient figures are not touched).
+
+**Response (hard, one booking):** `{ success: true, message, removed: { transactions: [{ id, transactionId, type, amount }], transactionsTotal, walletTransactionsKept, invoices: [{ id, invoiceNo }], payments, packageSessionsRestored }, customer: { id, before: {spent, outstanding, bookings}, after: {...} } | null, warnings?: string[] }`. Errors: `404` booking not found; `409` `PATIENT_FIGURES_CHANGED` (the patient's figures changed while deleting, nothing changed, retry); `500` a step failed (earlier steps are undone, `partial: true` + `undoFailures` if an undo failed). Other modes: `{ success: true, message: "..." }`.
+
+---
+
+## GET /api/availability?serviceId={id}&branchId={id}&days={n}
+
+Returns availability for the next `days` days (default 30) for a given service + branch.
+
+For each date: counts approved bookings, calculates whether at least one contiguous block
+of free 15-minute slots exists to fit the service's duration. Uses branch-specific service hours if available.
+
+`serviceIds` (optional, comma-separated, e.g. `serviceIds=3,7`) — CORRUPT-U06/RISK-081: a
+multi-service session. When present, duration is summed across every listed service, a
+compatible doctor must cover *all* of them (not just one), and the compatible-rooms list is the
+intersection across every service (a room must support all of them, not just one). Falls back to
+`[serviceId]` when omitted — every existing single-service caller is unaffected.
+
+**Response:** Array of `{ date, approvedCount, approvedSlots, isAvailable }`
+
+---
+
+## GET /api/inventory/products
+
+Requires a staff bearer token. Returns every product (dual-storage: native `inventory_products`
+table if populated, else a `page_settings` JSON blob, seeded with defaults on first read).
+
+**Response:** `{ products: ProductItem[] }` — `{ id, name, arabic_name?, category, branch_id?, sku?, unit, purchase_price, selling_price, stock_quantity, min_reorder_quantity, status, role, notes?, created_at, updated_at }`
+
+`role` (`'retail' | 'consumable' | 'both'`, **added task 3B.3**, DEC-021) — whether this product is
+sold to patients, consumed in services, or both; filters the recipe picker in
+`POST /api/service-consumables` and is enforced at checkout by `applyCheckoutCosting`.
+
+---
+
+## POST /api/inventory/products
+
+Requires a staff bearer token. Creates a product.
+
+**Body:** `{ name, arabic_name?, category?, branch_id?, sku?, unit?, purchase_price, selling_price, stock_quantity?, min_reorder_quantity?, status?, role?, notes? }`
+
+Required: `name`, `purchase_price`, `selling_price`. `role` must be one of `retail`/`consumable`/`both`
+if provided (defaults `retail`). `status` auto-forces to `'Out of Stock'` if `stock_quantity` is 0.
+
+**Response:** Created product, status 201
+
+---
+
+## PUT /api/inventory/products
+
+Requires a staff bearer token. Updates a product — only fields present in the body change.
+
+**Body:** `{ id, ...any ProductItem field }`
+
+**Response:** Updated product
+
+---
+
+## DELETE /api/inventory/products?id={id}
+
+Requires a staff bearer token.
+
+**Response:** `{ success: true, id }`
+
+---
+
+## GET /api/inventory/products/sales
+
+Requires a staff bearer token. Returns product-sale history.
+
+**Response:** `{ success: true, sales: ProductSaleRecord[] }`
+
+---
+
+## POST /api/inventory/products/sales
+
+Requires a staff bearer token. Records a retail product sale, deducts stock, and updates the existing customer spend scalar.
+
+**Body:** `{ product_id, product_name?, product_sku?, customer_id, customer_name?, customer_mobile?, customer_email?, quantity, unit_price?, total_amount?, branch_name?, sold_by?, payment_method?, notes? }`
+
+Required: `product_id`, `customer_id`, and positive `quantity`. **Updated 2026-07-26 (RISK-022 fix):**
+`customer_id` must resolve to an existing `customers` row, checked **before** any stock or ledger
+write — a non-existent `customer_id` now returns `404` rather than silently deducting stock and
+losing the sale record (`product_sales.customer_id` has an FK; a bad id previously failed that
+insert only, fell back to a `page_settings` blob, and still reported success).
+
+**Updated 2026-07-27 (RISK-024 fix):** `quantity` is now also checked against the product's current
+`inventory_products.stock_quantity` before any write — selling more than is in stock returns `409`
+instead of recording the sale and letting `deductInventoryStock` silently clamp stock to 0.
+
+After a successful native `product_sales` insert, the route additively attempts to create one issued product invoice, invoice line, and payment row. A ledger-write failure is logged and does not roll back or fail the established POS sale path.
+
+**Response:** `{ success: true, sale: ProductSaleRecord, sales: ProductSaleRecord[] }` (`200`), or
+`{ success: false, error }` (`404` for a non-existent customer, `409` for insufficient stock, `400` for missing/invalid required fields)
+
+---
+
+## GET /api/inventory/devices
+
+Requires a staff bearer token. Returns every clinic device (dual-storage: native
+`inventory_devices` table if populated, else a `page_settings` blob), with `status` recomputed
+live from pulse counts vs. thresholds (`'Optimal' | 'Warning' | 'Maintenance Due'`, or
+`'Out of Service'` if manually set).
+
+**Response:** `{ devices: [...], history: [...] }` — each device:
+`{ id, name, model, serial_number, category, branch_id, initial_pulse_count, current_pulse_count, total_lifetime_pulses, warning_threshold_1, maintenance_threshold_2, lamp_replacement_cost, warning_1_notified, warning_2_notified, last_maintenance_date, status, notes, created_at, updated_at }`
+
+`lamp_replacement_cost` + `maintenance_threshold_2` (**added task 3B.4**) — read by
+`applyCheckoutCosting` in `/api/reservations` to snapshot `lamp_replacement_cost /
+max_pulses_limit × pulses_per_session` onto the invoice line's COGS. The real
+`inventory_devices` table only stores `total_pulses`/`max_pulses_limit` (see `DB_SCHEMA.md`) —
+`normalizeDeviceRow()` in this route maps those to the blob-shape field names
+(`current_pulse_count`/`maintenance_threshold_2`) every other reader of this route expects.
+
+---
+
+## POST /api/inventory/devices
+
+Requires a staff bearer token. Registers a device; writes a `'Device Created'` audit log entry.
+
+**Body:** `{ name, model?, serial_number?, category?, branch_id?, initial_pulse_count?, warning_threshold_1?, maintenance_threshold_2?, lamp_replacement_cost?, notes? }`
+
+Required: `name`. `lamp_replacement_cost` must be a non-negative number if provided.
+
+**Response:** Created device, status 201
+
+---
+
+## PUT /api/inventory/devices
+
+Requires a staff bearer token. Updates a device — only fields present in the body change.
+
+**Body:** `{ id, ...any device field }`
+
+**Response:** Updated device
+
+---
+
+## GET /api/inventory/devices/audit-logs
+
+Requires a staff bearer token. Returns the full maintenance/pulse-reset/creation audit trail for
+**all** devices (no filtering by device — the caller filters client-side), newest first. Reads the
+native `device_maintenance_history` table if populated, else a `page_settings` blob fallback.
+
+**Response:** `DeviceAuditLog[]` — `{ id, device_id, device_name, type, action_type, performed_by, date, starting_pulse_count?, ending_pulse_count?, pulses_delivered?, pulses_added?, reason?, notes?, details?, created_at }`
+
+---
+
+## POST /api/inventory/devices/audit-logs
+
+Requires a staff bearer token. Records one audit log entry (used internally by device creation,
+pulse resets, and maintenance edits — not typically called directly from the UI).
+
+**Body:** Any subset of `DeviceAuditLog` fields (all optional; `recordDeviceAuditLog()` fills
+sensible defaults for missing ones).
+
+**Response:** Created log entry, status 201
+
+---
+
+## GET /api/packages
+
+**Cache (RISK-137 / DEC-131):** an anonymous GET answers `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`; a request with any `Authorization` header answers `private, no-store`. Error responses carry no cache header. A CMS edit can take up to 60 s to reach visitors.
+
+Public — no auth check, same convention as `GET /api/services` (returns everything unfiltered;
+active/`showOnWebsite` filtering for the public site happens client-side in `PackagesSection.tsx`).
+Returns every package definition with its items.
+
+**Response:** `[{ id, name, nameAr, branchId, price, taxRate, validityDays, onExpiry, extensionDays, active, showOnWebsite, items: [{ id, serviceId, serviceName, serviceNameAr, qty }] }]`
+
+---
+
+## POST /api/packages
+
+Requires a staff bearer token. Creates a package definition.
+
+**Body:** `{ name, nameAr?, branchId?, price, taxRate, validityDays, onExpiry, extensionDays, active, showOnWebsite, items: [{ serviceId, qty }] }`
+
+Required: `name`, at least one item with a positive integer `qty`. `nameAr` (Added 2026-07-28,
+`20260728010000_packages_public_display_fields.sql`) has no fallback — the public site shows the
+English name in Arabic view if unset. `showOnWebsite` (same migration) is independent of `active`
+— see `packages.show_on_website` in `DB_SCHEMA.md`.
+
+**Response:** Created package object, status 201.
+
+---
+
+## PATCH /api/packages
+
+Requires a staff bearer token. Updates a package definition. `id` required in the body; replaces
+all items if an `items` array is present, otherwise leaves items unchanged.
+
+**Response:** Updated package object.
+
+---
+
+## GET /api/prescriptions
+
+Requires staff bearer token or customer lookup parameter. Retrieves clinical prescriptions filtered by `customer_id`, `booking_id`, or all active clinic prescriptions.
+
+**Query Parameters:**
+- `customer_id` (optional): Filter prescriptions by patient ID.
+- `booking_id` (optional): Filter prescriptions by booking reservation ID.
+
+**Response:** `PrescriptionItem[]` — `{ id, booking_id, customer_id, customer_name, patient_name, doctor_name, diagnosis, medications: [{ name, dosage, frequency, duration }], instructions, general_notes, doctor_notes, follow_up_date, follow_up_notes, version, created_at, updated_at }`
+
+---
+
+## POST /api/prescriptions
+
+Requires staff/doctor bearer token. Creates or updates a digital prescription for a patient visit with deduplication and automated versioning.
+
+**Body:** `{ booking_id?, customer_id?, patient_name, customer_name?, doctor_name?, diagnosis, medications: MedicationItem[], instructions?, general_notes?, doctor_notes?, follow_up_date?, follow_up_notes?, date? }`
+
+- `follow_up_date`: Optional string (`YYYY-MM-DD`). Records the doctor's recommended clinical follow-up visit date.
+- `follow_up_notes`: Optional string. Records specific clinical instructions or rationale for the follow-up consultation.
+- When saved, `follow_up_date` is persisted to `prescriptions` and can be synced to `reservations.follow_up_date` to trigger reception calendar follow-up reminders.
+
+**Response:** `{ success: true, message: string, prescription: object, isNewVersion: boolean }`
+
+---
+
+## DELETE /api/packages?id={id}
+
+Requires a staff bearer token. Refuses (`409`) if any `customer_packages` row already references
+this package — mark it inactive instead.
+
+**Response:** `{ message: 'Package deleted successfully.' }`
+
+---
+
+## POST /api/packages/sell
+
+Requires a staff bearer token. Sells an active package to an existing customer.
+
+**Body:** `{ customerId, packageId, branchId? }`
+
+The requested branch must match the package's branch when the package is branch-restricted. The route creates an issued package invoice, one package invoice line, one cash payment, a `customer_packages` entitlement expiring after the package's `validity_days`, and one `customer_package_items` entitlement per configured package item.
+
+**Response:** `{ invoice, customerPackage, packageItems }`, status 201.
+
+---
+
+## POST /api/purchases
+
+Requires a staff bearer token.
+
+**Body:** `{ supplierId?, purchasedAt?, lines: [{ productId, qty, unitCost }], paid?, dueDate? }`
+
+Creates one purchase, its lines, and matching inbound `stock_movements`. `total` is derived on the server from the lines; all referenced products and an optional supplier must exist. For each line, also increases that product's `stock_quantity` by `qty` and overwrites its `purchase_price` with `unitCost` (DEC-033, last-cost basis) — applied sequentially per line, not concurrently.
+
+**Response:** `{ purchase, lines }`, status 201.
+
+---
+
+## GET /api/purchases
+
+Requires a staff bearer token. Returns every row in `purchases`, newest first, with the supplier name and each line's product name embedded.
+
+**Response:** `{ purchases: Purchase[] }` — each purchase includes `suppliers: { name }` and `purchase_lines: [{ id, product_id, qty, unit_cost, inventory_products: { name } }]`.
+
+---
+
+## GET /api/service-consumables?serviceId={id}
+
+Requires a staff bearer token. Returns the standard consumables recipe for one service, with each product's name/unit embedded.
+
+**Response:** `{ consumables: [{ service_id, product_id, standard_qty, inventory_products: { name, unit } }] }`
+
+---
+
+## POST /api/service-consumables
+
+Requires a staff bearer token. Replaces the entire recipe for a service — deletes existing `service_consumables` rows for `serviceId`, then inserts the given `items` (empty array clears the recipe).
+
+**Body:** `{ serviceId, items: [{ productId, standardQty }] }`
+
+Each item requires a positive `standardQty` and no duplicate `productId` within the same request. Every referenced product must exist and have `role IN ('consumable', 'both')` — a `retail`-only product is rejected with a 400 naming the product, since `applyCheckoutCosting` (`/api/reservations`) enforces the same rule at checkout time and would otherwise fail bookings for this service instead of failing the save.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/service-devices?serviceId={id}
+
+Requires a staff bearer token. Returns which devices are attached to a service and their `pulses_per_session`, with each device's name embedded.
+
+**Response:** `{ deviceLinks: [{ service_id, device_id, pulses_per_session, inventory_devices: { name } }] }`
+
+---
+
+## POST /api/service-devices
+
+Requires a staff bearer token. Replaces every device attached to a service — deletes existing `service_devices` rows for `serviceId`, then inserts the given `items` (empty array detaches all devices).
+
+**Body:** `{ serviceId, items: [{ deviceId, pulsesPerSession? }] }`
+
+Each item accepts an optional `pulsesPerSession` (defaults to 0 if omitted) and no duplicate `deviceId` within the same request. Every referenced device must exist in `inventory_devices`.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/suppliers
+
+Requires a staff bearer token. Returns every row in `suppliers`, ordered by `name`.
+
+**Response:** `{ suppliers: Supplier[] }`
+
+---
+
+## POST /api/suppliers
+
+Requires a staff bearer token. Creates a supplier.
+
+**Body:** `{ name, contact?, payment_terms?, active? }`
+
+Required: `name`. `active` defaults to `true`.
+
+**Response:** Created `Supplier` object, status 201.
+
+---
+
+## PUT /api/suppliers
+
+Requires a staff bearer token. Updates a supplier. Only fields present in the body are changed.
+
+**Body:** `{ id, name?, contact?, payment_terms?, active? }`
+
+Required: `id`. 404 if no supplier matches.
+
+**Response:** Updated `Supplier` object.
+
+---
+
+## DELETE /api/suppliers?id={id}
+
+Requires a staff bearer token. Deletes a supplier.
+
+**409** if any `purchases` row references this supplier (`supplier_id` is `ON DELETE SET NULL` at the
+DB level, so the route blocks the delete rather than letting it silently orphan purchase history) —
+mark the supplier inactive instead via `PUT`.
+
+**Response:** `{ success: true, id }`
+
+---
+
+## POST /api/packages/consume
+
+Requires a staff bearer token. Consumes one entitled package service from a completed reservation.
+
+**Body:** `{ customerPackageItemId, reservationId }`
+
+The reservation must be completed, belong to the entitlement's customer, and include the entitled service. The route atomically increments `qty_used`, decrements `qty_remaining`, creates one `package_revenue_recognitions` event, and marks the customer package `fully_used` when no sessions remain. A duplicate item/reservation consumption is rejected.
+
+**Response:** `{ consumption }`
+
+---
+
+## POST /api/packages/extend
+
+Requires a staff bearer token. Manually extends an active or expired customer package.
+
+**Body:** `{ customerPackageId, expiresAt }`
+
+`expiresAt` must be a future timestamp. The package becomes active and records the extending employee and time.
+
+**Response:** `{ customerPackage }`
+
+---
+
+## GET /api/customers
+
+Returns all customers, or a single customer matching the queried params.
+
+**Query params:**
+- `mobile` — Retrieve a single customer matching this mobile number
+- `email` — Retrieve a single customer matching this email
+
+**Response:** Single `Customer` object, or `Customer[]` array
+
+---
+
+## POST /api/customers
+
+Creates or updates a customer profile record.
+
+**Body:** `{ id?, name, mobile, gender?, email?, active?, spent_amount?, outstanding?, wallet_balance?, area?, location_name?, street_name?, building_no?, floor_no?, note?, age?, national_id?, address?, referral?, occupation? }`
+
+Required: `name`, `mobile`. If `id` is present, updates the existing customer. Otherwise creates a new record.
+
+**Response:** Created or updated `Customer` object, status 201 (created) or 200 (updated)
+
+---
+
+## DELETE /api/customers?id={id}
+
+Deletes a customer profile record. **Added 2026-09-30 (was missing):** both soft and hard delete
+require `requireSuperadminAccess` — an `admin` is refused (since commit `0976a72`, 2026-09-10; see
+`SECURITY.md` and `RISKS.md` RISK-078). **Changed 2026-10-25 (DEC-134, RISK-140; supersedes DEC-128):** `mode=hard` deletes the patient together with everything that belongs to them, in this order: transactions, invoice payment rows, invoices, product sales, wallet entries, packages, product balances, laser logs, medical records, medical reports, prescriptions, bookings (linked ones, plus un-linked ones that carry the patient's phone and name when no other patient row owns that phone), then the patient row, then the linked Supabase Auth user (by `auth_user_id`, else by e-mail/phone; never a staff login). Answers `200 { message, removed: { bookings, payments, paymentsAmount, packages, walletEntries, productBalances, laserSessions, clinicalRecords }, keptBookingsOtherName }`; `404` when the patient does not exist; `500 { code: "PATIENT_DELETE_FAILED", failedStep, removedSoFar, error }` when a step fails (the patient row is still there, run it again). An id of the form `res-cust-<phone>` (no patient row): `mode=hard` deletes the un-linked bookings with that phone and their transactions/invoices and answers the same `200` shape (`404` if none is left, `409 PATIENT_RECORD_EXISTS` if a patient row now owns the phone); `mode=soft` answers `409 PATIENT_IS_BOOKING_DERIVED` with `blockers.bookings`; `400` for any other non-UUID id. `mode=soft` answers `404` when the patient does not exist.
+
+### GET /api/customers?id={id}&deletePreview=1
+
+Superadmin only, read only. Returns what a hard delete would remove: `{ patientId, derived, name, counts: { bookings, payments, paymentsAmount, packages, walletEntries, productBalances, laserSessions, clinicalRecords }, keptBookingsOtherName }`. `id` may be a patient UUID or `res-cust-<phone>`. Same `404` / `400` / `409 PATIENT_RECORD_EXISTS` answers as the delete; `403` for a non-superadmin. The admin delete dialog shows it before the second confirm.
+
+**Response:** `{ message: "Customer deleted successfully" }`
+
+---
+
+## GET /api/customers/packages?customer_id={id}
+
+Requires a staff bearer token. Lists everything one customer has bought under the packages
+feature — `customer_packages` joined with `packages` (name/name_ar) and `customer_package_items`
+(joined with `services` for en/ar names), every status (`active`/`expired`/`fully_used`) included.
+Callers filter client-side to what they need — mirrors the "return everything, filter in the UI"
+convention already used by `GET /api/services` and `GET /api/packages`.
+
+**Response:** `{ packages: [{ id, packageId, packageName, packageNameAr, status, purchasedAt, expiresAt, pricePaid, items: [{ id, serviceId, serviceName, serviceNameAr, qtyTotal, qtyUsed, qtyRemaining }] }] }`
+
+---
+
+## GET /api/customers/package-redemptions?customer_id={id}
+
+Requires a staff bearer token. For one customer's booking history: which reservations were paid
+for (fully or partially) by redeeming a package session, which package that was, and when it was
+originally bought — joins `package_revenue_recognitions` back to `customer_packages`/`packages`,
+filtered to that customer. Lets the Booking History table show *why* a visit shows 0 EGP paid
+instead of leaving it unexplained, and stays accurate even if the package is later edited/
+discontinued, since it's sourced from the recognition event record, not the live package row.
+
+**Response:** `{ redemptions: [{ reservationId, recognisedAmount, recognisedAt, packageName, packageNameAr, packagePurchasedAt }] }`
+
+---
+
+## GET /api/customers/reconcile
+
+**Staff-only** (`requireStaffAccess`). PROPOSAL-002 Phase 1, task 1.14 — read-only, writes nothing.
+For every customer, derives `outstanding`/`spent`/`wallet` fresh from `invoices`/`payments`/
+`wallet_txns` (`src/lib/customerBalances.ts`) and compares against the currently-authoritative
+`customers.outstanding`/`spent_amount`/`wallet_balance` scalars, flagging any mismatch. This is a
+comparison tool proving the ledger-derived numbers agree with the delta-maintained scalars — no
+read path has cut over to trusting the ledger's numbers yet; see the note on those three columns in
+`DB_SCHEMA.md`.
+
+**Response:**
+```json
+{
+  "customersChecked": 12,
+  "discrepancyCount": 1,
+  "allMatched": false,
+  "discrepancies": [
+    {
+      "customerId": "…",
+      "customerName": "…",
+      "ledger": { "outstanding": 120, "spent": 100, "wallet": 0, "walletClamped": false },
+      "scalar": { "outstanding": 1860, "spent": 100, "wallet": 0 },
+      "matches": false
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/inventory/products/reconcile
+
+**Staff-only** (`requireStaffAccess`). PROPOSAL-002 Phase 2, task 2.12 — read-only, writes nothing.
+For every product, derives `stock_quantity` fresh from `stock_movements`
+(`src/lib/inventoryBalances.ts`) and compares against the currently-authoritative
+`inventory_products.stock_quantity` scalar, flagging any mismatch. Same comparison-only role as
+`GET /api/customers/reconcile` (task 1.14) — no read path has cut over to trusting the derived
+value yet; see the note on `stock_quantity` in `DB_SCHEMA.md`.
+
+**Response:**
+```json
+{
+  "productsChecked": 2,
+  "discrepancyCount": 2,
+  "allMatched": false,
+  "discrepancies": [
+    {
+      "productId": "…",
+      "productName": "k",
+      "derived": -2,
+      "scalar": 8,
+      "matches": false
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/clinic-settings?key={key}
+
+Alias for `/api/page-settings` — returns the `value` JSONB for the given key.
+
+**Response:** `{ key, value }`
+
+---
+
+## POST /api/clinic-settings?key={key}
+
+Alias for `/api/page-settings` — upserts the `value` JSONB for the given key.
+
+**Body:** Full page settings object
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/employees
+
+Returns all employee accounts with role and branch info.
+
+**Response:** `EmployeeAccount[]` — each row has `branch_id` (primary) and `branch_ids` (all assigned branches, primary first, always present).
+
+---
+
+## POST /api/employees
+
+Creates an employee account and sends a Supabase Auth invite email.
+
+**Body:** `{ name, email, roleName, branchIds?, password?, ... }`
+
+`branchIds` (DEC-110): ordered array of branch ids, first = primary branch (stored as `branch_id`; the whole list in `branch_ids`). The legacy single `branchId` is still accepted. If neither is sent the account is created with no branch. If sent: must be non-empty, unique, existing, and **active** — otherwise `400` (`field: "branchIds"`), before any auth user is created.
+
+**Response:** Created employee account (includes `branch_ids`)
+
+---
+
+## PATCH /api/employees
+
+Updates an employee. Send only the fields being changed. `branchIds` / legacy `branchId` follow the same rules as POST, except a branch the employee **already holds** may stay even if it is now inactive. An empty list (or a null `branchId`) is rejected with `400`.
+
+**Active / Inactive (DEC-117):** send `{ id, isActive: true|false }`. It is handled on its own and returns the updated row plus `authSynced` (whether the Supabase Auth ban was applied). Refused with `403` for a superadmin account and `400` for your own account. Inactive accounts get `403` from every staff endpoint and from `/api/auth/me` (`code: "account_inactive"`).
+
+---
+
+## DELETE /api/employees?id={id}
+
+Administrator-level (admin or superadmin). `mode=hard` (default) deletes the account and the linked Supabase Auth user. `mode=soft` switches the account Inactive instead (role and records kept, Auth user banned). Refused with `403` for a superadmin account and `400` for your own account (DEC-117).
+
+**Response:** `{ message }`
+
+---
+
+## GET /api/roles
+
+Returns all roles with their permission arrays.
+
+**Response:** `Role[]`
+
+---
+
+## POST /api/roles
+
+Creates or updates a role.
+
+**Body:** `{ id?, name, permissions, workspace? ('standard' | 'doctor') }` — `workspace` decides which screens the role lands on (DEC-113); omitted keeps the stored value.
+
+**Response:** Upserted role
+
+---
+
+## PATCH /api/roles
+
+Superadmin only. Locks or unlocks a role. **Body:** `{ name, locked: boolean }`. Core system roles cannot be unlocked (`400`); `404` if the role does not exist. **Response:** the updated role.
+
+---
+
+## DELETE /api/roles?id={id}
+
+Deletes a role by ID.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/provider-attendance?date={YYYY-MM-DD}
+
+Returns all provider attendance records for a date. No geolocation involved — this is an
+admin-set manual status/time entry per provider, distinct from `/api/hr/attendance` below.
+
+**Response:** `provider_attendance[]`
+
+---
+
+## POST /api/provider-attendance
+
+Upserts a manual attendance status for a provider (admin-entered, no geolocation check).
+
+**Body:** `{ providerId, date, status, checkIn?, checkOut?, notes? }`
+
+**Response:** Upserted `provider_attendance` row
+
+---
+
+## GET /api/hr/attendance
+
+Returns all employee attendance records, joined with `employee_accounts` (id, name, email,
+department, role_name). Requires HR access (`verifyHrAccess`).
+
+**Headers:** `Authorization: Bearer <supabase-jwt>`
+
+**Response:** `hr_attendance[]`
+
+---
+
+## POST /api/hr/attendance
+
+Employee self check-in with GPS geofence enforcement (see `PRODUCT_RULES.md` — "Provider
+attendance geofence" and `DECISIONS.md` DEC-009). Requires the employee's branch to have
+resolvable coordinates. Rejects with `not_in_location` (400, includes `distance` in meters)
+if the employee is > 800m from the branch. Bypassed entirely for `superadmin@revera.com`.
+
+**Headers:** `Authorization: Bearer <supabase-jwt>` (any authenticated employee)
+
+**Body:** `{ employeeId, latitude, longitude }`
+
+**Response:** Upserted `hr_attendance` row, or `400` with `{ error, message, distance? }` on rejection
+
+---
+
+## PATCH /api/hr/attendance
+
+Employee self check-out — records `check_out_time` for the employee's attendance row for today.
+
+**Headers:** `Authorization: Bearer <supabase-jwt>`
+
+**Body:** `{ employeeId }`
+
+**Response:** Updated `hr_attendance` row
+
+---
+
+## GET /api/hr/doctor-payroll
+
+Requires HR access (`verifyHrAccess`). Returns every stored `doctor_payroll` row, enriched with the
+provider's current name/specialty and a freshly-computed commission for the row's month.
+
+**Updated 2026-07-26 (task 2.14):** completed-reservation matching and commission are now
+attributed via `provider_id` (`reservations.provider_id === providers.id`), not a case-insensitive
+`doctor_name` string match — a provider rename no longer detaches historical commission (RISK-015).
+`calculated_commission` sums real per-reservation `invoice_lines.commission_snapshot` values (task
+2.11/2.15's checkout costing) rather than re-deriving commission live from `amount_paid +
+amount_left`. Only reservations with `status: 'completed'` count (narrowed from
+`'approved' OR 'completed'` — a necessary consequence, since `commission_snapshot` only exists once
+checkout completes an invoice line).
+
+**Response:** array of
+`{ id, provider_id, month, fixed_salary, commission_type, commission_value, status, doctor: { id, name, specialty, employee_id }, fixed_salary_snapshot, commission_type_snapshot, commission_value_snapshot, reservations_count, calculated_commission, total_reservations_value, net_salary }`
+
+---
+
+## POST /api/hr/doctor-payroll
+
+Requires HR access. Runs payroll for a given `month`, inserting one `doctor_payroll` row per
+active provider using the same `provider_id`-based commission attribution as `GET` above.
+
+**Body:** `{ month }` (`'YYYY-MM'`)
+
+**Response:** Inserted `doctor_payroll` rows
+
+---
+
+## PATCH /api/hr/doctor-payroll
+
+Requires HR access. Updates one `doctor_payroll` row by `id`. If `total_commission_earned` is not
+explicitly supplied, it is recalculated the same way as `GET`/`POST` (`provider_id`-based, summed
+from `commission_snapshot`) before being locked in.
+
+**Body:** `{ id, fixed_salary?, total_commission_earned?, status?, ... }`
+
+**Response:** Updated `doctor_payroll` row
+
+---
+
+## GET /api/auth/me
+
+Verifies the Bearer JWT and returns the employee's role + permissions from `employee_accounts` + `roles`.
+
+**Headers:** `Authorization: Bearer <supabase-jwt>`
+
+**Response:** `{ id, role, department, workspace ('standard' | 'doctor'), isAlsoDoctor, permissions, email, employeeId }`. `workspace` is the role's explicit workspace (DEC-113) and `isAlsoDoctor` the account flag (DEC-114). `403` with `code: "account_inactive"` for an inactive account (DEC-117); `503` when Supabase auth cannot be reached right now, so the client keeps the session (RISK-113).
+
+---
+
+## GET /api/auth/employee-email?employeeId={id}
+
+Looks up the Supabase Auth email for a given `employee_id`.
+
+**Response:** `{ email }`
+
+---
+
+## GET /api/expenses/categories
+
+Requires a staff bearer token. Returns all `expense_categories` ordered by name.
+
+**Response:** `ExpenseCategory[]`
+
+---
+
+## POST /api/expenses/categories
+
+Requires a staff bearer token. Creates an expense category.
+
+**Body:** `{ name, kind: 'fixed' | 'variable', parentId? }`
+
+`parentId`, if given, must reference an existing category.
+
+**Response:** Created `ExpenseCategory`, status 201.
+
+---
+
+## PATCH /api/expenses/categories?id={id}
+
+Requires a staff bearer token. Updates `name`, `kind` and/or `parentId` (any subset).
+
+**Response:** Updated `ExpenseCategory`
+
+---
+
+## DELETE /api/expenses/categories?id={id}
+
+Requires a staff bearer token. Deletes a category. Returns **409** if any `expenses` or
+`recurring_expenses` rows still reference it (`category_id` is `ON DELETE RESTRICT`) — re-categorize
+or delete those first.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/expenses
+
+Requires a staff bearer token. Returns `expenses` rows, most recent first.
+
+**Query params:** `branchId?`, `categoryId?`, `from?` (incurred_on >=), `to?` (incurred_on <=)
+
+**Response:** `Expense[]`
+
+---
+
+## POST /api/expenses
+
+Requires a staff bearer token. Creates a dated expense.
+
+**Body:** `{ categoryId, incurredOn: 'YYYY-MM-DD', amount, branchId?, vendor?, note?, isOpening? }`
+
+`categoryId` (and `branchId`, if given) must reference existing rows.
+
+**Response:** Created `Expense`, status 201.
+
+---
+
+## PATCH /api/expenses?id={id}
+
+Requires a staff bearer token. Updates any subset of `categoryId`, `branchId`, `incurredOn`,
+`amount`, `vendor`, `note`.
+
+**Response:** Updated `Expense`
+
+---
+
+## DELETE /api/expenses?id={id}
+
+Requires a staff bearer token.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/expenses/recurring
+
+Requires a staff bearer token. Returns `recurring_expenses` templates ordered by `next_due_on`.
+
+**Query params:** `active=true` — only active templates
+
+**Response:** `RecurringExpense[]`
+
+---
+
+## POST /api/expenses/recurring
+
+Requires a staff bearer token. Creates a recurring-expense template.
+
+**Body:** `{ categoryId, amount, cadence: 'monthly' | 'quarterly' | 'yearly', nextDueOn: 'YYYY-MM-DD', branchId? }`
+
+**Response:** Created `RecurringExpense`, status 201.
+
+---
+
+## PATCH /api/expenses/recurring?id={id}
+
+Requires a staff bearer token. Updates any subset of `categoryId`, `branchId`, `amount`, `cadence`,
+`nextDueOn`, `active`.
+
+**Response:** Updated `RecurringExpense`
+
+---
+
+## DELETE /api/expenses/recurring?id={id}
+
+Requires a staff bearer token. Deleting a template sets `recurring_id` to `null` on any `expenses`
+rows it previously generated (`ON DELETE SET NULL`) rather than deleting them.
+
+**Response:** `{ success: true }`
+
+---
+
+## POST /api/expenses/generate-due
+
+Requires a staff bearer token. For every `active` `recurring_expenses` row with `next_due_on <=`
+today (or the optional `asOf` override), creates exactly one `expenses` row dated at the template's
+current `next_due_on` and advances `next_due_on` by exactly one cadence step. Deliberately one
+period per call, not a catch-up loop — safe to call twice the same day, since the first call's
+advance moves `next_due_on` into the future. A template overdue by several periods needs several
+calls (e.g. a daily cron), each catching up one more period.
+
+**Body:** `{ asOf?: 'YYYY-MM-DD' }` — defaults to today
+
+**Response:** `{ generated: Expense[], count }`
+
+---
+
+## GET /api/assets
+
+Requires a staff bearer token. Returns `fixed_assets` rows with an added `current_book_value` field
+(the latest `depreciation_entries.book_value_after` for that asset, or `cost` if none posted yet).
+
+**Query params:** `branchId?`, `category?`, `status?`
+
+**Response:** `(FixedAsset & { current_book_value: number })[]`
+
+---
+
+## POST /api/assets
+
+Requires an **administrator** bearer token (not just staff — see FINANCE_TRACKER.md task 3.11 for
+why assets/loans are administrator-gated while expenses, task 3.10, are staff-gated). Creates a
+fixed asset.
+
+**Body:** `{ category: 'furniture' | 'medical_device' | 'it' | 'leasehold_improvement', name, purchasedOn: 'YYYY-MM-DD', cost, usefulLifeMonths, salvageValue?, branchId?, deviceId?, isOpening? }`
+
+`salvageValue` cannot exceed `cost`. `deviceId`, if given, must reference an existing
+`inventory_devices` row.
+
+**Response:** Created `FixedAsset`, status 201.
+
+---
+
+## PATCH /api/assets?id={id}
+
+Requires an administrator bearer token. Updates any subset of `branchId`, `name`, `status`,
+`deviceId` only — **`cost`/`usefulLifeMonths`/`salvageValue` are not editable after creation**,
+since existing `depreciation_entries` rows were computed from those values; delete and recreate the
+asset to correct a cost-basis mistake.
+
+**Response:** Updated `FixedAsset`
+
+---
+
+## DELETE /api/assets?id={id}
+
+Requires an administrator bearer token. Cascades to the asset's `depreciation_entries`.
+
+**Response:** `{ success: true }`
+
+---
+
+## POST /api/assets/post-depreciation
+
+Requires an administrator bearer token. For every `active` fixed asset with no
+`depreciation_entries` row for the target period, posts one month of straight-line depreciation
+(`src/lib/depreciation.ts`), clamped so book value never falls below `salvage_value`, and flips
+`status` to `fully_depreciated` once it reaches that floor (at which point the asset is excluded
+from all future runs, since it's no longer `active`). Checks for an existing row before inserting
+rather than relying solely on the `UNIQUE (asset_id, period)` backstop — safe to call twice for the
+same period.
+
+**Body:** `{ period?: 'YYYY-MM' }` — defaults to the current month
+
+**Response:** `{ period, posted: DepreciationEntry[], skipped: { assetId, reason }[] }`
+
+---
+
+## GET /api/loans
+
+Requires a staff bearer token.
+
+- Without `?id=`: returns all `loans` with an added `remaining_balance` field (the latest
+  `loan_schedule.balance_after`, or `principal` if no schedule exists).
+- With `?id={id}`: returns `{ loan, schedule }` — the loan and its full `loan_schedule`, ordered by
+  period.
+
+**Response:** `(Loan & { remaining_balance: number })[]` or `{ loan, schedule }`
+
+---
+
+## POST /api/loans
+
+Requires an administrator bearer token. Creates a loan and generates its full `loan_schedule` in
+the same request, chaining `amortizeLoanPayment()` (`src/lib/depreciation.ts`) period over period.
+If `installment` can't even cover a period's interest, the schedule computation fails with 400
+**before any database write** — no orphaned loan row is left behind.
+
+**Body:** `{ lender, principal, termMonths, startedOn: 'YYYY-MM-DD', installment, annualRate? }`
+
+**Opening loan (DEC-024 — "remaining balance, not original principal"):** pass
+`isOpening: true, openingBalance, openingAsOf: 'YYYY-MM'`. `principal`/`startedOn`/`termMonths`
+stay the loan's true original terms. The schedule's first row is a single lump `is_opening: true`
+entry at `openingAsOf` (`installment/interest_part: 0`, `principal_part: principal - openingBalance`,
+`balance_after: openingBalance`) representing everything before go-live, then normal amortized
+periods continue from `openingBalance` onward. This is the "single lump entry" option — chosen over
+enumerating every pre-go-live period, since DEC-026 means none of that history is being imported.
+
+**Response:** `{ loan, schedule }`, status 201.
+
+---
+
+## PATCH /api/loans?id={id}
+
+Requires an administrator bearer token. **Only `lender` is editable.** Attempting to change
+`principal`/`annualRate`/`termMonths`/`startedOn`/`installment` is rejected with 400 — those would
+invalidate the already-generated schedule; delete and recreate the loan instead.
+
+**Response:** Updated `Loan`
+
+---
+
+## DELETE /api/loans?id={id}
+
+Requires an administrator bearer token. Cascades to the loan's `loan_schedule`.
+
+**Response:** `{ success: true }`
+
+---
+
+## GET /api/finance/pnl
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses).
+Whole-range profit & loss (task 4.6).
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`branchId?` — when given, scopes invoices/expenses/depreciation to that branch; loan interest has
+no branch attribution anywhere in the schema and is **excluded** (`fixedOverhead.loanInterestExcluded:
+true`) rather than silently guessed at.
+
+**Revenue** = `SUM(invoice_lines.line_total)` for `service`/`product` lines on `issued` invoices in
+range, **plus** `SUM(package_revenue_recognitions.recognised_amount)` recognised in range (DEC-023
+— a package's own `invoice_lines` line books cash received, not revenue, so it is excluded from
+revenue to avoid double-counting). Services and products are kept as separate totals (never
+combined into one lump figure), each broken down `byCategory` — services via `services.cat` →
+`categories.en`, products via `inventory_products.category` (a free-text field, not FK'd to a
+table) — so "which category actually made this" doesn't require a second query.
+
+**COGS/commission** = `SUM(invoice_lines.cogs_snapshot)` / `SUM(invoice_lines.commission_snapshot)`
+for lines in range. `NULL` values (never costed) are excluded from the sum and counted separately
+(`uncostedLineCount`/`uncommissionedLineCount`) rather than treated as zero — `partiallyCosted`/
+`partiallyCommissioned` flag when any exist.
+
+**Fixed overhead** = `expenses.amount` + `depreciation_entries.amount` + `loan_schedule.interest_part`
+(never `installment` — its `principal_part` is a balance-sheet movement, not a P&L expense) for the
+range. `expenses` is broken down `byCategory` (via `expense_categories.name`) for the same reason
+revenue is — a single overhead number hides whether it's rent, utilities, or something else driving
+it.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  revenue: {
+    total,
+    services: { total, byCategory: [{ category, amount }] },
+    products: { total, byCategory: [{ category, amount }] },
+    packageRecognised
+  },
+  cogs: { total, costedLineCount, uncostedLineCount, partiallyCosted },
+  commission: { total, commissionedLineCount, uncommissionedLineCount, partiallyCommissioned },
+  fixedOverhead: {
+    total,
+    expenses: { total, byCategory: [{ category, amount }] },
+    depreciation, loanInterest, loanInterestExcluded
+  },
+  views: {
+    contributionMargin: { value, formula, label },   // DEC-015 primary — decisions
+    fullyLoadedProfit: { value, formula, label }      // DEC-015 secondary — full-cost curiosity
+  }
+}
+```
+
+---
+
+## GET /api/finance/service-margin
+
+Requires a staff bearer token **and** the `finance.view_margins` permission (superadmin bypasses).
+Per-service contribution margin (task 4.7) — the same `price − materials − commission − pulse_cost`
+formula as DEC-015, per minute and per session.
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`branchId?` scopes to invoices for that branch. `serviceId?` limits to one service.
+
+For each service with at least one `line_type='service'` line on an `issued` invoice in range:
+`contributionMarginPerSession = (SUM(line_total) − SUM(cogs_snapshot) − SUM(commission_snapshot))
+/ costedSessionCount`, summed and divided once (not averaged per-line) for the same reason
+`buildInvoiceTotals()` rounds once at the end. `cmPerMinute = contributionMarginPerSession /
+durationMinutes`, using `getServiceDurationMinutes()` (prefers `services.duration_minutes`, falls
+back to parsing `services.duration`; `durationIsFallback: true` flags when the fallback fired). A
+line needs **both** `cogs_snapshot` and `commission_snapshot` non-null to count toward
+`costedSessionCount` — mixing a real number with a NULL treated as zero would overstate margin.
+Results sort by `cmPerMinute` descending.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  services: [
+    {
+      serviceId, serviceName, durationMinutes, durationIsFallback,
+      sessionCount, costedSessionCount, partiallyCosted,
+      revenueTotal, contributionMarginTotal, contributionMarginPerSession, cmPerMinute
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/finance/cashflow
+
+Requires a staff bearer token **and** the `finance.view_cashflow` permission (superadmin bypasses).
+Cash actually received vs. cash actually paid out (task 4.9) — **deliberately a different number
+from `GET /api/finance/pnl`'s revenue** (RISK-016). Do not substitute one for the other in the UI.
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`branchId?` scopes cash received (via the paid invoice's branch) and paid expenses to that branch.
+`purchases` and `loans` carry no `branch_id` anywhere in the schema — both are **excluded** (flagged
+via `purchasesExcluded`/`loanInstallmentsExcluded`) rather than silently guessed at when `branchId`
+is given.
+
+- **Cash received:** `SUM(payments.amount)` for payments against `issued` invoices in range, broken
+  down `byMethod` (`cash`/`card`/`wallet`/`instapay`/`transfer`).
+- **Cash paid out:** `expenses.amount` (by `incurred_on`, broken down `byCategory` via
+  `expense_categories.name` — same reasoning as 4.6's P&L) + `purchases.paid` (by `purchased_at`) +
+  `loan_schedule.installment` (by scheduled period — the **whole** installment here, unlike 4.6's
+  P&L, which uses only `interest_part`; the principal portion is real cash leaving the bank even
+  though it isn't a P&L expense).
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  note: string,
+  cashReceived: { total, byMethod: { cash, card, wallet, instapay, transfer } },
+  cashPaidOut: {
+    total,
+    expenses: { total, byCategory: [{ category, amount }] },
+    purchases, purchasesExcluded, loanInstallments, loanInstallmentsExcluded
+  },
+  netCashFlow
+}
+```
+
+---
+
+## GET /api/finance/receivables-aging
+
+Requires a staff bearer token **and** the `finance.view_cashflow` permission (superadmin bypasses
+— no dedicated key exists for receivables; closest fit, since aging is unrealized cash. Flag if
+this should get its own `finance.*` key instead). Standard receivables aging report (task 4.10).
+
+**Query params:** `branchId?` scopes to invoices for that branch. `asOf?` (`'YYYY-MM-DD'`, defaults
+to today) — the date age is measured against.
+
+Built on the **task 1.14 ledger derivation**, not the pre-1.14 `customers.outstanding` scalar (that
+inherits RISK-012's inflated figures): for every `issued` invoice, `outstanding = max(0, grandTotal
+- SUM(payments for that invoice))`. Only invoices with `outstanding > 0` appear. Bucketed by
+`floor((asOf - issuedAt) / 1 day)`: `0-30` / `31-60` / `61-90` / `90+`.
+
+**Response:**
+```
+{
+  asOf: 'YYYY-MM-DD',
+  branchId: string | null,
+  totalOutstanding: number,
+  buckets: { '0-30', '31-60', '61-90', '90+' },
+  items: [ { customerId, customerName, invoiceId, invoiceNo, issuedAt, outstanding, ageDays, bucket } ]
+}
+```
+
+---
+
+## GET /api/finance/budget-vs-actual
+
+Requires a staff bearer token **and** the `finance.manage_expenses` permission (superadmin
+bypasses — no dedicated budget key exists; budgets are expense-category scoped, so this was the
+closest fit). Task 4.11. No write endpoint for `budget_lines` exists yet — out of this task's
+scope; whatever builds the budget-entry UI (task 4.15 or later) needs one.
+
+**Query params:** `period` (`'YYYY-MM'`, required). `branchId?`/`categoryId?` filter which
+`budget_lines` rows are returned.
+
+For each `budget_lines` row in `period`: `actual` = `SUM(expenses.amount)` in that category for
+that period — scoped to the row's specific `branch_id` if set, or summed across **every** branch
+if the row's `branch_id` is `NULL` (a clinic-wide budget). `variance = budgeted - actual` (positive
+= under/on budget, negative = over). Categories with real expenses in the period but **no**
+matching budget line are surfaced separately under `unbudgeted`, not silently omitted.
+
+**Response:**
+```
+{
+  period: 'YYYY-MM',
+  branchId: string | null,
+  items: [
+    { budgetLineId, categoryId, categoryName, branchId, period, budgeted, actual, variance, status }
+  ],
+  unbudgeted: [ { categoryId, categoryName, actual } ]
+}
+```
+
+---
+
+## GET /api/finance/doctor-pnl
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses).
+Task 4.8 — the same accrual revenue/COGS/commission accounting as `GET /api/finance/pnl`, sliced
+by `invoice_lines.provider_id` (and, for package sessions, the delivering reservation's
+`provider_id` via `package_revenue_recognitions.reservation_id` — never `doctor_name` string
+matching; this is the concrete report RISK-015 exists to make trustworthy).
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`branchId?` scopes to invoices for that branch.
+
+**No fixed-overhead or fully-loaded view** — this codebase has no established basis for
+allocating rent/depreciation/loan interest to an individual doctor (DEC-015 only defines a
+room-minutes allocation for services/sessions), so this endpoint stops at contribution margin,
+matching 4.7's service-margin. Lines with no `provider_id` land in `unattributed`, not silently
+dropped.
+
+**Reconciliation invariant:** `SUM(providers[].revenue.total) + unattributed.revenue.total` equals
+`GET /api/finance/pnl`'s `revenue.total` for the same range (same for `cogs`/`commission`/
+`contributionMargin`) — verified by hand against live dev data, not just asserted.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  note: string,
+  providers: [
+    {
+      providerId, providerName,
+      revenue: { total },
+      cogs: { total, costedLineCount, uncostedLineCount, partiallyCosted },
+      commission: { total, commissionedLineCount, uncommissionedLineCount, partiallyCommissioned },
+      contributionMargin
+    }
+  ],
+  unattributed: { ...same shape, providerId: null, providerName: 'Unattributed' }
+}
+```
+
+---
+
+## GET /api/finance/branch-pnl
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses).
+Task 4.8 — the same full P&L shape as `GET /api/finance/pnl` (revenue, cogs, commission,
+fixedOverhead, contributionMargin, fullyLoadedProfit), sliced by `branch_id`.
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+
+Revenue/cogs/commission attribute via each invoice's `branch_id` (package recognitions via the
+delivering reservation's `branch_id`). Expenses attribute via their own `branch_id`. Depreciation
+attributes via the asset's `branch_id`. **Loan interest carries no `branch_id` anywhere in the
+schema and always lands in `unattributed`** — unlike 4.6's whole-clinic total, which includes it
+directly when no `branchId` filter is given. Rows with no branch attribution (e.g. task 0.4's
+still-open branch-on-product-sale gap) land in `unattributed` too, never silently dropped.
+
+**Reconciliation invariant:** summing every field across `branches[]` plus `unattributed` equals
+4.6's whole-clinic totals exactly for the same range — verified by hand against live dev data.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  note: string,
+  branches: [
+    {
+      branchId, branchName,
+      revenue: { total },
+      cogs: { total, costedLineCount, uncostedLineCount, partiallyCosted },
+      commission: { total, commissionedLineCount, uncommissionedLineCount, partiallyCommissioned },
+      fixedOverhead: { total, expenses, depreciation, loanInterest },
+      contributionMargin, fullyLoadedProfit
+    }
+  ],
+  unattributed: { ...same shape, branchId: null, branchName: 'Unattributed' }
+}
+```
+
+---
+
+## GET /api/finance/package-profitability
+
+Requires a staff bearer token **and** the `finance.view_margins` permission (superadmin bypasses).
+Per package: is it actually profitable, which nothing else in the module answers. Only
+trustworthy since RISK-035 stopped double-billing package-redeemed visits.
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`packageId?` limits to one package.
+
+Revenue/cost are counted when a session is **delivered**, not when the package is sold —
+`revenueRecognised` sums `package_revenue_recognitions.recognised_amount` in range;
+`costToDeliver`/`commissionAttributed` join each recognition's `reservation_id` to that
+reservation's invoice and match the line by `service_id` (via `customer_package_items.service_id`)
+to read `cogs_snapshot`/`commission_snapshot` — the same real costing every other report uses.
+`soldInRange` (count + cash) is a separate, deliberately different number: new package sales in
+the period, cash collected regardless of whether any session has been used yet. `outstanding` is
+a not-period-bound snapshot: every currently `active` sale of the package, with
+`deferredLiability` computed via `deferredBalance()` (`src/lib/packages.ts`) summed the same way
+the consumption RPC computes total sessions (sum of `qty_total` across every item in that
+`customer_package`, not per item) — "how much service delivery do we still owe."
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  packages: [
+    {
+      packageId, packageName, sessionsDelivered, uncostedSessionCount,
+      revenueRecognised, costToDeliver, commissionAttributed, contributionMargin,
+      soldInRange: { count, cash },
+      outstanding: { activeCustomerPackages, deferredLiability }
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/finance/no-show-cost
+
+Requires a staff bearer token **and** the `finance.view_capacity` permission (superadmin
+bypasses). Count and **estimated** lost revenue for reservations that never delivered:
+`no_show`, `cancelled`, `postponed` (RISK-029's three non-completion outcomes).
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive,
+matched against `reservations.date`, a text column — RISK-020). `branchId?` scopes to that branch.
+
+Estimated using **today's** list price (`getServicePriceDetails`, honoring any active promotion)
+for the booked service(s) — this is not a stored snapshot of what would have been charged (unlike
+a completed booking's real `invoice_lines`), and is labeled as an estimate in the response and UI
+rather than presented with false precision.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  totalCount, totalEstimatedLostRevenue,
+  byStatus: { no_show: { count, estimatedLostRevenue }, cancelled: {...}, postponed: {...} },
+  byBranch: [ { branchId, branchName, count, estimatedLostRevenue } ]
+}
+```
+
+---
+
+## GET /api/finance/commission-payouts
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses). A
+reconciliation view, not a duplicate of `GET /api/hr/doctor-payroll` (which already manages the
+actual payroll run) — compares what the booking ledger says a doctor earned in commission this
+month against what `doctor_payroll.total_commission_earned` actually recorded for them, the same
+kind of drift-detection `GET /api/customers/reconcile` already does for patient balances.
+
+**Query params:** `period` (`'YYYY-MM'`, required).
+
+`ledgerCommission` sums `invoice_lines.commission_snapshot` for that `provider_id` on `issued`
+invoices in the period (same source doctor-pnl uses). `payroll` is the matching `doctor_payroll`
+row for `(provider_id, month)` if one exists, else `null`. `status` is `payroll_not_run` (no
+`doctor_payroll` row this month), `matches` (`variance === 0`), or `mismatch`.
+
+**Response:**
+```
+{
+  period: 'YYYY-MM',
+  providers: [
+    {
+      providerId, providerName, ledgerCommission,
+      payroll: { commission, status, paymentDate } | null,
+      variance: number | null,
+      status: 'payroll_not_run' | 'matches' | 'mismatch'
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/finance/trend
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses).
+The same revenue/cogs/commission/fixedOverhead/contributionMargin/fullyLoadedProfit accounting as
+`GET /api/finance/pnl`, one row per month for the last `months` months (default 6, max 24) ending
+with the current month — the only Phase 4 report with a multi-period view; every other report is
+single-period only.
+
+**Query params:** `months?` (integer, default 6, max 24). `branchId?` scopes every month the same
+way 4.6's `branchId` does (including loan interest being entirely excluded from a branch-scoped
+month, not just this endpoint's aggregate).
+
+Deliberately a simpler shape than 4.6 (no category breakdowns, no `partiallyCosted` line counts)
+since this is a chart data source — click into a specific month's full P&L on that screen for the
+detail. Verified to match 4.6's output exactly for the same period.
+
+**Response:**
+```
+{
+  branchId: string | null,
+  months: [
+    { period: 'YYYY-MM', revenue, cogs, commission, fixedOverhead, contributionMargin, fullyLoadedProfit }
+  ]
+}
+```
+
+---
+
+## GET /api/finance/new-vs-returning
+
+Requires a staff bearer token **and** the `finance.view_pnl` permission (superadmin bypasses).
+Splits the range's revenue (same definition as 4.6: service/product `invoice_lines` + package
+revenue recognised in range) by whether each contributing customer is new or returning — no other
+Phase 4 report groups revenue by whether the patient is new.
+
+**Query params:** either `period` (`'YYYY-MM'`) or both `from`/`to` (`'YYYY-MM-DD'`, inclusive).
+`branchId?` scopes to that branch.
+
+"New" means the customer's **earliest-ever** issued invoice (across all time, not just this
+range) falls inside this range; anyone whose first invoice predates the range is "returning," even
+if this is their first visit in a while. Invoices with no linked `customer_id` are reported
+separately under `walkIn`, never silently folded into either bucket.
+
+**Response:**
+```
+{
+  range: { label, from, to },
+  branchId: string | null,
+  new: { revenue, customerCount },
+  returning: { revenue, customerCount },
+  walkIn: { revenue, note }
+}
+```
+
+---
+
+## GET /api/transactions
+
+Requires staff access **and** the `transactions.view` permission (superadmin bypasses, everyone
+else needs it explicitly granted — see `hasFinancePermission`, same pattern as every `/api/finance/*`
+route). Returns paginated financial transactions with customer and branch joins, plus aggregated
+overview statistics. An empty `transactions` table returns an empty list and zero-valued stats —
+does **not** seed or fabricate any data (RISK-076).
+
+**Query params:**
+- `search?`: string (matches transaction ID, invoice number, customer name, customer phone, reference, or description)
+- `dateRange?`: `'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all'`
+- `startDate?`, `endDate?`: string (YYYY-MM-DD for custom range)
+- `type?`: `'all' | 'payment' | 'outstanding_payment' | 'refund' | 'wallet_topup' | 'wallet_deduction' | 'service_charge' | 'product_purchase' | 'adjustment'`
+- `paymentMethod?`: `'all' | 'cash' | 'card' | 'instapay' | 'vodafone_cash' | 'wallet' | 'bank_transfer' | 'other'`
+- `status?`: `'all' | 'completed' | 'pending' | 'outstanding' | 'refunded' | 'failed'`
+- `branchId?`: UUID of branch or `'all'`
+- `amountRange?`: `'all' | 'under500' | '500_1000' | '1000_5000' | 'above5000'`
+- `sortBy?`: `'date' | 'amount'`
+- `sortOrder?`: `'asc' | 'desc'`
+- `customerId?`: UUID of customer (for patient profile tab)
+- `page?`: integer (default 1)
+- `limit?`: integer (default 10)
+
+**Response:**
+```json
+{
+  "transactions": [
+    {
+      "id": "uuid",
+      "transaction_id": "TXN-001045",
+      "type": "payment",
+      "amount": 500,
+      "payment_method": "cash",
+      "status": "completed",
+      "source": "manual",
+      "description": "Session payment",
+      "customer": { "id": "uuid", "name": "Yasser Zaki", "phone": "010 1234 5678" },
+      "occurred_at": "2026-08-27T11:59:00.000Z"
+    }
+  ],
+  "total": 78,
+  "page": 1,
+  "totalPages": 8,
+  "stats": {
+    "todayNetPayments": 0,
+    "todayPaymentsCount": 0,
+    "totalOutstanding": 0,
+    "outstandingCount": 0,
+    "totalWalletBalance": 0,
+    "activeWalletCount": 0,
+    "totalSpent": 0,
+    "patientOutstanding": 0,
+    "patientWalletBalance": 0
+  }
+}
+```
+`stats` fields are always computed from real `customers`/`transactions` rows — the figures shown
+here are illustrative zeros, not example data (an earlier version of this doc showed the module's
+old hardcoded demo fallback numbers verbatim; those were removed as part of RISK-076).
+
+---
+
+## POST /api/transactions
+
+Requires staff access **and** the `transactions.create` permission; `refund` and `adjustment`
+additionally require `transactions.refund`. Manually creates a financial transaction and updates
+`customers.wallet_balance` / `.outstanding` / `.spent_amount`, writing to `wallet_txns` for
+wallet-moving types (`wallet_topup`, `wallet_deduction`, `adjustment`). **Does not** write to
+`invoices`/`invoice_lines`/`payments` — a manual transaction recorded here will not appear in
+Finance module P&L/reports, which read from that ledger (see RISK-076's "known gaps").
+
+`transaction_id` is generated from the real `transaction_seq` Postgres sequence via the
+`next_transaction_seq()` RPC (`TXN-001045`, ...) — atomic and collision-free.
+
+**Body:**
+```json
+{
+  "transaction_type": "payment | outstanding_payment | refund | wallet_topup | wallet_deduction | adjustment | service_charge | product_purchase",
+  "customer_id": "uuid",
+  "amount": 1000,
+  "payment_method": "cash | card | instapay | vodafone_cash | wallet | bank_transfer",
+  "branch_id": "uuid",
+  "reference_no": "REC-10023",
+  "related_transaction_id": "uuid (optional, for refund)",
+  "description": "Session payment",
+  "reason": "Required for refund/adjustment",
+  "adjustment_direction": "increase | decrease",
+  "occurred_at": "YYYY-MM-DDTHH:mm:ss.sssZ"
+}
+```
+`customer_id` is required for every type except `service_charge`/`product_purchase` (those are
+meant to be created automatically elsewhere; this endpoint accepts them with no customer-balance
+effect). `adjustment` moves `wallet_balance` per `adjustment_direction` — see RISK-076 for why
+wallet was chosen as the target field.
+
+**Response:** `{ "success": true, "transaction": Transaction, "message": "Transaction created successfully." }` on success, or `{ "error": string }` with a 400/403/404/500 status — 404 means the given `customer_id` genuinely doesn't exist, not a query failure.
+
+---
+
+## POST /api/customers/settle-debt
+
+Requires staff access. A patient paying down outstanding debt with no new booking involved — the
+gap RISK-012 flagged (the settlement math existed, no screen ever triggered it).
+
+Allocates the amount **oldest-first against the patient's actual unpaid completed bookings**,
+updating each reservation's `amount_paid`/`amount_left` and appending a real `payments` row to its
+existing invoice, then moves `customers.outstanding`/`spent_amount` by exactly what was applied.
+It deliberately does not just decrement the scalar — that leaves the reservations disagreeing with
+it, and the next touch of those bookings recomputes from them and double-counts (RISK-076).
+
+**Body:** `{ customerId, amount, paymentMethod?, note? }`
+
+**Response:**
+```json
+{
+  "success": true,
+  "settled": 200,
+  "unallocated": 0,
+  "outstandingAfter": 300,
+  "allocations": [{ "reservationId": "uuid", "amount": 200, "date": "2026-01-01" }],
+  "message": "Settled EGP 200."
+}
+```
+`unallocated` > 0 means the recorded debt exceeded what unpaid bookings account for (RISK-012's
+inflated figures). That portion is **not** collected and **not** deducted — it is reported so staff
+can investigate rather than having the balance quietly reduced by an amount no invoice supports.
+
+Rejects with 400 when the patient has no outstanding balance, when the amount exceeds it, or when
+no unpaid booking exists to allocate against; 404 for an unknown patient.
+
+---
+
+## GET /api/transactions/audit-logs
+
+Requires staff access **and** the `transactions.view` permission. Returns immutable audit records
+for financial transactions. Returns a 500 with `{ error }` on a real query failure — does not
+fabricate sample log entries (RISK-076).
+
+**Query params:** `transactionId?`, `limit?` (default 50)
+
+**Response:** `{ "logs": TransactionAuditLog[] }`
+
+---
+
+## GET /api/prescriptions
+
+Fetches patient prescriptions with version filtering and history retrieval.
+
+**Query params:**
+- `customerId` / `customer_id`: Filter prescriptions for a specific patient. Defaults to returning active/latest records (`is_latest = true`) unless `all_versions=true` is set.
+- `bookingId` / `booking_id`: Filter prescription for a specific booking.
+- `id`: Fetch a single prescription by ID.
+- `rootId`: Fetch entire version history chain for a prescription (`all_versions` automatically enabled).
+- `all_versions`: Set to `"true"` to include previous archived revisions.
+
+**Response:** Array of prescription objects with `{ id, customer_id, booking_id, root_prescription_id, parent_prescription_id, version, is_latest, doctor_name, doctor_id, patient_name, date, diagnosis, medications, general_notes, doctor_notes, follow_up_date, created_at, updated_at }`.
+
+---
+
+## POST /api/prescriptions
+
+Creates a new prescription or saves changes to an existing prescription as a new version without deleting previous history.
+
+**Body:**
+- `id`: Optional. If provided, creates a new version record (`version = previous.version + 1`, `parent_prescription_id = previous.id`, `root_prescription_id = previous.root_prescription_id || previous.id`) and marks the older record `is_latest = false`.
+- `customer_id` / `customerId`: UUID of the patient.
+- `booking_id`: Optional UUID of the linked appointment.
+- `patient_name` / `customer_name`: Patient full name.
+- `doctor_name`: Prescribing doctor or staff name.
+- `doctor_id`: Optional UUID of the prescribing doctor.
+- `date`: YYYY-MM-DD.
+- `diagnosis`: Medical diagnosis string.
+- `medications`: Array of `{ name, dosage, instructions }`.
+- `general_notes`: Patient-visible notes.
+- `doctor_notes`: Confidential doctor-only clinical notes.
+- `follow_up_date`: YYYY-MM-DD.
+
+**Response:**
+```json
+{
+  "success": true,
+  "prescription": { ... }
+}
+```
+
+---
+
+## DELETE /api/prescriptions
+
+Deletes a prescription by ID.
+
+**Query params:** `id` (required UUID)
+
+**Response:** `{ "success": true }`
+
+---
+
+## GET /api/laser-pulses
+
+Fetches unified laser pulse logs and lifetime aggregated statistics for a patient or clinic-wide.
+
+**Query params:**
+- `customerId` / `customer_id`: Filter logs and calculate stats for a specific patient.
+- `reservationId` / `reservation_id`: Filter logs for a specific appointment session.
+- `pulseType`: Filter by `'SERVICE'`, `'PULSE_PURCHASE'`, or `'PACKAGE'`.
+- `limit`: Number of logs to return (default 100).
+
+**Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "totalSessions": number,
+    "totalPulsesDelivered": number,
+    "totalAdditionalPulses": number,
+    "totalAdditionalCharge": number
+  },
+  "logs": [
+    {
+      "id": "uuid",
+      "customer_id": "uuid",
+      "reservation_id": "uuid | null",
+      "pulse_type": "SERVICE | PULSE_PURCHASE | PACKAGE",
+      "treatment_area": "string",
+      "pulses_used": number,
+      "remaining_balance_after": number | null,
+      "additional_pulses": number,
+      "pulse_value": number,
+      "additional_charge": number,
+      "total_patient_charge": number,
+      "additional_reason": "string | null",
+      "source_id": "string | null",
+      "doctor_id": "string | null",
+      "doctor_name": "string | null",
+      "device_id": "string | null",
+      "device_name": "string | null",
+      "session_date": "ISO string",
+      "created_at": "ISO string"
+    }
+  ]
+}
+```
+
+---
+
+## POST /api/laser-pulses
+
+Records a unified laser pulse session and creates an audit log entry.
+
+**Body:**
+- `customerId` (UUID, required)
+- `reservationId` (UUID, optional)
+- `pulseType` (`"SERVICE"` | `"PULSE_PURCHASE"` | `"PACKAGE"`, required)
+- `treatmentArea` (string, required)
+- `pulsesUsed` (number, non-negative, required)
+- `additionalPulses` (number, non-negative, optional)
+- `pulseValue` (number, non-negative, optional)
+- `additionalPulsesReason` (string, mandatory if `additionalPulses > 0`)
+- `servicePrice` (number, optional)
+- `sourceId` (string, optional)
+- `remainingBalanceAfter` (number, optional)
+- `deviceId` / `deviceName` (optional)
+- `doctorId` / `doctorName` (optional)
+- `sessionDate` (ISO string, optional)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Laser pulse session logged successfully.",
+  "log": { ... }
+}
+```
+
+---
+
+## PATCH /api/customers/products (FIFO Pulse Consumption)
+
+Consumes pulses from the patient's retail active balances using First-In, First-Out (FIFO) deduction across multiple purchases.
+
+**Body:**
+- `action`: `"fifo_consume"` | `"consume_pulses"`
+- `customerId` / `customer_id`: UUID of patient
+- `quantity`: number of pulses to consume
+- `treatment_area`: string
+- `booking_id`: optional UUID
+- `notes`: optional clinical remarks
+
+**Response:**
+```json
+{
+  "success": true,
+  "consumed": number,
+  "remainingGeneralBalance": number,
+  "affectedPurchases": [
+    {
+      "purchase_id": "string",
+      "deducted": number,
+      "remaining_after": number,
+      "purchase_name": "string"
+    }
+  ],
+  "balances": [ ... ]
+}
+```
+
+---
+
+## PATCH /api/customers/packages (Package Pulse Consumption)
+
+Consumes pulses included in a patient's active package.
+
+**Body:**
+- `action`: `"consume_package_pulses"`
+- `packageId`: UUID / ID of customer package
+- `quantity`: number of pulses to consume
+- `treatment_area`: string
+- `booking_id`: optional UUID
+- `notes`: optional clinical remarks
+
+**Response:**
+```json
+{
+  "success": true,
+  "consumed": number,
+  "remainingPulses": number,
+  "includedPulses": number,
+  "usedPulses": number,
+  "log": { ... }
+}
+```
+
+---
+
+# Routes documented late (2026-10-21 audit)
+
+These routes existed before this section was written; the contract was out of date for them. Each entry was written from
+the handler on `dev` (methods, who may call, parameters, response keys). Who may call each one, method by method, is in
+`SECURITY.md` §3. Errors are `{ error }` as everywhere else.
+
+## GET /api/profile
+
+Staff. The signed-in person's **own** employee row and, when they are a doctor, their provider row. Takes no id: the identity is
+the bearer token (RISK-128). The provider is matched strictly (same id, phone, national id, or exact normalised name; exactly
+one match, otherwise `null`).
+
+**Response:** `{ employee, provider }` — `employee` is the `employee_accounts` row plus `branch_ids` and `working_days_hours` / `workingDaysHours` (saved schedule); `provider` is a `providers` row or `null`. `404` if the employee record is missing.
+
+---
+
+## GET /api/profile/attendance?from={YYYY-MM-DD}&to={YYYY-MM-DD}
+
+Staff. The caller's own `hr_attendance` rows between two dates, newest first. `400` if either date is missing or not ISO. Admin / HR read everyone's through `/api/hr/attendance`.
+
+**Response:** array of `hr_attendance` rows.
+
+---
+
+## GET /api/profile/payroll?from={YYYY-MM-DD}&to={YYYY-MM-DD}&view=doctor|staff
+
+Staff. What the profile screen needs for the caller's pay summary and target progress. `view=doctor` counts the money collected on bookings assigned to the caller, anything else (`staff`) the bookings the caller created; only `completed`, `confirmed`, `approved` and `started` bookings, summed by `amount_paid`. The month of `from` selects the `doctor_payroll` row.
+
+**Response:** `{ employee, provider, doctorPayroll, targetRevenue }` (`provider` and `doctorPayroll` may be `null`).
+
+---
+
+## GET /api/invoices?reservationId={id}
+
+Staff. The latest non-void invoice for a booking, with its lines and bilingual item names (the immutable ledger data written at checkout, RISK-010).
+
+**Response:** `{ invoice: { id, invoice_no, reservation_id, customer_id, branch_id, issued_at, subtotal, discount_total, grand_total, status } | null, lines: [{ id, line_type, service_id, product_id, description, qty, unit_price, discount, line_total, nameEn, nameAr }] }`. `400` without `reservationId`.
+
+---
+
+## POST /api/reservation-products
+
+Staff. Adds a line (product, additional service or device pulses) to a booking as a real `reservation_products` row (DEC-042). Deducts product stock. If the booking is already `completed` and has an issued invoice, the line is also added to that invoice. It does **not** change `amount_paid` / `amount_left`; the caller does that with a separate `PATCH /api/reservations`.
+
+**Body:** `{ reservationId, lineType: 'product'|'additional_service'|'device_pulses', description, productId?, serviceId?, qty?, unitPrice?, addedByRole? ('doctor_session' default) }`
+
+**Response:** `{ id, name, qty, unitPrice, total, addedBy }`. `404` if the booking does not exist.
+
+---
+
+## GET /api/reservations/laser-deficit?reservationId={id}
+## POST /api/reservations/laser-deficit
+
+Staff. Reception checkout is the only place a laser-pulse deficit is settled (Brief 35, DEC-079). GET previews: delivered pulses, source package, already-consumed amount, deficit, resolved rate and the resolution state. POST resolves it with `{ reservationId, choice: 'BUY_NEW_PACKAGE' | 'PAY_PER_PULSE', packageId?, sourceCustomerPackageId?, paymentMethod?, amountPaid? }`. The client sends no amounts: pulses, balance, package price and rate are all re-resolved on the server. Idempotent per reservation (`reservations.laser_deficit_resolution`).
+
+---
+
+## Rooms
+
+### GET /api/rooms
+**Public.** All rooms with branch names. **Response:** array of `{ id, name, type, status, branchId, branchNameEn, branchNameAr, createdAt }`.
+
+### POST /api/rooms
+Staff. **Body:** `{ name, type, branchId, status? ('available' default) }`. **Response:** created room, `201`. `400` when a required field is missing.
+
+### PATCH /api/rooms?id={id}
+Staff. Same body fields as POST; send what changes. **Response:** updated room.
+
+### DELETE /api/rooms?id={id}
+Staff. **Response:** `{ success: true, message }`.
+
+---
+
+## Service ↔ room mappings
+
+### GET /api/service-rooms?serviceId={id}&roomId={id}
+**Public.** Both filters optional. **Response:** array of `{ service_id, room_id }`.
+
+### POST /api/service-rooms
+Staff. Replaces a mapping set, in one of two shapes: `{ serviceId, roomIds: [...] }` (all rooms of one service) or `{ roomId, serviceIds: [...] }` (all services of one room). The existing rows for that service / room are deleted first. `400` if neither shape is sent.
+
+---
+
+## Terms and conditions
+
+### GET /api/terms?active_only={true}
+
+**Cache (RISK-137 / DEC-131):** an anonymous GET answers `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` and `Vary: Authorization`; a request with any `Authorization` header answers `private, no-store`. Error responses carry no cache header. A CMS edit can take up to 60 s to reach visitors.
+**Public** (the public Terms page). **Response:** `{ terms: [...] }`.
+
+### POST /api/terms
+Administrator. Creates an item. `400` unless the English title and content are present. **Response:** `{ term }`.
+
+### PUT /api/terms
+Administrator. Updates one item (`id`), or reorders when the body is an array of `{ id, sort_order }`. **Response:** `{ term }` or `{ success: true }`.
+
+### DELETE /api/terms?id={id}
+Administrator. **Response:** `{ success: true }`.
+
+---
+
+## Employee notes
+
+### GET /api/employees/notes?employeeId={id}
+Administrator. Notes about one employee, newest first, each with `creator: { id, name } | null`.
+
+### POST /api/employees/notes
+Administrator. **Body:** `{ employeeId, note, createdBy? }`. **Response:** the created note with `creator`, `201`.
+
+### DELETE /api/employees/notes?id={id}
+Administrator. **Response:** `{ success: true }`.
+
+---
+
+## Provider schedule audit logs
+
+### GET /api/providers/schedule-audit-logs
+Staff. All `provider_schedule_audit_logs` rows, newest first (an empty array if the table cannot be read).
+
+---
+
+## HR (HR access = superadmin, admin or hr role, `verifyHrAccess`)
+
+### GET /api/hr/payroll
+HR. Staff payroll rows with the employee joined. Doctors, and employees flagged `is_also_doctor`, are left out: they are paid through Doctor Payroll (DEC-113, DEC-114).
+
+### POST /api/hr/payroll
+HR. **Body:** `{ month: 'YYYY-MM' }`. Runs payroll for every non-doctor employee account; rows already paid are skipped. **Response:** `{ success, count, skippedPaid }`.
+
+### PATCH /api/hr/payroll
+HR. **Body:** `{ id, bonuses?, deductions?, status? }`. Recomputes the net pay. **Response:** the updated row; `404` if not found.
+
+### GET /api/hr/leaves
+HR. Leave requests with the employee joined, newest first.
+
+### POST /api/hr/leaves
+Any staff (self-service). **Body:** `{ employeeId, leaveType, startDate, endDate, reason? }`. Counts the days inclusively and stores status `Pending`. **Response:** the created request, `201`.
+
+### PATCH /api/hr/leaves
+HR. **Body:** `{ id, status, approvedBy? }`. **Response:** the updated request.
+
+### GET /api/hr/performance
+HR. Reviews with employee and reviewer joined, newest first.
+
+### POST /api/hr/performance
+HR. **Body:** `{ employeeId, reviewerId, rating, comments?, goals? }`; the review date is today. **Response:** the created review, `201`.
+
+### DELETE /api/hr/performance?id={id}
+HR. **Response:** `{ success: true }`.
+
+### GET /api/hr/alerts
+HR. Unresolved missing-check-in alerts with the employee joined.
+
+### POST /api/hr/alerts
+Any staff (self-service). **Body:** `{ employeeId }`. Logs a missing-check-in alert. **Response:** the alert, `201`.
+
+### PATCH /api/hr/alerts
+HR. **Body:** `{ id, resolved }`. **Response:** the updated alert.
+
+---
+
+## Customer avatars
+
+### GET /api/customer-avatars?id={customerId}
+**Public.** With `id`: `{ id, avatar_url }`; without: the whole map `{ [customerId]: url }`. Stored in `page_settings` under key `customer_avatars`.
+
+### POST /api/customer-avatars
+Staff. **Body:** `{ id, avatar_url }`; an empty `avatar_url` removes the avatar. **Response:** `{ success, id, avatar_url }`.
+
+---
+
+## Medical records
+
+Staff only (PHI, RISK-080).
+
+### GET /api/medical-records?customerId={id}&reservationId={id}
+Intake records and uploaded reports for a patient (optionally narrowed to one booking). Both `customerId` / `customer_id` spellings are accepted.
+
+### POST /api/medical-records
+**Body:** `{ type: 'form' | 'report', customerId, ... }` plus either the intake fields (`recordData`) or the report fields (`reportData`); `reservationId` optional. `form` (default) upserts the patient's intake form; `report` adds an uploaded report. `400` without a customer id.
+
+### DELETE /api/medical-records?reportId={id}
+Deletes one uploaded report.
+
+### GET | POST | PUT | DELETE /api/medical-records/templates
+Intake form templates mapped per service, in the `medical_record_templates` table only (RISK-086; no local file). GET takes `serviceId` (templates that apply to that service); an empty table is seeded once with the three built-in defaults. POST body: `{ title, description?, service_ids[], fields[], is_default? }`; PUT updates by `id`; DELETE takes `id` / `templateId`. Setting `is_default` clears it on the others.
+
+---
+
+## POST /api/inventory/devices/{id}/reset-pulses
+
+Staff. Resets a device's pulse counter and writes a `device_maintenance_history` row. **Body:** `{ reason, performedBy, notes?, resetToZero? }`.
+
+---
+
+## POST /api/translate
+
+Staff. Translates text through Google Translate's public endpoint. **Body:** `{ text, from? ('auto'), to? ('ar') }`. **Response:** `{ translation, translatedText }`. `400` without `text`.
+
+---
+
+## Finance reports added after the first Phase 4 write-up
+
+All are `GET`, need a staff token plus the permission shown, and take `branchId?` with either `period=YYYY-MM` or `from` / `to` (inclusive dates), unless noted.
+
+- **GET /api/finance/capacity** — `finance.view_capacity` (or `reports.view_analytics`). Per branch and clinic-wide: room / doctor / bottleneck minutes, booked minutes, utilisation, no-show rate. **Response:** `{ range, branchId, assumedOpenMinutesPerDay, note, clinicWide, byBranch }`. Booked minutes read 0 before 2026-07-29 (`completed_at` was added then, no backfill).
+- **GET /api/finance/service-mix** — `finance.view_margins` (or `reports.view_financial_reports`). Break-even revenue, services ranked by contribution margin per bottleneck minute, the greedy-optimal allocation, maximum potential revenue and the gap decomposed into idle capacity, suboptimal mix and no-show loss. **Response:** `{ range, branchId, note, breakEven, rankedServices, capacity, allocation, maxPotentialRevenue, actualServiceRevenue, gapToPotential, gapDecomposition }`. The demand cap per service is the period's actual delivered sessions, not a forecast.
+- **GET /api/finance/revenue-bridge** — `finance.view_pnl`. Cash received in the period (payments on live issued invoices, as `cashflow`) and how much of it paid for packages (deferred, DEC-088 item 9). **Response:** `{ range, branchId, cashReceived, packageCashReceived }`. Opening (historical) invoices are excluded.
+- **GET /api/finance/deferred-packages** — `finance.view_pnl`. No parameters. The deferred package balance as of now: money collected for services not yet delivered, by pulses and by sessions per service, plus packages whose price is still pending. **Response:** `{ asOf, ... }` from `computeDeferredBreakdown`.
+
+---
+
+## Prescriptions
+
+Staff only. Manages digital clinical prescriptions and immutable version history (DEC-137, TC-056, TC-105).
+
+### GET /api/prescriptions
+Fetches prescriptions. Supports querying by booking (`bookingId`), customer (`customerId`), and session date (`date`). If `bookingId` yields no record, falls back to the customer's prescriptions that were saved without any booking (`booking_id` null) for the given date (all dates if `date` is omitted). It never returns a prescription linked to a different booking (DEC-140).
+- **Query Params:** `bookingId` (optional), `customerId` (optional), `date` (optional), `includeHistory` (boolean, default false).
+- **Response:** `{ prescriptions: Prescription[] }` or array of prescriptions.
+
+### POST /api/prescriptions
+Creates or updates (versions) a digital clinical prescription.
+- **Body:** `{ booking_id?, customer_id, customer_name, doctor_id, doctor_name, diagnosis, medications, instructions, follow_up_date?, follow_up_notes?, id? }`.
+- **Behavior:**
+  - If `id` is provided, versions the existing prescription: creates new row with `version = previous.version + 1`, `is_latest = true`, linking `parent_prescription_id` and `root_prescription_id`, and setting previous to `is_latest = false`.
+  - `booking_id` is stored only when it is a UUID and the reservation exists (one lookup). Otherwise the prescription is saved unlinked and the response has `booking_id: null`; the save never fails because of the id (DEC-140). The local JSON fallback keeps the raw id.
+  - Automatically updates `reservations.follow_up_date` if follow-up is specified and `booking_id` is a valid UUID.
+- **Response:** `{ success: true, prescription: Prescription }`.
+

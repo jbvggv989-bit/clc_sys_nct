@@ -1,0 +1,1411 @@
+# PRODUCT_RULES.md — Revera Clinics Business Rules (Enforced in Code)
+
+> **Last Updated:** 2026-10-21 (the deletion rules corrected, and a closing section added for DEC-113 to DEC-121 and RISK-128; the rest of the file was last reviewed 2026-07-30 and has **not** been re-verified line by line)
+> **Known issue found in the 2026-10-21 audit:** the sections from "Financial Transactions & Manual Ledger Rules" to "Reception Dashboard Shift Lifecycle & Operational Rules" appear twice (about lines 314–513 and 514–717) with small differences in a few lines. Merge them in a dedicated pass; until then treat a rule as valid if the code agrees with either copy, and check the code.
+> **Last full pass:** 2026-07-30
+> **Source:** Confirmed from live code only — no speculation
+> **2026-07-30 Update:** Added Doctor & Receptionist Session Workflows, Patient Medical Records Intake Requirements, Session Products & Pulses calculation, and Admin Customer Balances formulas.
+
+---
+
+## What This File Is
+
+This file documents business logic that is **actually enforced in the codebase today**.
+It is not a wishlist or aspirational spec. If a rule is not enforced in code, it is not listed here.
+
+---
+
+## Booking / Scheduling Rules
+
+### ~~Daily capacity cap — 8 bookings per service per day per branch~~ — REMOVED 2026-07-25
+
+**This rule was never enforced.** It violated this file's own contract (only rules actually
+enforced in code belong here) and was carried for weeks.
+
+`src/app/api/reservations/route.ts` was read in full: the PATCH approve block (lines 345–523)
+contains **no count check of any kind**. The only `8` relating to bookings is
+`src/components/BookingModal.tsx:1066`, a client-side check that is dead code — the `disabledDates`
+map it reads is populated as `isAvailable === false ? 99 : 0` (`BookingModal.tsx:356-358`), so it
+only ever holds 0 or 99, never an actual count.
+
+Do not plan capacity work around an 8-per-day ceiling; it does not exist.
+
+---
+
+### ~~Time slot uniqueness per service~~ — REMOVED 2026-07-25
+
+**This constraint was deliberately dropped**, not lost. See
+`supabase/migrations/20260705141243_setup_rooms_schema.sql:104-105`, with the comment
+"to allow multiple bookings per slot in different rooms".
+
+**What IS enforced:** a `room_id` can be assigned only once per date + time_slot when status is
+`'approved'` — unique partial index `reservations_unique_room_slot`. Note the approve-time conflict
+query (`src/app/api/reservations/route.ts:407-412`) filters by date and status but **not** by
+branch; this is currently correct only because `room_id` is globally unique across branches.
+
+---
+
+### Doctor double-booking is NOT prevented
+**Confirmed 2026-07-25:** `src/app/api/reservations/route.ts:509-520` writes `doctor_name` with no
+validation against `working_days_hours` or existing bookings. Doctor conflict checking exists only
+in the read-only `/api/availability` (lines 305–345). An admin approving from the panel can
+double-book a doctor, so any doctor-utilization figure derived from `reservations` may exceed 100%.
+
+---
+
+### Slot duration-aware availability
+**Enforced in:** `src/app/api/availability/route.ts`
+
+The availability endpoint checks whether a contiguous block of 15-min slots equal to the
+service's duration is free. A service with duration 1:00 Hour needs 4 consecutive free
+15-min slots.
+
+Operating hours are defined by the branch's specific `service_hours` table configuration when a `branchId` is specified. If not specified or no branch-specific hours are set, the global clinic-wide hours (09:00–20:00) defined in `src/lib/services.ts:ALL_15MIN_SLOTS` are used as a fallback.
+
+---
+
+### Required booking fields
+**Enforced in:** `POST /api/reservations`
+
+`serviceId`, `date`, `name`, `phone` are required. Missing any returns HTTP 400. `email` is optional (nullable); when omitted, the booking and linked customer are saved with `email: null`.
+
+---
+
+### Default session type
+**Enforced in:** `POST /api/reservations`
+
+If `sessionType` is not provided, defaults to `'in_person'`.
+
+---
+
+### Booking origin badge
+**Enforced in:** `POST /api/reservations`
+
+Public website bookings are tagged with `origin: 'website'` and displayed with an origin badge in the admin list.
+
+---
+
+### Booking step flow & MD3 Date/Time Pickers
+**Enforced in:** `src/components/BookingModal.tsx`, `MaterialDatePicker.tsx`, `MaterialTimePicker.tsx`
+
+The public website patient booking flow is consolidated into 3 main steps (or 2 steps if deposit percentage is 0):
+1. **Service & Schedule (`Service & Schedule` / `الخدمة والموعد`)**: Combines session type selection (In-Clinic vs Online), branch selection, service category & service dropdown, and inline Material Design 3 style custom Date & Time pickers.
+   - **Date Picker (`MaterialDatePicker.tsx`)**: MD3 full month calendar with date header, month switcher (`<` `>`), weekday grid, and brand-styled day selector (`var(--cr-primary)` `#414E36`).
+   - **Time Picker (`MaterialTimePicker.tsx`)**: MD3 digital display (`HH:MM` with AM/PM toggle) paired with interactive radial analog clock dial and toggleable quick slots grid.
+2. **Confirm (`Confirm` / `تأكيد`)**: Summary of reservation, optional doctor selection, patient name/email/phone, notes, and Terms & Conditions.
+3. **Payment (`Payment` / `الدفع`)**: InstaPay / Mobile Wallet deposit submission (when deposit percentage > 0).
+
+---
+
+### Booking lifecycle stages
+**Enforced in:** `src/app/admin/page.tsx` + `PATCH /api/reservations`
+
+Valid statuses include: `pending`, `approved`, `rejected`, `confirmed`, `started`, `completed`, `cancelled`. UI enforces stage progression for action buttons.
+
+---
+
+### Booking cancellation constraints
+**Enforced in:** `PATCH /api/reservations` and `src/app/admin/page.tsx`
+
+Cancellation sets `status` to `'cancelled'` and optionally records `cancelled_reason`. Completed bookings cannot be cancelled.
+
+---
+
+## Service Catalog Rules
+
+### Service duration format
+**Enforced in:** `src/lib/services.ts:getDurationInMinutes()`
+
+Duration strings are parsed from formats: `'1:30 Hours'`, `'30 mins'`, `'1:30'`. Default fallback
+if unparseable: 30 minutes.
+
+---
+
+### Service visibility and active flags
+**Confirmed in schema:** `services.visible` and `services.active` columns exist.
+**Note:** No enforcement of these flags on the public website was confirmed in code during audit.
+The admin panel displays them but patient-facing queries (`GET /api/services`) return all services
+without filtering by visible/active.
+
+---
+
+## Admin Panel Rules
+
+### ~~No authentication on admin panel~~ — STALE, corrected 2026-07-25
+
+`/admin` **does** have a Supabase email/password login gate (see "Admin login and role lookup"
+below, and DEC-010). This entry predated it and contradicted the rest of this file.
+
+**The accurate statement:** selected sensitive API mutations validate a bearer token in their
+handlers. `PATCH /api/reservations` requires `requireStaffAccess` except for its narrowly scoped
+public deposit self-report; `DELETE /api/reservations` requires an administrator; and payroll,
+roles, employees, and product-sales mutations have route-level checks. Coverage is not universal:
+`/api/customers`, inventory, and customer-product routes still require their own authorization
+review. See RISK-018.
+
+---
+
+### Admin can hard-delete all reservations
+**Enforced in:** `DELETE /api/reservations?id=all`
+
+Deletes all rows from the reservations table. No soft-delete. No confirmation beyond the UI.
+
+---
+
+### Admin login and role lookup
+**Enforced in:** `src/app/admin/page.tsx` + `GET /api/auth/me`
+
+- Login uses Supabase Auth email/password.
+- `superadmin@revera.com` bypasses employee lookup and receives full permissions.
+- All other users: session token sent to `/api/auth/me`, which looks up `employee_accounts` + `roles` and returns `permissions` array.
+- Server-side token validation is partial; sensitive routes must enforce it in their handlers.
+
+---
+
+### Reception Dashboard & Staff Shift Geofence
+**Enforced in:** `POST /api/reception/dashboard` (`action: "start_shift"`) (client trigger: `ReceptionDashboardView.tsx`)
+
+- Controlled by `enableGpsShift` toggle under **Admin Settings -> Inactivity & Shift Settings** (`page_settings.home.inactivity.enableGpsShift`, default `true`).
+- When `enableGpsShift === true`:
+  - Browser geolocation (`latitude`, `longitude`, `accuracy`) is strictly required for all users (receptionists, employees, admins, superadmins).
+  - Validates coordinates against the assigned branch (if assigned) and all active clinic branches within a 1000m tolerance.
+  - If the user is outside the 1000m radius of all active clinic locations or no coordinates could be matched (`!isInsideLocation`), the request is strictly rejected with HTTP 400 (`out_of_location`) and no attendance row is created.
+  - Surfaces real-time location verification errors both in the Start Shift modal and as an in-card alert banner.
+- When `enableGpsShift === false`:
+  - Staff can start shifts from anywhere without GPS restriction.
+
+---
+
+### Global Ending Session & Receptionist Clinical Finalization Engine
+**Enforced in:** `src/components/admin/settings/BookingSettingsView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/DoctorAccountView.tsx`, `src/app/admin/page.tsx` (`TC-055`)
+
+- **Configuration:** Admin Settings -> Booking Settings (`page_settings.home.booking.globalEndingSession`, default `false`).
+- **Zero-Reload Reactivity:** Settings updates immediately trigger `window.dispatchEvent(new CustomEvent('revera-settings-change'))`, propagating live state to all open modals, drawers, and tabs instantly without requiring a page refresh.
+- **Receptionist Booking Modal Integration:** When `globalEndingSession === true` and a booking is active (`status === 'started'`), the static "● Treatment In Session" badge in the Session Flow card of `BookingDetailsModal.tsx` is transformed into an interactive **"End Session"** action button.
+- **Clinical Intake & Finalization Screen (`viewMode === "end_session"`):**
+  - **Back Navigation:** Top-left `< Back to Booking Details` button returns to `"details"` view without ending the treatment session or discarding entered data.
+  - **Medical Intake & History:** Integrates dynamic service-specific intake templates (`/api/medical-records/templates`), on-file status badges, and fallback intake fields (Skin type, Allergies, Daily medications, Chronic conditions, Previous treatments). Strictly blocks session finalization for first-visit patients if intake is missing.
+  - **Clinical Procedure Notes:** Dedicated textarea for procedure observations and clinical recommendations, persisted directly to `reservations.doctorNotes`.
+  - **Digital Prescription Writer:** Clinical diagnosis, dynamic medications array (Name, Dosage, Frequency, Duration), instructions, WhatsApp transmission, and branded print PDF generation.
+  - **Primary & Additional Services Manager:** Live primary service switcher, additional services selector with linked equipment devices, and automated pulse summation.
+  - **Products & Consumables Manager:** Live stock verification, attached products deduction, and automatic sales logging via `POST /api/inventory/products/sales`.
+  - **Real-Time Doctor Sync:** Session termination persists all records, deducts device pulses (`PUT /api/inventory/devices`), records line items (`POST /api/reservation-products`), and patches the reservation to `status: 'completed'`. Doctor view Postgres realtime channel immediately clears the ongoing treatment session on the doctor's screen with zero page reload.
+  - **System Test Suite:** Validated automatically via Diagnostic Test Case `TC-055` in the Admin Settings System Test Suite.
+
+---
+
+### Doctor Prescription Follow-Up Visits & Reception Reminders Engine
+**Enforced in:** `DoctorOngoingSessionTab.tsx`, `AdminBookingsView.tsx`, `POST /api/prescriptions`, `PATCH /api/reservations`
+- **Clinical Follow-Up Specification:** Doctors can toggle *"Requires Follow-Up / Consultation?"* during active treatment sessions in `DoctorOngoingSessionTab.tsx`. Doctors choose from quick interval presets (`+3 Days`, `+1 Week`, `+2 Weeks`, `+1 Month`) or pick a custom date (`follow_up_date`) and add clinical instructions.
+- **Persistence:** Submitting the prescription saves `follow_up_date` to `prescriptions` table via `POST /api/prescriptions` and syncs `followUpDate` to the booking via `PATCH /api/reservations`.
+- **Reception Calendar Indicator (Not a Confirmed Reservation):** Follow-ups are surfaced in the Reception Calendar (`AdminBookingsView.tsx`) with clear non-reservation badging (**"Follow-Up Reminder (Not a Reservation)" / "تذكير متابعة (ليست حجزاً)"**) and calendar date dots so receptionists clearly know the patient is recommended for follow-up and does not occupy a confirmed appointment slot yet.
+- **Receptionist Outreach & 1-Click Conversion:** Provides receptionists with direct tools to contact the patient 1–2 days prior to the follow-up date:
+  1. **WhatsApp Reminder:** Generates a pre-filled WhatsApp message with doctor name, recommended follow-up date, and service details.
+  2. **Call Patient:** Direct phone dialing (`tel:`).
+  3. **Convert to Full Booking ("تحويل لحجز مؤكد"):** Launches the booking flow so receptionists can lock in the appointment with a single click.
+- **System Test Suite:** Validated automatically via Diagnostic Test Case `TC-060` in the Admin Settings System Test Suite.
+
+---
+
+### Coming-soon sidebar sections are superadmin-only
+**Enforced in:** `src/app/admin/page.tsx` (`SIDEBAR_ITEMS`, `permittedSidebarItems`)
+
+- Marketing, Customer Support, Reports, and Finance are placeholder sidebar entries (`comingSoon: true`) with no page behind them.
+- Rendered disabled, greyed out, unclickable, with a "Coming Soon" hover tooltip.
+- Filtered out of `permittedSidebarItems` for every role except `superadmin`.
+
+---
+
+## localStorage Keys (Revera-branded)
+
+Service state on the admin side persists to localStorage under these keys:
+- `revera_service_toggles`
+- `revera_dynamic_services`
+- `revera_dynamic_categories`
+
+These keys will need changing when forking for client #2.
+
+---
+
+## Inventory Product Roles & Sales Restrictions
+**Enforced in:** `src/app/admin/page.tsx` and `POST /api/inventory/products/sales`
+
+- Products with `role === 'consumable'` are marked as "Consumable (used in services only)".
+- Standalone retail sale of consumable products to patients is strictly blocked:
+  - In `src/app/admin/page.tsx` products list table, the **Sell Product** action button is disabled with label `"Consumable Only"` and tooltip `"Consumable Only (Used in services only, not for retail sale)"`.
+  - In `handleOpenSellProductModal`, opening the retail POS modal is blocked with an alert.
+  - In retail product select dropdowns, consumable items are filtered out.
+  - In `POST /api/inventory/products/sales`, server-side validation checks `role === 'consumable'` and rejects the transaction with HTTP 400.
+
+---
+
+## Customer Wallet & Financial Overrides Rules
+**Enforced in:** `PATCH /api/reservations`, `POST /api/customers`, `AdjustWalletModal.tsx`, `CustomerProfileDrawer.tsx`, `CustomerFormModal.tsx`
+
+When completing a reservation, the receptionist processes a payment settlement. If the reservation's status is updated to `'completed'`, the linked customer's profile is updated:
+- **Wallet Balance**: Decreased by any `walletWithdrawal` amount used for payment and increased by any `walletDeposit` (overpayment change saved to wallet).
+- **Total Spent**: Increased by the amount paid plus any wallet balance used to offset the cost. Customer's lifetime total spent (`spent_amount`) only increases when payment is actually settled.
+- **Outstanding Debt**: Increased by any unpaid session remainder (`effectiveAmountLeft = totalCost - amountPaid`). When a session treatment is completed without payment, the unpaid session amount is added to `customer.outstanding`. Upon invoice settlement, `customer.outstanding` is reduced and `customer.spent_amount` is increased.
+
+### Superadmin Financial Overrides (Wallet, Outstanding Debt, Total Spend):
+- **Role Gating:** Only `superadmin` role users are authorized to directly adjust/override existing patient financial figures (`wallet_balance`, `outstanding`, `spent_amount`).
+- **Profile Drawer Access:** Superadmins see dedicated edit triggers on all 3 metric cards (**Total Spend**, **Wallet Balance**, **Outstanding Debt**) within `CustomerProfileDrawer.tsx`, opening the unified `AdjustWalletModal.tsx` (supporting Exact and Delta +/- modes with real-time preview and reason logging).
+- **Customer Form Modal:** In `CustomerFormModal.tsx`, opening balances can be set by staff on new patient creation. For existing patients, `wallet_balance`, `spent_amount`, and `outstanding` fields are strictly read-only for standard staff and editable only by superadmins with clear visual badge indicators.
+- **Backend Protection:** `POST /api/customers` strictly verifies superadmin privileges before updating `wallet_balance` (with `wallet_txns` ledger tracking), `spent_amount`, or `outstanding` on existing patient profiles. Standard staff profile edits leave financial metrics untouched.
+- **System Test Suite:** Diagnostic Test Case `TC-093` verifies the Superadmin Patient Financial Overrides & Ledger Security Engine.
+
+---
+
+## What Is NOT Enforced (But May Be Assumed)
+
+The following are **not currently enforced in code**:
+- Patient phone OTP verification (auth modal is UI-only, OTP is simulated)
+- Service visible/active flags filtering public service list
+- Package redemption on a booking that already has a deposit paid — deposits are booking-level, not
+  per-service, so waiving a service's price after cash was collected against it would need
+  refund/reversal logic that isn't built. Redemption is disabled (with an explanatory note) for any
+  checkout where `amountPaid > 0` before that checkout. (Package/session tracking itself **is**
+  built — see `customer_packages`/`customer_package_items` in `DB_SCHEMA.md`, wired to UI 2026-07-28.)
+- External Payment Gateway processing (payments are logged as cash/card settlements in the admin dashboard ledger only)
+- Automated reminders (enable_reminder flag exists on services but no sending logic found)
+- Server-side auth validation on `/api/*` routes (browser login gate only)
+
+---
+
+## Receptionist & Doctor Session Workflow Rules
+**Enforced in:** `src/app/admin/page.tsx`, `src/components/admin/DoctorAccountView.tsx`, `PATCH /api/reservations`
+
+1. **Session Control**:
+   - Receptionist clicks **"Start Session"** to begin patient treatment (transitions booking status to `ongoing`).
+   - Receptionist **cannot** end treatment sessions. Treatment ending is strictly performed by the Doctor via **"Complete Treatment"**.
+   - Upon session completion by the Doctor, the booking status transitions from `ongoing` to `completed`, and the Receptionist interface presents the **"Pay & Settle Invoice"** button.
+
+2. **Session Date Navigation & Booking Info**:
+   - Doctor Portal schedule features a structured date selector (**Yesterday**, **Today**, **Tomorrow**, Date Picker).
+   - "Open Session" action button is replaced with `<Info /> Info` modal button to view booking details inline without navigating away.
+
+3. **Patient Medical Record / Clinical Intake**:
+   - Returning patients display their real medical record history on file fetched from `/api/medical-records`.
+   - First-time patients without an existing record **must** have an intake form submitted by the Doctor before completing treatment.
+
+4. **Session Products & Extra Device Pulses**:
+   - Doctors can add session consumables/skincare products (`/api/inventory/products`) and extra device pulses (`/api/inventory/devices`) directly within the session notes view.
+   - Session add-ons dynamically update the booking's `amount_left` and total invoice price in real time.
+   - In the Receptionist Payment Settlement checkout modal, session add-ons are displayed as line items under **Session Add-ons & Consumables** and included in `totalCost` and `balanceDue`.
+
+5. **Customer Information & Financials in Booking Details Drawer**:
+   - **Customer Information Card**: Displays the customer's account-level lifetime metrics across all reservations:
+     - **Wallet Balance**: Customer's stored wallet credit (`customerRecord.wallet_balance`).
+     - **Total Spent (All Visits)**: Customer's total spent across all completed visits (`customerRecord.spent_amount`).
+     - **Outstanding (All Visits)**: Customer's total debt across all visits (`customerRecord.outstanding`).
+   - **Price Details & Session Financials Card**: Displays this specific session's breakdown:
+     - **Total Price**: Total cost for the session services and add-ons (`cost EGP`).
+     - **Session Paid**: Actual amount paid so far for this specific session (`amountPaid EGP`).
+     - **Session Outstanding**: Remaining balance owed for this specific session (`amountLeft EGP` / `cost - amountPaid EGP`).
+    - Upon completing payment settlement checkout, Session Paid is updated to total price, Session Outstanding drops to 0 EGP, Customer Total Spent increases by settled payment, and Customer Outstanding is reduced by settled amount.
+
+6. **Reception Follow-Up Reminders & Pre-Filled Booking Engine (`TC-060` & `TC-061`)**:
+   - **Doctor Follow-Up Intent**: When completing a session or issuing a digital prescription, doctors record an optional follow-up target date (`follow_up_date`) and clinical instructions (`follow_up_instructions`).
+   - **Lead Time Window**: Follow-up reminders appear on the receptionist's bookings view before the target date according to `booking.followUpLeadDays` configured in Booking Settings (`/admin` -> Settings -> Booking Settings, default 2 days). Reminder appearance date = `targetDate - followUpLeadDays`.
+   - **Full-Width Sleek Notification Banner**: Active follow-up reminders are rendered at the top of the receptionist bookings view spanning 100% width, styled as a sleek Indigo alert banner directly below any active treatment session alerts.
+   - **1-Click Pre-Filled Booking Conversion**: Clicking **"+ Convert to Full Booking"** automatically opens the New Booking view (`AdminNewBookingView.tsx`) with pre-populated patient details (matching database profile and loading active packages/balances), recommending doctor (`selectedDoctorId`), service (`selectedServiceId`), appointment date, and clinical notes.
+   - **Mini-Calendar Dots**: Dates with active follow-up reminder alerts display distinct Indigo dots on the calendar date grid.
+
+---
+
+## Financial Transactions & Manual Ledger Rules
+**Enforced in:** `/api/transactions`, `src/components/admin/transactions/`, `src/components/admin/patients/PatientTransactionsHistoryTab.tsx`
+
+1. **Immutability of Financial Records**:
+   - Completed financial transactions are **never modified or directly deleted**.
+   - If an adjustment or refund is made, a **new transaction** is inserted on the actual date the refund occurs, preserving historical daily net totals for earlier dates.
+2. **Strictly Limited Manual Transaction Creation (3 Allowed Types)**:
+   - Staff manual transaction creation via `/admin -> Transactions -> New Transaction` or `Patient Profile -> Add Transaction` is strictly limited to 3 business options:
+     1. **Refund**: Refunds positive completed payments (either to Cash Back or Wallet Credit). Requires selecting an existing completed transaction for the patient, with validation ensuring the refund amount does not exceed the remaining unrefunded balance. Decreases patient lifetime `spent_amount`.
+     2. **Service Charge**: Standalone ad-hoc clinic charges (e.g. consultation, cancellation fee, administration charge). Requires patient, amount, payment method, and description. Increases patient lifetime `spent_amount`.
+     3. **Product / Package Purchase**: Direct retail purchase of skincare products (`/api/inventory/products`) or clinic packages (`/api/packages`). Supports product/package selector, auto-calculated total (`price * quantity`), payment method, reference, and item metadata logging. Increases patient lifetime `spent_amount`.
+   - **Permission-gated in Manual Creation (DEC-105, supersedes the DEC-104 ban)**: Direct `Payment` and `Outstanding Payment` (settlement) require `transactions.manual_payment`; `Wallet Top-up` / `Wallet Deduction` require `transactions.manual_wallet`. Superadmin always has both; every other role needs the exact key granted in Role Management (the coarse `Transactions`/`Finance` role labels do not imply them). Without the grant the API returns 403 and the UI hides those type buttons. `Adjustment` remains rejected (400) — use the patient balance adjustment tools. Booking checkout, Settle Balance and the wallet workflows remain the normal, automated path.
+3. **Transaction Source Tracking & Filtering**:
+   - Every transaction is tagged with `source: 'manual' | 'automatic'`.
+   - System displays a distinct visual badge (`Source: Manual` vs `Source: Automatic`) in the transactions table, patient transaction history tab, and audit trail.
+   - Filter bar supports `Source: All / Manual / Automatic`.
+4. **Today's Net Payments**:
+   - `Today's Net Payments = Completed Payments Today − Completed Refunds Today`.
+   - Excludes pending and failed transactions.
+5. **Outstanding Balance**:
+   - `Outstanding = Sum of active unpaid customer debt obligations`.
+6. **Wallet Balance & Refund Destinations**:
+   - If a refund's destination is `wallet`, the refund amount is credited to `customers.wallet_balance` and logged to `wallet_txns` with `direction: 'in'`.
+   - If `cash`, patient wallet is untouched.
+   - Lifetime total spent (`spent_amount`) is decremented regardless of destination, clamped at 0.
+
+---
+
+## Historical & Previous Bookings Rules
+**Enforced in:** `/api/reservations/previous`, `src/components/admin/bookings/AdminAddPreviousBookingView.tsx`, `AdminBookingsView.tsx`, `CustomerProfileDrawer.tsx`, `TransactionsView.tsx`, `src/app/admin/page.tsx`
+
+1. **Multi-Access Point Launching**:
+   - Accessible from 3 distinct locations across the administrative workspace:
+     1. **Bookings Page**: via the 3-dots (`MoreVertical`) dropdown menu beside `+ New Booking`.
+     2. **Patient Profile Drawer (`CustomerProfileDrawer.tsx`)**: via the dedicated `[🕒 Add Previous Booking]` top header action button and the Booking History tab header.
+     3. **Transactions Page (`TransactionsView.tsx`)**: via the top action button group directly beside `New Transaction` and `Audit Logs`.
+2. **Automatic Patient Data Prefill**:
+   - When launched from a patient profile, `AdminAddPreviousBookingView` receives the customer object (`initialCustomer`) and automatically pre-populates and binds the patient's **Phone** (`mobile` / `phone`) and **Name** (`name`), immediately triggering the matching badge (`✓ Existing patient found: [Name]`) without requiring manual re-entry.
+3. **Non-Disruption of Live Scheduling**:
+   - Historical bookings are saved with `status = 'completed'`, `is_manual = true`, and `is_historical = true`.
+   - Historical bookings never generate pending approval cards, upcoming appointment slot reservations, or doctor live calendar conflicts.
+4. **Original Historical Date Preservation**:
+   - The user-specified historical date (even years prior to system deployment) is preserved verbatim in `reservations.date` and `reservations.completed_at`.
+5. **Patient Matching & Automatic Profile Creation**:
+   - Matches existing patients by phone number (normalizing Egyptian formats `+201...`, `00201...`, `201...` to `01...` and supporting international country codes e.g. `+966`, `+971`, `+965`, etc.).
+   - Provides an integrated country selector dropdown with flags and dialing codes in the previous booking intake interface.
+   - If matched, links the historical reservation to `customer_id` and increments `number_of_bookings`.
+   - If no patient matches the phone number, a new patient record is automatically created in `customers` (`active = true`, `number_of_bookings = 1`) and linked.
+6. **Field Optionality**:
+   - `patientPhone`, `patientName`, and `date` are mandatory.
+   - `doctor`, `service`, and `paymentType` are optional and can remain empty without failing creation.
+7. **Patient & Booking History Visibility & Automated Verification**:
+   - The historical reservation is displayed in the patient's Profile Booking History, the Transactions list, and the All Appointments directory.
+   - Verified under System Test Suite `TC-038` and `TC-047`.
+8. **Zero-Invoice & Zero-Spent Fully Settled Paid Status Rule**:
+   - When a previous/historical booking is recorded with `invoiceValue = 0` (or 0.00) and `actualSpent = 0` (or 0.00), the booking has 0 remaining debt (`amount_left = 0`) and is considered fully settled / paid.
+   - The system displays the payment status badge as **"Paid"** across the Patient Profile Booking History (`CustomerProfileDrawer.tsx`), All Appointments directory (`AdminBookingsView.tsx`), and Booking Details drawer (`BookingDetailsModal.tsx`).
+   - The live Financial Ledger Preview in `AdminAddPreviousBookingView.tsx` indicates `Fully Settled (0 EGP Debt — Paid)`.
+
+---
+
+## Role-Based Access Control (RBAC) & Granular Action-Level Permissions Rules
+**Enforced in:** `src/app/admin/page.tsx`, `src/components/admin/settings/RoleManagementView.tsx`, `src/components/admin/translations.ts`, and individual view components (UI visibility) — **and, as of RISK-078/RISK-081 CORRUPT-A10 (2026-09-07), `src/lib/access.ts`'s `hasGranularPermission()` at the route level for `providers`, `services`, `inventory/products`, `inventory/devices`, and `customers/products`** (mutating verbs only). Before that fix, every rule below described UI behavior only — a role could have a button hidden and still perform the action via a direct API call. `employees` and `roles` remain `requireAdministratorAccess`-gated only (no granular distinction), which is intentional per RISK-069, not an oversight. See `ai_docs/SECURITY.md` §3a for the current per-route inventory.
+
+1. **Superadmin Immunity**:
+   - Users with `adminRole === 'superadmin'` possess blanket authorization across all navigation sections, APIs, action buttons, and 3-dots menus regardless of the `permissions` array.
+2. **Multi-Tier Hierarchical Fallback**:
+   - When checking an action-level permission (e.g., `bookings.action_print_schedule`, `providers.action_edit`, `inventory.action_update_pulses`), `hasPermission` automatically falls back to parent permissions (e.g. `bookings.view_calendar`, `providers.edit`, `inventory.manage_devices`) or the coarse category permission (e.g. `Bookings`, `Providers`, `Inventory`) if granular sub-keys are not explicitly defined.
+   - Preserves complete backward compatibility for existing roles configured prior to the granular matrix rollout.
+3. **Dynamic 3-Dots Menu Concealment**:
+   - When every individual action inside a 3-dots (`MoreVertical`) dropdown evaluates to `false` for the current user's role, the entire trigger button is suppressed from rendering. No empty or broken menus are ever shown to unauthorized staff.
+4. **Parent-Child Synchronization in Role Editor**:
+   - Selecting a category header or section parent in `RoleManagementView` automatically selects all underlying granular permissions.
+   - De-selecting all child actions automatically deselects the parent, ensuring the stored `permissions` array accurately reflects granular intent.
+5. **Coverage Across All 15 Subsystems**:
+   - RBAC rules strictly cover all 15 clinic categories: Dashboard & Reception, Bookings Management, Patient Management, Doctor Management, Services Catalog, Inventory & Devices, Employees & Staff, HR & Payroll, Financial Transactions, Marketing & Campaigns, Customer Support, Reports & Analytics, Finance & Accounting, Doctor Portal & Clinical Intake, and Settings & System Control.
+
+---
+
+## Multi-Service Public Booking (RISK-081 CORRUPT-U06)
+**Enforced in:** `src/components/BookingModal.tsx`, `src/app/api/availability/route.ts`, `src/app/api/reservations/route.ts`.
+
+1. **One Primary Service, Any Number Of Additional Services**:
+   - The public booking flow requires exactly one primary service (`serviceId`) and accepts zero or more `additionalServiceIds` on top of it, added via a pill picker shown once a primary service is chosen.
+   - Every downstream single-service assumption in `BookingModal.tsx` (doctor filtering, operating-hours calculation) keys off the *combined* set of selected services, not just the primary.
+2. **Combined Price & Duration**:
+   - Price and duration shown to the patient, the deposit calculated from them, and the amount charged server-side are all summed across every selected service — never the primary service alone.
+3. **One Doctor, One Room, Covers Every Selected Service**:
+   - A doctor is only offered as a choice (client-side) or matched (server-side, `/api/availability`) if their `services` list covers *every* selected service, not just one.
+   - A room is only assigned if it is mapped (`service_rooms`) to *every* selected service (intersection), both for automatic availability computation and for a manual/reception-created booking's room assignment.
+4. **`service_ids` Is The Source Of Truth**:
+   - The created `reservations` row stores the full, deduped list in `service_ids` (with `service_id` kept as the first entry for backward compatibility with any code still reading it as a scalar) — the same column `/admin` and the booking PATCH/checkout flow already read for admin-created multi-service bookings.
+
+---
+
+## Medical Records Are Per-Visit, Not Per-Customer (RISK-081 CORRUPT-D03)
+**Enforced in:** `src/app/api/medical-records/route.ts`, `supabase/migrations/20260907000000_add_reservation_id_to_medical_records.sql`.
+
+1. **A Visit's Intake Form Is Scoped To That Visit**:
+   - When a save includes a `reservation_id` (the doctor's active-session intake save), the row is keyed on `(customer_id, reservation_id)` — a second visit never overwrites the first visit's baseline data; it creates its own row.
+2. **A Patient-Profile Edit Has No `reservation_id`**:
+   - `MedicalFormModal.tsx` (opened from the customer profile page, not tied to any specific visit) saves with `reservation_id` omitted, and is upserted against the single `reservation_id IS NULL` row for that customer — this is deliberately a different concept from a visit's clinical intake.
+3. **Reads Default To "Most Recent"**:
+   - `GET /api/medical-records?customerId=` with no `reservationId` returns whichever row (profile or any visit) was most recently updated, so doctor-session prefill still shows the patient's latest known baseline.
+   - Pass `?reservationId=` to fetch one specific visit's intake data.
+
+---
+
+## Role-Based Dynamic URL Routing & Portal Login Isolation
+**Enforced in:** `src/lib/roleUtils.ts`, `src/app/[role]/page.tsx`, `src/app/admin/page.tsx`.
+
+1. **Direct Role Portal URLs (`/<role>`)**:
+   - The system routes staff directly to their clean role portal without `/admin/` prefix:
+     - Receptionist accounts: `/reception`
+     - Doctor accounts: `/doctor`
+     - Superadmin accounts: `/superadmin`
+     - Admin accounts: `/admin`
+     - Custom staff roles: `/<role-slug>` (e.g. `/hr`, `/nurse`, `/accountant`).
+2. **Role Portal Login Isolation**:
+   - Staff navigating to a specific role portal (e.g. `/admin`, `/reception`, `/doctor`, `/superadmin`, or `/<role-slug>`) can only log in if their assigned role matches that portal.
+   - The `/admin` portal strictly accepts **Admin** accounts (and **Superadmin**), rejecting non-admin staff (e.g., Receptionist or Doctor logging in at `/admin`) with: `"Access denied: This portal is exclusively for Admin accounts. Please sign in at your designated portal (/reception)."`.
+   - `superadmin` accounts retain universal access across all portals.
+3. **Seamless Session Synchronization**:
+   - On login, the browser URL cleanly reflects `/${roleSlug}` (or `/admin` for admins).
+   - On logout from a role portal, the URL preserves the portal path (e.g. `/reception`) for convenient re-login.
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-045` (`Role-Based URL Routing & Account Navigation Engine`).
+
+---
+
+## Customer Portal Header Login Button Visibility & Page Settings Toggle
+**Enforced in:** `src/components/Navbar.tsx`, `src/components/admin/settings/HomePageSettingsView.tsx`, `src/app/admin/page.tsx`, `src/app/api/page-settings/route.ts`, `data/page_settings.json`.
+
+1. **Deactivated by Default in Customer View**:
+   - The customer login and profile button in the public website header (`Navbar.tsx` desktop and mobile menus) is deactivated (`showCustomerLogin: false`) by default.
+2. **Dynamic Admin Page Settings Toggle**:
+   - Administrators can activate or deactivate the customer login button via Admin Settings -> Pages Settings -> Home (`Customer Portal & Login Button` switch card).
+   - Saved under `header.showCustomerLogin` in `page_settings` (`/api/page-settings`).
+3. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-046` (`Customer Portal Header Login Settings Engine`).
+
+---
+
+## Core System-Locked Roles & Permissions Protection
+**Enforced in:** `src/components/admin/settings/RoleManagementView.tsx`, `src/app/api/roles/route.ts`.
+
+1. **Superadmin Root Role Is Permanently Locked**:
+   - The root owner role (`superadmin`) is permanently locked from deletion to guarantee system access integrity.
+   - Operational roles (`admin`, `reception`, `receptionist`, `doctor`, and all custom roles) are fully unlocked, customizable, and manageable by administrators in Role Management.
+   - Deletion buttons for `superadmin` are disabled and replaced with the `System Locked` indicator in Role Management.
+   - `DELETE /api/roles?name=superadmin` rejects deletion attempts targeting `superadmin` with a `400 Bad Request` error.
+
+---
+
+## Deletion Rules (Soft Delete vs Hard Delete) — who may delete what
+**Enforced in:** `src/contexts/AlertConfirmContext.tsx`, `src/app/api/customers/route.ts`, `src/app/api/employees/route.ts`, `src/app/api/providers/route.ts`, `src/app/api/services/route.ts`, `src/app/api/reservations/route.ts`, `src/lib/accountActivation.ts`, `src/app/admin/page.tsx`. **Updated 2026-10-21** (the old text said every delete was superadmin-only; employee accounts no longer are, DEC-117).
+
+1. **Who may delete** (the server decides; the screens only hide the buttons):
+   - **Patients** (`customers`) and **bookings** (`reservations`): superadmin only, soft or hard.
+   - **Doctors** (`providers`): superadmin only (the granular `providers.delete` path alone is not enough).
+   - **Services**: staff holding the `services.delete` permission.
+   - **Employee accounts**: any administrator (admin or superadmin), but never a superadmin account and never your own account (`checkAccountAction`). There is always an active administrator left, because the caller is one.
+2. **Two kinds of delete** where both exist:
+   - **Soft Delete (Deactivate / Archive)**: keeps all associated financial transactions, historical bookings, medical reports, prescriptions, invoices and audit logs. For an employee account this now means **Inactive**: the role and records are kept, the Supabase Auth user is banned, the account has no access to anything, and it can be switched back on (DEC-117). It no longer overwrites the role with `inactive`.
+   - **Hard Delete (Permanent Removal)**: permanently removes the record from Supabase tables and, for an employee, the Auth user. **A patient** is hard-deleted together with everything that belongs to them (DEC-132, supersedes DEC-128): bookings, payments (transactions, invoices and their payment rows, product sales), packages, wallet entries, product balances, laser sessions, medical records, medical reports and prescriptions. The superadmin first sees the counts ("This will permanently delete: 3 bookings, 2 payment records (2,700 EGP), ...") and must confirm a second time. Un-linked bookings that carry the patient's phone and name go too (unless another patient row owns that phone), so the patient does not come back in the Patients list. There is no undo; Soft Delete is how to hide a patient and keep the history. A patient shown only because of bookings (`res-cust-<phone>`, no patient record) is hard-deleted by deleting the bookings with that phone and their payments; Soft Delete is refused for it with a message saying so.
+3. **An inactive account takes its doctor off the booking lists** (DEC-118): switching an account off, soft-deleting it, or deleting it sets the matching `providers.active` to false (the provider row and its bookings are kept); switching it back on sets it to true. The match is a unique case-insensitive name, narrowed by phone; if it is ambiguous nothing changes and the response says `providerSync: "ambiguous"`.
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-048` (`Superadmin Dual Delete (Soft vs Hard) & Core System Role Locking Engine`).
+
+---
+
+## New Booking Multi-Slot Selection & Financial Calculation Rules
+**Enforced in:** `src/components/admin/bookings/AdminNewBookingView.tsx`, `src/app/api/reservations/route.ts`.
+
+1. **Multi-Slot Selection Engine**:
+   - Receptionists and admins can select one or multiple time slots for an appointment from interactive time chips.
+   - Selected slots automatically calculate and display the total session duration (e.g. 2 slots = 60 mins).
+   - The selected slots are joined and stored in `requested_time` and `time_slot`.
+2. **Form Field Ordering**:
+   - In Appointment Details (Card 2), **Available Time** is positioned directly before **Session Type** (In Person vs Online).
+3. **Financial Section & Breakdown**:
+   - Side-by-side **Booking Value (EGP)** and **Amount Paid Now (EGP)** inputs with browser spin arrows removed and clean visual placeholders.
+   - Auto-calculates `bookingValue = servicePrice * slotsCount` with support for manual receptionist override.
+   - Live **Remaining Value** (`bookingValue - amountPaidNow`) displayed in real-time with status badges (Fully Settled / Due on Visit / Credit Balance) and detailed in the Booking Confirmation Summary modal.
+
+---
+
+## Reception Dashboard Shift Lifecycle & Operational Rules
+**Enforced in:** `src/components/admin/reception/ReceptionDashboardView.tsx`, `src/app/api/reception/dashboard/route.ts`, `src/components/admin/translations.ts`.
+
+1. **Dynamic Shift State Architecture**:
+   - One unified dashboard dynamically adapting across 3 distinct shift states:
+     - **State 1 (Not Started / Start of Day)**: Displays greeting, scheduled shift hours, Overview KPIs, Quick Actions (`+ New Booking`, `+ New Patient`), Attention Needed alerts, today's bookings table with 3-dots action menu, and a prominent green `Start Shift` button.
+     - **State 2 (In Progress / During Day)**: Displays live elapsed shift timer, actual clock-in time, real-time KPI metrics, operational action grid, today's schedule table with 3-dots action menu, and an `End Shift` button.
+     - **State 3 (Completed / End of Day)**: Replaces live operational queues with a comprehensive End of Day Review including total worked duration, Today's Performance cards (Completed, Cancelled, No-Shows), and Payments Received breakdown (Cash, InstaPay, Visa, Wallet, Total).
+     - **Total Spent (All Visits)**: Customer's total spent across all completed visits (`customerRecord.spent_amount`).
+     - **Outstanding (All Visits)**: Customer's total debt across all visits (`customerRecord.outstanding`).
+   - **Price Details & Session Financials Card**: Displays this specific session's breakdown:
+     - **Total Price**: Total cost for the session services and add-ons (`cost EGP`).
+     - **Session Paid**: Actual amount paid so far for this specific session (`amountPaid EGP`).
+     - **Session Outstanding**: Remaining balance owed for this specific session (`amountLeft EGP` / `cost - amountPaid EGP`).
+    - Upon completing payment settlement checkout, Session Paid is updated to total price, Session Outstanding drops to 0 EGP, Customer Total Spent increases by settled payment, and Customer Outstanding is reduced by settled amount.
+
+---
+
+## Financial Transactions & Manual Ledger Rules
+**Enforced in:** `/api/transactions`, `src/components/admin/transactions/`, `src/components/admin/patients/PatientTransactionsHistoryTab.tsx`
+
+1. **Immutability of Financial Records**:
+   - Completed financial transactions are **never modified or directly deleted**.
+   - If an adjustment or refund is made, a **new transaction** is inserted on the actual date the refund occurs, preserving historical daily net totals for earlier dates.
+2. **Strictly Limited Manual Transaction Creation (3 Allowed Types)**:
+   - Staff manual transaction creation via `/admin -> Transactions -> New Transaction` or `Patient Profile -> Add Transaction` is strictly limited to 3 business options:
+     1. **Refund**: Refunds positive completed payments (either to Cash Back or Wallet Credit). Requires selecting an existing completed transaction for the patient, with validation ensuring the refund amount does not exceed the remaining unrefunded balance. Decreases patient lifetime `spent_amount`.
+     2. **Service Charge**: Standalone ad-hoc clinic charges (e.g. consultation, cancellation fee, administration charge). Requires patient, amount, payment method, and description. Increases patient lifetime `spent_amount`.
+     3. **Product / Package Purchase**: Direct retail purchase of skincare products (`/api/inventory/products`) or clinic packages (`/api/packages`). Supports product/package selector, auto-calculated total (`price * quantity`), payment method, reference, and item metadata logging. Increases patient lifetime `spent_amount`.
+   - **Permission-gated in Manual Creation (DEC-105, supersedes the DEC-104 ban)**: Direct `Payment` and `Outstanding Payment` (settlement) require `transactions.manual_payment`; `Wallet Top-up` / `Wallet Deduction` require `transactions.manual_wallet`. Superadmin always has both; every other role needs the exact key granted in Role Management (the coarse `Transactions`/`Finance` role labels do not imply them). Without the grant the API returns 403 and the UI hides those type buttons. `Adjustment` remains rejected (400) — use the patient balance adjustment tools. Booking checkout, Settle Balance and the wallet workflows remain the normal, automated path.
+3. **Transaction Source Tracking & Filtering**:
+   - Every transaction is tagged with `source: 'manual' | 'automatic'`.
+   - System displays a distinct visual badge (`Source: Manual` vs `Source: Automatic`) in the transactions table, patient transaction history tab, and audit trail.
+   - Filter bar supports `Source: All / Manual / Automatic`.
+4. **Today's Net Payments**:
+   - `Today's Net Payments = Completed Payments Today − Completed Refunds Today`.
+   - Excludes pending and failed transactions.
+5. **Outstanding Balance**:
+   - `Outstanding = Sum of active unpaid customer debt obligations`.
+6. **Wallet Balance & Refund Destinations**:
+   - If a refund's destination is `wallet`, the refund amount is credited to `customers.wallet_balance` and logged to `wallet_txns` with `direction: 'in'`.
+   - If `cash`, patient wallet is untouched.
+   - Lifetime total spent (`spent_amount`) is decremented regardless of destination, clamped at 0.
+
+---
+
+## Historical & Previous Bookings Rules
+**Enforced in:** `/api/reservations/previous`, `src/components/admin/bookings/AdminAddPreviousBookingView.tsx`, `AdminBookingsView.tsx`, `CustomerProfileDrawer.tsx`, `TransactionsView.tsx`, `src/app/admin/page.tsx`
+
+1. **Multi-Access Point Launching**:
+   - Accessible from 3 distinct locations across the administrative workspace:
+     1. **Bookings Page**: via the 3-dots (`MoreVertical`) dropdown menu beside `+ New Booking`.
+     2. **Patient Profile Drawer (`CustomerProfileDrawer.tsx`)**: via the dedicated `[🕒 Add Previous Booking]` top header action button and the Booking History tab header.
+     3. **Transactions Page (`TransactionsView.tsx`)**: via the top action button group directly beside `New Transaction` and `Audit Logs`.
+2. **Automatic Patient Data Prefill**:
+   - When launched from a patient profile, `AdminAddPreviousBookingView` receives the customer object (`initialCustomer`) and automatically pre-populates and binds the patient's **Phone** (`mobile` / `phone`) and **Name** (`name`), immediately triggering the matching badge (`✓ Existing patient found: [Name]`) without requiring manual re-entry.
+3. **Non-Disruption of Live Scheduling**:
+   - Historical bookings are saved with `status = 'completed'`, `is_manual = true`, and `is_historical = true`.
+   - Historical bookings never generate pending approval cards, upcoming appointment slot reservations, or doctor live calendar conflicts.
+4. **Original Historical Date Preservation**:
+   - The user-specified historical date (even years prior to system deployment) is preserved verbatim in `reservations.date` and `reservations.completed_at`.
+5. **Patient Matching & Automatic Profile Creation**:
+   - Matches existing patients by phone number (normalizing Egyptian formats `+201...`, `00201...`, `201...` to `01...`).
+   - If matched, links the historical reservation to `customer_id` and increments `number_of_bookings`.
+   - If no patient matches the phone number, a new patient record is automatically created in `customers` (`active = true`, `number_of_bookings = 1`) and linked.
+6. **Field Optionality**:
+   - `patientPhone`, `patientName`, and `date` are mandatory.
+   - `doctor`, `service`, and `paymentType` are optional and can remain empty without failing creation.
+7. **Patient & Booking History Visibility & Automated Verification**:
+   - The historical reservation is displayed in the patient's Profile Booking History, the Transactions list, and the All Appointments directory.
+   - Verified under System Test Suite `TC-038` and `TC-047`.
+8. **Zero-Invoice & Zero-Spent Fully Settled Paid Status Rule**:
+   - When a previous/historical booking is recorded with `invoiceValue = 0` (or 0.00) and `actualSpent = 0` (or 0.00), the booking has 0 remaining debt (`amount_left = 0`) and is considered fully settled / paid.
+   - The system displays the payment status badge as **"Paid"** across the Patient Profile Booking History (`CustomerProfileDrawer.tsx`), All Appointments directory (`AdminBookingsView.tsx`), and Booking Details drawer (`BookingDetailsModal.tsx`).
+   - The live Financial Ledger Preview in `AdminAddPreviousBookingView.tsx` indicates `Fully Settled (0 EGP Debt — Paid)`.
+
+---
+
+## Role-Based Access Control (RBAC) & Granular Action-Level Permissions Rules
+**Enforced in:** `src/app/admin/page.tsx`, `src/components/admin/settings/RoleManagementView.tsx`, `src/components/admin/translations.ts`, and individual view components (UI visibility) — **and, as of RISK-078/RISK-081 CORRUPT-A10 (2026-09-07), `src/lib/access.ts`'s `hasGranularPermission()` at the route level for `providers`, `services`, `inventory/products`, `inventory/devices`, and `customers/products`** (mutating verbs only). Before that fix, every rule below described UI behavior only — a role could have a button hidden and still perform the action via a direct API call. `employees` and `roles` remain `requireAdministratorAccess`-gated only (no granular distinction), which is intentional per RISK-069, not an oversight. See `ai_docs/SECURITY.md` §3a for the current per-route inventory.
+
+1. **Superadmin Immunity**:
+   - Users with `adminRole === 'superadmin'` possess blanket authorization across all navigation sections, APIs, action buttons, and 3-dots menus regardless of the `permissions` array.
+2. **Multi-Tier Hierarchical Fallback**:
+   - When checking an action-level permission (e.g., `bookings.action_print_schedule`, `providers.action_edit`, `inventory.action_update_pulses`), `hasPermission` automatically falls back to parent permissions (e.g. `bookings.view_calendar`, `providers.edit`, `inventory.manage_devices`) or the coarse category permission (e.g. `Bookings`, `Providers`, `Inventory`) if granular sub-keys are not explicitly defined.
+   - Preserves complete backward compatibility for existing roles configured prior to the granular matrix rollout.
+3. **Dynamic 3-Dots Menu Concealment**:
+   - When every individual action inside a 3-dots (`MoreVertical`) dropdown evaluates to `false` for the current user's role, the entire trigger button is suppressed from rendering. No empty or broken menus are ever shown to unauthorized staff.
+4. **Parent-Child Synchronization in Role Editor**:
+   - Selecting a category header or section parent in `RoleManagementView` automatically selects all underlying granular permissions.
+   - De-selecting all child actions automatically deselects the parent, ensuring the stored `permissions` array accurately reflects granular intent.
+5. **Coverage Across All 15 Subsystems**:
+   - RBAC rules strictly cover all 15 clinic categories: Dashboard & Reception, Bookings Management, Patient Management, Doctor Management, Services Catalog, Inventory & Devices, Employees & Staff, HR & Payroll, Financial Transactions, Marketing & Campaigns, Customer Support, Reports & Analytics, Finance & Accounting, Doctor Portal & Clinical Intake, and Settings & System Control.
+
+---
+
+## Multi-Service Public Booking (RISK-081 CORRUPT-U06)
+**Enforced in:** `src/components/BookingModal.tsx`, `src/app/api/availability/route.ts`, `src/app/api/reservations/route.ts`.
+
+1. **One Primary Service, Any Number Of Additional Services**:
+   - The public booking flow requires exactly one primary service (`serviceId`) and accepts zero or more `additionalServiceIds` on top of it, added via a pill picker shown once a primary service is chosen.
+   - Every downstream single-service assumption in `BookingModal.tsx` (doctor filtering, operating-hours calculation) keys off the *combined* set of selected services, not just the primary.
+2. **Combined Price & Duration**:
+   - Price and duration shown to the patient, the deposit calculated from them, and the amount charged server-side are all summed across every selected service — never the primary service alone.
+3. **One Doctor, One Room, Covers Every Selected Service**:
+   - A doctor is only offered as a choice (client-side) or matched (server-side, `/api/availability`) if their `services` list covers *every* selected service, not just one.
+   - A room is only assigned if it is mapped (`service_rooms`) to *every* selected service (intersection), both for automatic availability computation and for a manual/reception-created booking's room assignment.
+4. **`service_ids` Is The Source Of Truth**:
+   - The created `reservations` row stores the full, deduped list in `service_ids` (with `service_id` kept as the first entry for backward compatibility with any code still reading it as a scalar) — the same column `/admin` and the booking PATCH/checkout flow already read for admin-created multi-service bookings.
+
+---
+
+## Medical Records Are Per-Visit, Not Per-Customer (RISK-081 CORRUPT-D03)
+**Enforced in:** `src/app/api/medical-records/route.ts`, `supabase/migrations/20260907000000_add_reservation_id_to_medical_records.sql`.
+
+1. **A Visit's Intake Form Is Scoped To That Visit**:
+   - When a save includes a `reservation_id` (the doctor's active-session intake save), the row is keyed on `(customer_id, reservation_id)` — a second visit never overwrites the first visit's baseline data; it creates its own row.
+2. **A Patient-Profile Edit Has No `reservation_id`**:
+   - `MedicalFormModal.tsx` (opened from the customer profile page, not tied to any specific visit) saves with `reservation_id` omitted, and is upserted against the single `reservation_id IS NULL` row for that customer — this is deliberately a different concept from a visit's clinical intake.
+3. **Reads Default To "Most Recent"**:
+   - `GET /api/medical-records?customerId=` with no `reservationId` returns whichever row (profile or any visit) was most recently updated, so doctor-session prefill still shows the patient's latest known baseline.
+   - Pass `?reservationId=` to fetch one specific visit's intake data.
+
+---
+
+## Role-Based Dynamic URL Routing & Portal Login Isolation
+**Enforced in:** `src/lib/roleUtils.ts`, `src/app/[role]/page.tsx`, `src/app/admin/page.tsx`.
+
+1. **Direct Role Portal URLs (`/<role>`)**:
+   - The system routes staff directly to their clean role portal without `/admin/` prefix:
+     - Receptionist accounts: `/reception`
+     - Doctor accounts: `/doctor`
+     - Superadmin accounts: `/superadmin`
+     - Admin accounts: `/admin`
+     - Custom staff roles: `/<role-slug>` (e.g. `/hr`, `/nurse`, `/accountant`).
+2. **Role Portal Login Isolation**:
+   - Staff navigating to a specific role portal (e.g. `/admin`, `/reception`, `/doctor`, `/superadmin`, or `/<role-slug>`) can only log in if their assigned role matches that portal.
+   - The `/admin` portal strictly accepts **Admin** accounts (and **Superadmin**), rejecting non-admin staff (e.g., Receptionist or Doctor logging in at `/admin`) with: `"Access denied: This portal is exclusively for Admin accounts. Please sign in at your designated portal (/reception)."`.
+   - `superadmin` accounts retain universal access across all portals.
+3. **Seamless Session Synchronization**:
+   - On login, the browser URL cleanly reflects `/${roleSlug}` (or `/admin` for admins).
+   - On logout from a role portal, the URL preserves the portal path (e.g. `/reception`) for convenient re-login.
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-045` (`Role-Based URL Routing & Account Navigation Engine`).
+
+---
+
+## Customer Portal Header Login Button Visibility & Page Settings Toggle
+**Enforced in:** `src/components/Navbar.tsx`, `src/components/admin/settings/HomePageSettingsView.tsx`, `src/app/admin/page.tsx`, `src/app/api/page-settings/route.ts`, `data/page_settings.json`.
+
+1. **Deactivated by Default in Customer View**:
+   - The customer login and profile button in the public website header (`Navbar.tsx` desktop and mobile menus) is deactivated (`showCustomerLogin: false`) by default.
+2. **Dynamic Admin Page Settings Toggle**:
+   - Administrators can activate or deactivate the customer login button via Admin Settings -> Pages Settings -> Home (`Customer Portal & Login Button` switch card).
+   - Saved under `header.showCustomerLogin` in `page_settings` (`/api/page-settings`).
+3. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-046` (`Customer Portal Header Login Settings Engine`).
+
+---
+
+## Core System-Locked Roles & Permissions Protection
+**Enforced in:** `src/components/admin/settings/RoleManagementView.tsx`, `src/app/api/roles/route.ts`.
+
+1. **Superadmin Root Role Is Permanently Locked**:
+   - The root owner role (`superadmin`) is permanently locked from deletion to guarantee system access integrity.
+   - Operational roles (`admin`, `reception`, `receptionist`, `doctor`, and all custom roles) are fully unlocked, customizable, and manageable by administrators in Role Management.
+   - Deletion buttons for `superadmin` are disabled and replaced with the `System Locked` indicator in Role Management.
+   - `DELETE /api/roles?name=superadmin` rejects deletion attempts targeting `superadmin` with a `400 Bad Request` error.
+
+---
+
+## Deletion Rules (Soft Delete vs Hard Delete) — who may delete what
+**Enforced in:** `src/contexts/AlertConfirmContext.tsx`, `src/app/api/customers/route.ts`, `src/app/api/employees/route.ts`, `src/app/api/providers/route.ts`, `src/app/api/services/route.ts`, `src/app/api/reservations/route.ts`, `src/lib/accountActivation.ts`, `src/app/admin/page.tsx`. **Updated 2026-10-21** (the old text said every delete was superadmin-only; employee accounts no longer are, DEC-117).
+
+1. **Who may delete** (the server decides; the screens only hide the buttons):
+   - **Patients** (`customers`) and **bookings** (`reservations`): superadmin only, soft or hard.
+   - **Doctors** (`providers`): superadmin only (the granular `providers.delete` path alone is not enough).
+   - **Services**: staff holding the `services.delete` permission.
+   - **Employee accounts**: any administrator (admin or superadmin), but never a superadmin account and never your own account (`checkAccountAction`). There is always an active administrator left, because the caller is one.
+2. **Two kinds of delete** where both exist:
+   - **Soft Delete (Deactivate / Archive)**: keeps all associated financial transactions, historical bookings, medical reports, prescriptions, invoices and audit logs. For an employee account this now means **Inactive**: the role and records are kept, the Supabase Auth user is banned, the account has no access to anything, and it can be switched back on (DEC-117). It no longer overwrites the role with `inactive`.
+   - **Hard Delete (Permanent Removal)**: permanently removes the record from Supabase tables and, for an employee, the Auth user. **A patient** is hard-deleted together with everything that belongs to them (DEC-132, supersedes DEC-128): bookings, payments (transactions, invoices and their payment rows, product sales), packages, wallet entries, product balances, laser sessions, medical records, medical reports and prescriptions. The superadmin first sees the counts ("This will permanently delete: 3 bookings, 2 payment records (2,700 EGP), ...") and must confirm a second time. Un-linked bookings that carry the patient's phone and name go too (unless another patient row owns that phone), so the patient does not come back in the Patients list. There is no undo; Soft Delete is how to hide a patient and keep the history. A patient shown only because of bookings (`res-cust-<phone>`, no patient record) is hard-deleted by deleting the bookings with that phone and their payments; Soft Delete is refused for it with a message saying so.
+3. **An inactive account takes its doctor off the booking lists** (DEC-118): switching an account off, soft-deleting it, or deleting it sets the matching `providers.active` to false (the provider row and its bookings are kept); switching it back on sets it to true. The match is a unique case-insensitive name, narrowed by phone; if it is ambiguous nothing changes and the response says `providerSync: "ambiguous"`.
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-048` (`Superadmin Dual Delete (Soft vs Hard) & Core System Role Locking Engine`).
+
+---
+
+## New Booking Multi-Slot Selection & Financial Calculation Rules
+**Enforced in:** `src/components/admin/bookings/AdminNewBookingView.tsx`, `src/app/api/reservations/route.ts`.
+
+1. **Multi-Slot Selection Engine**:
+   - Receptionists and admins can select one or multiple time slots for an appointment from interactive time chips.
+   - Selected slots automatically calculate and display the total session duration (e.g. 2 slots = 60 mins).
+   - The selected slots are joined and stored in `requested_time` and `time_slot`.
+2. **Form Field Ordering**:
+   - In Appointment Details (Card 2), **Available Time** is positioned directly before **Session Type** (In Person vs Online).
+3. **Financial Section & Breakdown**:
+   - Side-by-side **Booking Value (EGP)** and **Amount Paid Now (EGP)** inputs with browser spin arrows removed and clean visual placeholders.
+   - Auto-calculates `bookingValue = servicePrice * slotsCount` with support for manual receptionist override.
+   - Live **Remaining Value** (`bookingValue - amountPaidNow`) displayed in real-time with status badges (Fully Settled / Due on Visit / Credit Balance) and detailed in the Booking Confirmation Summary modal.
+
+---
+
+## Reception Dashboard Shift Lifecycle & Operational Rules
+**Enforced in:** `src/components/admin/reception/ReceptionDashboardView.tsx`, `src/app/api/reception/dashboard/route.ts`, `src/components/admin/translations.ts`.
+
+1. **Dynamic Shift State Architecture**:
+   - One unified dashboard dynamically adapting across 3 distinct shift states:
+     - **State 1 (Not Started / Start of Day)**: Displays greeting, scheduled shift hours, Overview KPIs, Quick Actions (`+ New Booking`, `+ New Patient`), Attention Needed alerts, today's bookings table with 3-dots action menu, and a prominent green `Start Shift` button.
+     - **State 2 (In Progress / During Day)**: Displays live elapsed shift timer, actual clock-in time, real-time KPI metrics, operational action grid, today's schedule table with 3-dots action menu, and an `End Shift` button.
+     - **State 3 (Completed / End of Day)**: Replaces live operational queues with a comprehensive End of Day Review including total worked duration, Today's Performance cards (Completed, Cancelled, No-Shows), and Payments Received breakdown (Cash, InstaPay, Visa, Wallet, Total).
+2. **End Shift Confirmation Dialog**:
+   - Opening the End Shift modal calculates and renders live shift analytics:
+     - **Shift Summary**: Actual start/end time and total worked duration.
+     - **Today's Performance**: Real database counts for Completed, Cancelled, and No-Shows.
+     - **Payments Received**: Real breakdown aggregated across `transactions` and `payments` tables for Cash, InstaPay, Visa/Card, Wallet, and Total Payments.
+     - **Warning Alert Banner**: Displays warning if uncompleted/pending bookings remain.
+3. **Zero Fake Data Policy**:
+   - All KPIs, booking rows, doctors, services, performance metrics, and payment amounts are queried live from Supabase tables (`hr_attendance`, `reservations`, `transactions`, `payments`, `employee_accounts`, `providers`, `services`).
+4. **Bilingual Localization (EN / AR)**:
+   - Complete dictionary parity across English and Arabic under `reception.dashboard` in `translations.ts` with RTL layout support.
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-050` (`Reception Dashboard Shift State & Performance Metrics Engine`).
+
+---
+
+## Unified Staff Login & Public Customer Dropdown Real-Time Sync Rules
+**Enforced in:** `src/components/Navbar.tsx`, `src/app/login/page.tsx`, `src/components/admin/settings/HomePageSettingsView.tsx`, `src/app/api/auth/me/route.ts`, `src/lib/roleUtils.ts`.
+
+1. **Shaded Customer Login Preservation**:
+   - When the "Customer Portal & Login Button" toggle in Admin Settings -> Pages Settings -> Home is deactivated (`showCustomerLogin: false`), the customer login button in the public website header (`Navbar.tsx`) is **NOT removed**.
+   - Instead, the customer login option is visually **shaded / grayed out** (`opacity-50`, disabled cursor, "Deactivated" / "معطل" badge) to indicate disabled status while maintaining clean layout symmetry.
+2. **Instant Multi-Tab & Same-Tab Real-Time Sync**:
+   - Toggle updates in `HomePageSettingsView.tsx` broadcast immediately via 3 redundant channels:
+     - `window.dispatchEvent(new CustomEvent("revera-settings-change", { detail: { showCustomerLogin } }))` (same-tab immediate DOM update).
+     - `new BroadcastChannel("revera_channel").postMessage(...)` (cross-tab lightweight messaging).
+     - `localStorage.setItem("revera_settings_sync", ...)` (native cross-tab storage listener).
+   - Navbar updates live without requiring any page reload.
+3. **Public Navigation Login Dropdown**:
+   - The desktop and mobile navigation header features an interactive Login dropdown:
+     - **Option 1 (Patient & Customer Login)**: Opens patient authentication modal / profile when active; displays shaded disabled state when deactivated in settings.
+     - **Option 2 (Clinic Staff & Doctors Portal)**: Links to `/login`.
+4. **Unified Staff Login Portal (`/login`)**:
+   - Single unified login portal for all clinic staff (Doctors, Receptionists, Administrators, SuperAdmins, HR).
+   - Accepts Email Address or Employee ID (`REV-XXXX`), checks customer email exclusions, and authenticates via Supabase Auth.
+   - Automatically inspects the authenticated role via `/api/auth/me` and routes the user to their designated role portal (`/${getRoleSlug(role)}` e.g. `/admin`, `/doctor`, `/reception`, `/superadmin`).
+   - Already-authenticated staff visiting `/login` are automatically redirected to their active workspace without showing credentials prompt.
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-051` (`Unified Staff Login & Customer Dropdown Real-Time Sync Engine`).
+
+---
+
+## Reception & Non-Doctor Staff Weekly Shifts & Department Synchronization Rules
+**Enforced in:** `src/components/admin/employees/AdminEmployeesView.tsx`, `src/app/api/employees/route.ts`, `src/components/admin/translations.ts`.
+
+1. **Weekly Working Days Shift Schedule Matrix**:
+   - Receptionists and non-doctor staff configure their schedules using the full weekly working days matrix (Sunday through Saturday).
+   - Each weekday supports an `isOpen` working status checkbox, start and end time pickers, multi-shift additions (`+ Add Shift`), and removal of extra shifts (`Trash2`).
+2. **Single-Branch & In-Clinic Scoping**:
+   - Unlike Doctors who can be assigned to multiple branches and provide online consultations, Receptionists and operational staff are strictly bound to a **single assigned branch** and operate **exclusively in-clinic** (multi-branch selector and online consultation tabs are hidden).
+3. **Bidirectional Department & Role Synchronization**:
+   - When switching the department dropdown to `"Doctors"`, the system role automatically synchronizes to `"Doctor"` (or the primary doctor role from `rolesList`), revealing the doctor & medical configuration section.
+   - When switching the department back to `"Receptionist"` (or other non-doctor departments), the system role automatically reverts to a non-doctor role (e.g. `"receptionist"`), cleanly hiding the doctor section and restoring the staff weekly shifts configuration.
+   - Conversely, changing the system role dropdown synchronizes the department dropdown in both directions.
+4. **Summary Shift String & Working Schedule Compilation**:
+   - On submission, the matrix schedule is compiled into `workingDaysHours` and summarized into a human-readable `shift` string (`"09:00 AM to 05:00 PM"`, `"Multi-Shift Schedule"`, or `"Off"`) for backward compatibility with `employee_accounts.shift` and attendance reporting.
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-053` (`Reception & Staff Weekly Shift Configuration Engine`).
+
+---
+
+## Responsive Layout & Mobile Staff Views Standards
+**Enforced in:** `src/app/admin/page.tsx`, `AdminBookingsView.tsx`, `ReceptionDashboardView.tsx`, `PatientsDirectoryView.tsx`, `CustomerProfileDrawer.tsx`, `AdminEmployeesView.tsx`, `TransactionsView.tsx`, `InventoryDevicesTab.tsx`, `InventoryProductsTab.tsx`, `AdminServicesView.tsx`, `AdminHrView.tsx`, `AdminNewBookingView.tsx`, `AdminAddPreviousBookingView.tsx`, `UserProfileView.tsx`.
+
+1. **Admin Shell & Navigation Drawer**:
+   - Mobile navigation drawer width is responsive (`w-[280px] max-w-[85vw] md:w-[220px]`).
+   - Aside drawer containers must use `fixed inset-y-0 start-0 top-0 bottom-0 z-50 md:z-30 h-full min-h-screen min-h-[100dvh] max-h-screen md:h-screen md:max-h-screen md:translate-x-0` ensuring 100% full viewport height coverage across dynamic mobile address bars and embedded viewports without bottom cutoffs.
+   - On desktop, the main content wrapper uses `flex-1 flex flex-col min-w-0 max-w-full md:ps-[220px]` (padding-inline-start), permanently locking the sidebar to the viewport so the sidebar never scrolls away or reveals background gaps when page content scrolls down.
+   - The scrollable `<nav>` flex container must include `flex-1 min-h-0 space-y-1 overflow-y-auto` to allow proper inner scrolling and prevent flex container height distortion.
+   - Every sidebar item and submenu link must trigger `setSidebarOpen(false)` on click to auto-dismiss the drawer on mobile viewports.
+   - Sticky top header elements adapt gracefully on `< 640px` screens: branch dropdown uses `max-w-[130px] sm:max-w-[200px] truncate` (the Profile entry now lives in the sidebar account footer, DEC-109), and gaps/paddings scale down to `gap-1.5 sm:gap-3` and `px-2 sm:px-4`.
+2. **Table Container Scoping & Minimum Widths**:
+   - All administrative data tables must be wrapped in `<div className="overflow-x-auto ...">` with explicit minimum table widths (`min-w-[700px]` to `min-w-[950px]`).
+   - `overflow-hidden` must never be applied directly to a table container without an `overflow-x-auto` wrapper, preventing crushed columns and content clipping.
+3. **Adaptive Card Paddings & Grid Scaling**:
+   - Section containers and dashboard cards must use adaptive padding classes (`p-4 sm:p-6 md:p-8`) instead of rigid large paddings (`p-8`).
+   - Card grids must scale progressively from mobile to desktop (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`).
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-054` (`Responsive Staff Views & Mobile Layout Engine`).
+
+---
+
+## Prescription Versioning & Immutable History Audit Rules
+**Enforced in:** `src/app/api/prescriptions/route.ts`, `src/components/admin/patients/useCustomerProfile.ts`, `src/components/admin/patients/CustomerProfileDrawer.tsx`, `src/components/admin/doctor/modals/DoctorPatientHistoryDrawer.tsx`, `src/components/admin/translations.ts`, `supabase/migrations/20260915180000_add_prescription_versioning.sql`.
+
+1. **Immutable History on Prescription Edit**:
+   - Editing an existing prescription must **never delete or mutate** previous version records in place.
+   - Every edit inserts a new prescription row with incremented version (`version = previous.version + 1`), sets `is_latest = true`, and links `parent_prescription_id` to the immediate ancestor and `root_prescription_id` to the v1 original root.
+   - The previous version is updated to `is_latest = false` to preserve the historical audit record.
+2. **Clinician & Staff Attribution**:
+   - Every prescription version captures the prescribing/modifying doctor's identity (`doctor_name` and `doctor_id`).
+3. **Prescription History Drawer & Read-Only Audit**:
+   - The Patient Profile Prescriptions tab provides a **Prescription History** action on every prescription record.
+   - Clicking **Prescription History** opens a dedicated chronological version timeline modal displaying each historical version with its version pill, date/time, doctor attribution, diagnosis, medications list, and general notes.
+   - Previous versions are strictly read-only and marked with `Read-Only History` badges and audit notice banners.
+   - Each historical version can be individually printed using standard clinic prescription templates.
+4. **Tooltips & Internationalization**:
+   - *Edit Prescription*: "Update this prescription. Previous versions will remain available in history." / "تعديل هذه الروشتة. ستبقى النسخ السابقة محفوظة في السجل."
+   - *Prescription History*: "View previous versions of this prescription." / "عرض النسخ السابقة من هذه الروشتة."
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-056` (`Prescription Versioning & Immutable History Audit Engine`).
+
+---
+
+## Receptionist Booking Control & Booked Service Editing Rules
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/translations.ts`.
+
+1. **Superadmin Booking Status Override Control**:
+   - The interactive status dropdown selector in the Booking Details modal header is restricted strictly to **Superadmins** (`hasPermission("superadmin")`).
+   - For all other staff roles (e.g., receptionists, doctors, standard admins), the status is rendered as a clean, static, non-interactive badge (e.g. `COMPLETED`, `CONFIRMED`), preventing unauthorized or accidental arbitrary status jumps.
+   - Normal staff proceed through standard operational lifecycle buttons in the Session Flow card (Check In, Start Session, Settle Invoice) or Other Actions (Postpone, Cancel, No-Show).
+   - The **Other Actions** panel (Postpone, Cancel, No-Show) is strictly hidden for checked-in patients (`checked_in`), in-progress treatments (`started`), completed sessions (`completed`), cancelled bookings (`cancelled`/`rejected`), and no-shows (`no_show`), ensuring that once a patient has physically arrived and checked in, pre-arrival cancellation/rescheduling actions are disabled.
+   - Any manual status transition via `handleUpdateBookingStatus` strictly validates `hasPermission("superadmin")` and displays a bilingual authorization warning if unauthorized. Cancel and No-Show transitions additionally require explicit confirmation.
+
+2. **Booked Service Replacement On Patient Arrival**:
+   - Receptionists can edit or replace the assigned clinical service directly when the patient arrives at the clinic or from the Booking Details drawer.
+   - A dedicated **Change Service** action opens a structured Service Picker with real-time search, category filtering, and effective branch pricing.
+
+3. **Financial Integrity & Automatic Recalculation**:
+   - Previously paid amounts (`amount_paid` or deposit amounts) are **100% preserved** and never reset or overwritten during a service replacement.
+   - The new service's price is resolved dynamically according to the booking's assigned branch (`getEffectiveServicePrice` / branch price overrides).
+   - The invoice total is recalculated: `total_price = new_service_price + attached_products_cost`.
+   - Remaining balance due is automatically updated: `amount_left = Math.max(0, total_price - amount_paid)`.
+   - If the new service price is lower than or equal to the amount already paid, `amount_left` becomes 0 (and the invoice is treated as fully settled).
+
+4. **Price Confirmation Dialog**:
+   - Prior to committing the change, the system displays a clear, bilingual comparative dialog showing:
+     - Old Service & Old Price
+     - New Service & New Price
+     - Paid Amount (Preserved & Protected)
+     - Recalculated Remaining Due
+     - Financial reassurance notice explaining the automatic adjustment.
+
+5. **Audit Logging & Historical Traceability**:
+   - Changing a service automatically appends an immutable audit entry to `notes`:
+     `[Service Changed by {user} on {timestamp}]: {oldServiceName} ({oldPrice} EGP) ➔ {newServiceName} ({newPrice} EGP)`.
+
+6. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-057` (`Receptionist Booking Control & Service Editing Engine`).
+
+---
+
+## User Profile Working Details & Schedule Visualization Engine Rules
+**Enforced in:** `src/components/admin/UserProfileView.tsx`, `src/components/admin/translations.ts`, `src/app/admin/page.tsx`, `src/components/admin/DoctorAccountView.tsx`.
+
+1. **Zero-Dash Guarantee for Schedule Information**:
+   - Working Days and Working Hours must **never** display empty dashes (`—`) in employee or doctor profiles.
+   - When no custom working schedule is found in the database, the system automatically resolves to the clinic's standard operating schedule (**Saturday – Thursday**, **10:00 AM – 08:00 PM**, **Friday Off**).
+
+2. **Multi-Source Schedule Normalization**:
+   - The schedule engine recursively normalizes all data representations:
+     - Nested `branch_schedules` per branch ID
+     - Direct `in_person` and `online` nodes
+     - Multi-shift arrays (`shifts: [{ start: "...", end: "..." }]`)
+     - Pre-formatted text shifts (e.g., `"09:00 AM to 05:00 PM"`, `"10:00 AM to 08:00 PM"`)
+     - 24-hour time strings (`"09:00"`, `"17:00"`) converted into clean 12-hour AM/PM format (`"09:00 AM – 05:00 PM"` in English, `"09:00 ص – 05:00 م"` in Arabic).
+
+3. **Background Database Auto-Enrichment**:
+   - If schedule props are not fully pre-populated by parent views, `UserProfileView` performs client-side lookups against `employee_accounts` and `providers` to retrieve complete working days, hours, and branch assignments.
+
+4. **Modern 7-Day Interactive Weekly Schedule Matrix**:
+   - Section 2 (**Work Information & Weekly Schedule**) displays an interactive 7-day visual grid (Saturday through Friday) with:
+     - **Active Days**: Emerald active pill with checkmark, 12-hour formatted time slot badges, and daily hours duration.
+     - **Off Days**: Clean muted card with coffee/moon icon and `Off Day` / `Rest Day` badge.
+     - **Today Indicator**: Dynamic highlighting of the current day of the week with a prominent `Today` badge.
+     - **Header Badges**: Shift badge with Sun/Moon/Clock icons, Total Weekly Working Hours counter (`X hrs/week`), and Active Days count (`X Days Active`).
+     - **Attribute Cards**: 6 modern structured cards for Department, Employment Type, Assigned Branches, Active Working Days, Daily Working Hours, and Weekly Off Day.
+     - **Branch Schedule Switcher**: Seamless branch tab switcher when staff is assigned to multiple branches with distinct operating hours.
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-058` (`User Profile Working Details & Schedule Visualization Engine`).
+
+---
+
+## Doctor Started Session Propagation & Real-Time Synchronization Engine Rules
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/components/admin/DoctorAccountView.tsx`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/doctor/tabs/DoctorScheduleTab.tsx`.
+
+1. **Composite Doctor Resolution in API (`/api/reservations`)**:
+   - When querying reservations by doctor (`doctorId` or `doctorName`), the backend must resolve both the `provider_id` (from `providers` or linked `employee_accounts`) and the doctor's display name.
+   - The query matches reservations using a composite OR filter: `provider_id.eq.${resolvedProvId}` OR `doctor_name.ilike.%${cleanName}%`.
+   - Arabic (`د.`, `دكتور`) and English (`Dr.`) titles are stripped during matching to guarantee zero false negative misses.
+
+2. **Real-time Postgres Subscription Normalization**:
+   - When a receptionist or admin starts a session (`status = 'started'`), Supabase `postgres_changes` emits a payload with raw table rows.
+   - `DoctorAccountView` filters the event using `isDoctorMatch(payload.new)` and normalizes missing joined fields (`service_name` resolved from `servicesList`, `room_name`, `time_slot`).
+   - If the booking status is `started`, `in_progress`, `active`, or `in treatment`, it immediately populates `activeSessionBooking`.
+
+3. **Global Live Session Pulse Banner**:
+   - When an active session is detected and the doctor is on any tab other than Ongoing Session (`schedule`, `patients`, `analytics`), a glowing Live Active Session Pulse Banner is rendered at the top of the main view with:
+     - Live pulse animation icon (`Play` with glowing pulse)
+     - Patient name, service title, scheduled time, and treatment room
+     - 1-click **Open Ongoing Session** action button jumping directly to the Ongoing Session tab.
+
+4. **Queue & Schedule Tab Started Highlighting**:
+   - On the Doctor Schedule Tab (Calendar Agenda & Queue List), appointments in `started` or `in_progress` status are highlighted with an active glowing pill and direct **Open Session** action buttons.
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-059` (`Doctor View Real-time Started Session Detection & Synchronization Engine`).
+
+---
+
+## Follow-Up Visit Management & Clinical Prescription Engine Rules
+**Enforced in:** `src/app/api/prescriptions/route.ts`, `src/app/api/reservations/route.ts`, `src/components/admin/bookings/AdminBookingsView.tsx`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`.
+
+1. **Universal Follow-Up Availability in Prescription Writers**:
+   - The interactive Follow-Up Visit toggle card is ubiquitously embedded in:
+     - Doctor View Active Session (`DoctorOngoingSessionTab.tsx`)
+     - Reception Clinical Finalization & Global Ending Session (`BookingDetailsModal.tsx` inline prescription form)
+     - Booking Details Drawer Standalone Prescription Modal (`BookingDetailsModal.tsx` modal)
+   - Features quick interval presets: `+3 Days`, `+1 Week`, `+2 Weeks`, `+1 Month`, alongside an explicit date picker (with `min` set to today) and clinical instructions/reason input.
+
+2. **Persistence and Automatic Calendar Synchronization**:
+   - When a prescription is saved with follow-up enabled (`follow_up_date`), it is recorded in the `prescriptions` table and automatically propagated to the parent `reservations` record (`follow_up_date` / `followUpDate`).
+   - In Reception Calendar (`AdminBookingsView.tsx`), dates with pending follow-up visits display an indigo calendar dot (`#6366F1`) and are distinguished from full reservations.
+
+3. **Receptionist Follow-Up Action Hub & Notification Layout**:
+   - Follow-up entries are rendered in a dedicated **Follow-Up Reminders** notification banner positioned right under stale session alerts matching treatment-in-session styling featuring:
+     - Clear 2-line layout: Top line displays **Patient Name** with the **Target Date badge**, and underneath line displays **Doctor Name**, **Follow-Up indicator**, **Patient Phone Number**, and **Doctor Clinical Instructions/Notes**.
+     - 1-click WhatsApp reminder template generator with localized patient greeting and follow-up reason.
+     - Direct Phone Call action button (`tel:` link).
+     - 1-click **Convert to Full Booking / تحويل لحجز مؤكد** action that carries full patient profile, recommending doctor, service, target date, and clinical instructions directly into the New Booking form (`AdminNewBookingView.tsx`) and confirmation summary.
+     - **Configurable Lead Time & Overdue Visibility**: Configured in Booking Settings (`followUpLeadDays`, default 2 days). On Today's view, all pending reminders whose reminder date has arrived (`fu.reminderDate <= today`) are displayed (including overdue follow-ups up to 90 days). When browsing specific future or past calendar dates, the banner displays follow-ups active for that selected window.
+     - **Origin Booking Exclusion Guarantee**: The appointment/session where the doctor created the follow-up is unconditionally excluded from satisfying its own reminder (`fu.bookingId && String(r.id) === String(fu.bookingId) -> return false`), preventing false premature dismissals.
+     - **Automatic Dismissal**: A follow-up reminder is immediately dismissed when the receptionist clicks "+ Convert to Full Booking" or when a separate active reservation is scheduled for that patient during the follow-up target window.
+     - **Real-Time Synchronization**: `AdminBookingsView.tsx` subscribes to Supabase realtime `postgres_changes` on `prescriptions` and `reservations` and window custom events (`revera-prescription-change`, `revera-booking-change`), seamlessly merging client Supabase queries with authenticated `/api/prescriptions` endpoints.
+     - **Booking Details Drawer**: Converted follow-up clinical notes and instructions are prominently displayed inside the Booking Information card in `BookingDetailsModal.tsx`.
+
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test cases `TC-060` & `TC-061` (`Clinical Prescription Follow-Up Visit & Reception Calendar Integration Engine`).
+
+---
+
+## Laser Per-Pulse Calculation & Invoice Settlement Engine Rules
+**Enforced in:** `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/app/admin/page.tsx`, `src/lib/printUtils.ts`, `src/app/api/reservations/route.ts`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`.
+
+1. **Per-Pulse Pricing Formula**:
+   - When a booking is established in `PER_PULSE` mode (Option 2: Pay per Pulse), all laser services delivered during the session (both Primary Booked Service and Additional Services) are charged dynamically based on delivered pulses:
+     $$\text{Price} = \text{delivered\_pulses} \times \text{agreed\_price\_per\_pulse}$$
+   - Non-laser services rendered in the same session retain their standard catalog / branch pricing.
+   - Example: Primary laser service (250 pulses) + Additional laser service (250 pulses) @ 1 EGP/pulse = 500 EGP subtotal, rather than catalog prices.
+   - `writeCheckoutInvoice` in `src/app/api/reservations/route.ts` recognizes per-pulse mode and writes accurate line totals into the invoice ledger.
+
+2. **Booking Details Modal Payment Mode & Settlement Display**:
+   - The standard Booking Details Modal (`BookingDetailsModal.tsx`) clearly displays the session payment method:
+     - **Top Laser Per-Pulse Settlement Banner**: Amber banner with `Zap` icon, agreed pulse rate (`@ ${rate} EGP/pulse`), full bilingual agreement text, and Total Pulses Delivered counter badge.
+     - **3-Metrics Row (Card C)**: "Session Type & Payment Mode" card with explicit `Pay per Pulse (@ ${rate} EGP)` indicator and `Per Pulse` badge.
+     - **Service Details Card**: Shows primary and additional laser services with delivered pulse badges, live multipliers `(${pulses} pulses × ${rate} EGP)`, and accurate total price.
+     - **Payment Summary Card**: Includes a dedicated `Payment Mode` row displaying `⚡ Pay per Pulse (@ ${rate} EGP)`.
+
+3. **Laser Settlement Agreement Notice**:
+   - In ending session finalization, checkout settlement, invoice preview modal, and printed invoice PDFs, an explicit golden Laser Settlement Notice is rendered:
+     - **English**: `Settled that laser services in this session are charged per pulse (500 pulses × 1 EGP = 500 EGP)`
+     - **Arabic**: `تم الاتفاق على أن تكون خدمات الليزر في هذه الجلسة مدفوعة بنظام حساب النبضات (500 نبضة × 1 ج.م = 500 ج.م)`
+   - Structured notes tags `[Laser Settlement]: ...` and `[Laser Pulses Delivered]: ...` are automatically persisted to `reservations.notes`.
+
+4. **Safe Additional Service & Primary Pulses Note Parsing**:
+   - `parseAdditionalServiceLine` extracts service names, quantities, unit prices, totals, and pulses without regex leakage or corruption from `, Pulses: <num>` suffixes.
+   - `extractPrimaryPulses` accurately parses primary delivered pulses from structured strings (`[Laser Pulses Delivered]: Primary: <N> pulses...`), preventing fallback to static catalog prices.
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-071` (`Laser Per-Pulse Dynamic Calculation & Invoice Settlement Engine`).
+
+---
+
+## Laser Pulses Package Purchase & Quota Engine Rules
+**Enforced in:** `src/app/api/packages/sell/route.ts`, `src/app/api/packages/route.ts`, `src/app/api/customers/packages/route.ts`, `src/components/admin/patients/CustomerProfileDrawer.tsx`, `src/components/admin/packages/PackageAdminPanel.tsx`.
+
+1. **Zero-Item Pulses Package Exemption**:
+   - Pulses packages do not require linked service items (`package_items.length === 0`).
+   - `/api/packages/sell` recognizes any package with 0 items, `package_type === 'pulses'`, or `total_pulses > 0` as a valid Laser Pulses Package and never triggers the `"Package must contain at least one service with a positive quantity."` validation blocker.
+
+2. **Schema-Resilient Metadata Synchronization**:
+   - Package types (`services` vs `pulses`) and included total pulses are mirrored to `page_settings` under key `packages_meta` on package creation (`POST`) and updates (`PATCH`), and enriched automatically on `GET /api/packages`.
+   - When a laser pulses package is sold, pulse quotas (`total_pulses`, `pulses_remaining`) are initialized in `customer_packages` and stored in `page_settings` under key `customer_package_pulses` for seamless ecosystem access across doctor sessions, receptionist intake, and customer profiles.
+
+3. **Customer Profile Package & Quota Display**:
+   - In the Sell Package drawer modal (`CustomerProfileDrawer.tsx`), laser pulses packages display their quota (e.g. `⚡ 10,000 Pulses`) in the dropdown and an Included Pulses Quota card in the package preview.
+   - In the Active Packages list (Patient Profile Tab 5), laser pulses packages render an interactive pulse quota card with `Zap` icon, badge, remaining/total pulse counters, and a visual progress bar.
+
+4. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-070` (`Package Types & Laser Pulses Package Engine`).
+
+---
+
+## Laser Pulses Package Redemption & Resilient Session Completion Rules
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/app/api/customers/packages/route.ts`, `src/app/api/reservation-products/route.ts`, `src/components/admin/DoctorAccountView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`.
+
+1. **Schema-Resilient Session Ending (No 42703 Database Errors)**:
+   - When ending or completing a session via `PATCH /api/reservations`, the backend wraps updates in a multi-stage fallback. If Postgres returns error code `42703` (missing column on `reservations` table), extended columns (`laser_payment_mode`, `laser_price_per_pulse`, `delivered_pulses`, `actual_duration_minutes`, `doctor_notes`, `reception_notes`, `follow_up_notes`, `follow_up_date`, `total_price`, `price`) are stripped and the update retries cleanly without failing.
+   - Updates always preserve core booking lifecycle fields (`status: 'completed'`, `notes`, `amount_paid`, `amount_left`, `service_id`).
+
+2. **UUID-Guarded Customer Package Queries (No 22P02 Syntax Errors)**:
+   - `PATCH /api/customers/packages` guards against non-UUID package IDs (e.g. synthetic `pb-...` or `temp-pkg-...`) before querying `customer_packages` table with `.eq('id', pkgId)`.
+   - Pulse store operations (`consume_package_pulses`) operate reliably across all package identifier formats, updating `page_settings.customer_package_pulses` and logging usage history.
+
+3. **0 EGP Package Redemption Service Line & Zero Phantom Charges**:
+   - When a session is settled in `PACKAGE` mode, `writeCheckoutInvoice` treats the base laser service as fully covered by package redemption (`100% discount, line_total = 0`), preventing phantom receivables or duplicate charges.
+   - In `persistSessionLineItems`, device pulses for prepaid packages or standard inclusion are recorded with `unitPrice: 0` so hardware pulse counter entries are never billed as billable addon products.
+
+4. **Flexible Reservation Products Payload Normalization**:
+   - `/api/reservation-products` accepts parameter aliases seamlessly (`description` / `productName` / `name`, `qty` / `quantity`, `unitPrice` / `unit_price` / `price`) and supports all staff roles (`doctor_session`, `receptionist`, `receptionist_global_ending`).
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-072` (`Laser Pulses Package Redemption & Session Completion Engine`).
+
+---
+
+## Multi-Scenario Laser Pulses Package Settlement Rules
+**Enforced in:** `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/DoctorAccountView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/app/admin/page.tsx`, `src/lib/printUtils.ts`.
+
+1. **Scenario 1 (No Active Package Purchase + Session Coverage)**:
+   - When a patient with no active pulses packages attends a laser session with `laserPaymentMode === "PACKAGE"`, they choose an available pulses package from the catalog (e.g. 10,000 Pulses @ 7,000 EGP).
+   - The session invoice bills strictly the price of the purchased package (`+ 7,000 EGP`).
+   - The base laser service itself is 100% covered by the newly purchased package (`0 EGP (Package Redemption)`).
+   - Delivered pulses (e.g. 5,000) are consumed from this new package (`customerPackage.id`), and remaining pulses (5,000) carry forward for future sessions without paying again.
+
+2. **Scenario 2 (Existing Package with Deficit Spillover)**:
+   - When delivered pulses exceed remaining pulses in the active package (e.g. 10,000 delivered vs 5,000 balance -> 5,000 pulse deficit), two resolution choices are presented:
+     - **Choice 3A (Buy New Package)**: The patient purchases a new package. The deficit pulses are deducted from the new package, the package price is billed on the invoice, and remaining pulses carry forward.
+     - **Choice 3B (Pay Rest per Pulse)**: The excess deficit pulses are billed on the invoice at the agreed per-pulse rate (`deficit × pulseRate`, e.g. 5,000 × 1 EGP = 5,000 EGP).
+
+3. **Scenario 3 (Standard Redemption)**:
+   - When pulses delivered <= balance, 0 EGP laser charge on invoice. Pulses are deducted, and balance carries forward.
+
+4. **Additional Laser Services vs Non-Laser Services in Package Mode**:
+   - Any additional service added to the session that is a **Laser Service** (`checkIsLaserService`, or keyword 'laser'/'ليزر') is **100% covered by the pulses package (0 EGP cash price)**. Its delivered pulses are deducted from the pulses package quota and its invoice line is formatted as `(Package Redemption · 0 EGP) / (استهلاك باقة · 0 ج.م)`.
+   - Only **Non-Laser Services** (e.g. consultations, chemical peeling, facials) retain their catalog price and are added to the session invoice on top of the package mode selection (e.g. 7,000 EGP package + 150 EGP non-laser service = 7,150 EGP total invoice).
+
+5. **Universal Settlement Agreement Appearance**:
+   - The purple/emerald **Laser Pulses Package Settlement Agreement Banner** is displayed prominently across:
+     - Doctor Ongoing Session tab (with live remaining pulses preview).
+     - Booking Details Modal (top banner and `Package` badge).
+     - Payment Settlement Modal (checkout notice).
+     - Booking Invoice Preview Modal.
+     - Printed Invoice PDFs (`printUtils.ts`).
+
+6. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-073` (`Multi-Scenario Laser Pulses Package Settlement Engine`).
+
+---
+
+## New Booking Laser Pulses Package Selection & Catalog Purchase Rules
+**Enforced in:** `src/components/admin/bookings/AdminNewBookingView.tsx`, `src/components/admin/DoctorAccountView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/app/admin/page.tsx`, `src/components/admin/translations.ts`.
+
+1. **Active Pulses Package Detection in New Booking**:
+   - For laser bookings (`isLaserService === true`), Option 3 (**Pulses Package**) distinguishes between session packages (`packageType === 'services'`) and pulses packages (`packageType === 'pulses'`).
+   - If the patient possesses an active pulses package with positive balance (`pulsesRemaining > 0`):
+     - Displays pulse quota badge (e.g., `5,000 pulses left / 5,000 نبضة متبقية`) instead of `0 sessions left`.
+     - In the package card breakdown, displays `Laser Hair Removal Treatments (All Areas)` with remaining pulse quota, eliminating the false `Selected service is not covered in this package` amber alert.
+     - Sets Booking Value to `0 EGP (Package)`, with a prominent green confirmation banner indicating that session pulses will be deducted from the patient's active package upon completion.
+     - Notes record `[Laser Package Redemption]: <Package Name>`.
+
+2. **In-Booking Catalog Pulses Package Selection (No Active Package)**:
+   - When a patient has no active pulses package, selecting Option 3 reveals interactive pulses catalog package cards loaded dynamically from `/api/packages`.
+   - Each card displays package name, pulse quota (e.g. 10,000 pulses), and price (e.g. 6,000 EGP).
+   - Selecting a catalog pulses package sets Booking Value and Amount Paid Now to that package's price (e.g., `6,000 EGP (Buy Package)`).
+   - Notes record `[Purchasing New Pulses Package]: <Name> (<Price> EGP · <Pulses> pulses)` and payload includes `purchasingPackageId`.
+   - Doctor session checkout and Reception settlement automatically activate Scenario 1 (selling the new package at invoice while treating the laser session as 100% covered).
+
+3. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-074` (`New Booking Laser Pulses Package Selection & Catalog Purchase Engine`).
+
+---
+
+## Laser Option 3 Multi-Package Selection & Session Pricing Rules
+**Enforced in:** `src/components/admin/bookings/AdminNewBookingView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/DoctorAccountView.tsx`, `src/app/admin/page.tsx`, `src/components/admin/translations.ts`.
+
+1. **Strict UI Isolation to Option 3 on Laser Bookings**:
+   - When a laser service is selected (`isLaserService === true`), laser pulses packages appear **exclusively inside Option 3 (Pulses Package)**.
+   - The general "Patient Packages & Subscriptions" bottom section is completely hidden for laser appointments (`{!isLaserService && ( ... )}`), eliminating clutter and preventing erroneous `0 sessions left` / `Selected service is not covered in this package` notices.
+   - For non-laser appointments (`!isLaserService`), that section shows strictly non-laser service packages (`customerServicePackages`).
+
+2. **Multiple Active Pulses Packages Selection**:
+   - If the patient owns more than one active laser pulses package, Option 3 renders an interactive selection grid of all active packages owned by the patient.
+   - Receptionists can click between cards to select which package quota (`selectedCustomerPulsePkgId`) to deduct session pulses from.
+   - The laser booking value is 0 EGP with a green confirmation banner that pulses will be deducted upon treatment completion.
+
+3. **In-Booking Catalog Package Purchase When Patient Has No Active Package**:
+   - If the patient has 0 active pulses packages, Option 3 reveals interactive pulses catalog package cards loaded dynamically from `/api/packages`.
+   - Selecting a catalog package updates the booking value and amount paid now to that package's price (e.g., 6,000 EGP).
+
+4. **Total Session Price Calculation Across All Workflows**:
+   - The total price of the session is strictly:
+     `pulses package price (if purchasing new) + 0 EGP for laser session(s) + any other non-laser service price if used`.
+   - Additional laser services added during the session are 100% covered under the pulses package (`Package Redemption · 0 EGP`).
+   - Additional non-laser services (dermatology, facial, peelings, etc.) retain their full catalog price and are added to the session invoice total.
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-075` (`Laser Option 3 Multi-Package & Non-Laser Add-on Pricing Engine`).
+
+---
+
+## Laser Package Used Pulses Deduction & Synchronization Rules
+**Enforced in:** `src/app/api/customers/packages/route.ts`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/DoctorAccountView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/app/admin/page.tsx`.
+
+1. **Dual Column Persistence on Supabase (`customer_packages`)**:
+   - Whenever pulses are deducted via `PATCH /api/customers/packages` (`action: 'consume_package_pulses'`), updates are written to `pulses_used` and `pulses_remaining` (the PostgreSQL table columns per migration `20260920030000_add_package_type_and_total_pulses_to_packages.sql`) with dual fallback to `used_pulses` and `remaining_pulses`.
+   - If the package is not yet initialized in the `page_settings` store, initial balances are populated directly from the existing `customer_packages` database record (`pulses_used`, `pulses_remaining`).
+
+2. **Full Laser Service Pulses Aggregation**:
+   - Delivered pulses from both the **Base Laser Service** and all **Additional Laser Services** are summed into total session delivered pulses (`totalLaserDeliveredPulses`).
+   - The total delivered pulses count is passed for package deduction. Non-laser services are excluded from pulse deduction.
+
+3. **Multi-Point Execution & Cross-Workflow Idempotency**:
+   - Pulses are deducted whenever a session is finalized:
+     - **Doctor Portal**: Doctor clicks "Complete Session" in `DoctorOngoingSessionTab.tsx` / `DoctorAccountView.tsx`.
+     - **Reception Dashboard**: Receptionist clicks "End Session" in `BookingDetailsModal.tsx` (`handleFinalizeSessionStandalone` Step 5b).
+     - **Checkout Settlement**: Staff processes payment settlement in `page.tsx` (`handleSavePayment`).
+   - Every deduction records `booking_id` in the package's `usage_history`. If the reservation's pulses were already deducted by an earlier workflow action, subsequent calls gracefully no-op, preventing double deduction.
+
+4. **Deficit Cap & Completion Status**:
+   - When delivered pulses exceed remaining pulses, the system consumes the remaining balance (`actualDeduct = Math.min(qtyToDeduct, pkgPulses.remaining_pulses)`) and sets package status to `'completed'`, avoiding HTTP 400 transaction aborts.
+
+5. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-076` (`Laser Package Pulses Deduction & Cross-Workflow Synchronization Engine`).
+
+---
+
+## In-Booking Package Selling & Integrated Patient Search Rules
+**Enforced in:** `src/components/admin/bookings/AdminNewBookingView.tsx`, `src/app/admin/page.tsx`, `src/components/admin/patients/CustomerProfileDrawer.tsx`, `src/components/admin/patients/useCustomerProfile.ts`.
+
+1. **Immediate In-Booking Package Persistence**:
+   - When a receptionist books a laser appointment with Option 3 (Pulses Package) and selects a new pulses package to buy (`isNewPackagePurchase && selectedCatalogPulsePkg`), the package is immediately created and sold to the patient via `POST /api/packages/sell` during `handleSaveBooking`.
+   - The resulting `customerPackage.id` is linked to `reservation.packageId` and recorded in reservation notes.
+   - The package is immediately active in the PostgreSQL `customer_packages` table, making it instantly visible in the Patient Profile's "Purchased Packages" -> "Active Packages" tab with full pulses quota, purchase date, and active badge.
+
+2. **Integrated Patient Search & Persistent Dropdown**:
+   - The patient directory dropdown in New Booking is triggered by clicking "Browse Patients List" or focusing the phone input.
+   - The dropdown container renders unconditionally when `showCustomerDropdown` is active (not suppressed if filtered results count is 0).
+   - An integrated search input inside the dropdown filters patients across Name, Phone, and Email in real time.
+   - If no match is found, an explicit "No matching patients found" notice and "Show all patients" button are rendered.
+   - `src/app/admin/page.tsx` passes the comprehensive, synthesized `customers` list to `AdminNewBookingView` and `AdminAddPreviousBookingView`.
+
+3. **Automated Diagnostic Verification**:
+   - Verified under System Test Suite test case `TC-077` (`In-Booking Package Selling & Integrated Patient Search Engine`).
+
+---
+
+## Synthetic Customer ID Resolution & Cross-Workflow Profile Sync Rules
+**Enforced in:** `src/app/api/packages/sell/route.ts`, `src/app/api/customers/packages/route.ts`, `src/app/api/inventory/products/sales/route.ts`, `src/components/admin/patients/useCustomerProfile.ts`.
+
+1. **Synthetic Patient ID Resolution (`res-cust-...`)**:
+   - Reservation-derived patient records with pseudo-IDs (e.g., `res-cust-01016302772`) MUST NEVER be passed directly to database queries targeting PostgreSQL `UUID` columns (`customers.id`, `invoices.customer_id`, `customer_packages.customer_id`).
+   - `POST /api/packages/sell` and `POST /api/inventory/products/sales` validate customer IDs against `UUID_REGEX`. If a synthetic ID or phone number is passed, the system extracts phone digits, looks up existing customer UUIDs, or auto-creates a real customer record from reservation history.
+   - `useCustomerProfile.ts` resolves or creates the real customer record before calling `/api/packages/sell` or `/api/inventory/products/sales`, updating `viewingCustomerProfile.id` with the generated UUID.
+
+2. **Safe UUID Filtering on Package Lookups**:
+   - `GET /api/customers/packages` guards against non-UUID customer IDs by extracting phone numbers and querying `customers` by phone.
+   - Database queries against `customer_packages` and `customer_product_balances` only query valid UUIDs (`.in('customer_id', validCustomerIds)`), eliminating PostgreSQL `22P02 invalid input syntax for type uuid` errors.
+
+3. **Multi-Workflow Patient Profile Synchronization**:
+   - `useCustomerProfile.ts` subscribes to `revera-laser-change` to immediately re-fetch both product balances and customer packages (`fetchCustomerProfilePackages`), ensuring packages created or updated in New Booking, Doctor Portal, or Reception Dashboard appear instantly in open patient profiles.
+
+---
+
+## In-Booking Package Partial Payment Rules (DEC-075)
+
+These rules govern the case where a patient purchases a new pulses package during the booking creation process and makes a partial payment upfront.
+
+### Core Invariant: Outstanding Balance MUST Always Be Preserved
+
+**The booking's financial commitment must NEVER be silently zeroed out.**
+
+Specifically, `amountLeft` in the `reservations` table MUST reflect the true unpaid balance — it must not be overwritten to 0 if the patient paid less than the total package price.
+
+### Rules
+
+1. **`amountPaid` Must Be Passed in the Sell Body**:
+   - When `AdminNewBookingView.tsx` calls `POST /api/packages/sell` during Option 3 (In-Booking Package Purchase), it MUST include `amountPaid: numAmountPaid` in the request body.
+   - The API must NOT default to full payment (grandTotal) when `amountPaid` is not explicitly provided.
+
+2. **Package Sell API Must Record Partial Payment Correctly** (`/api/packages/sell`):
+   - `actualPaid = min(grandTotal, max(0, amountPaid))`
+   - `remainingDue = grandTotal - actualPaid`
+   - `invoiceStatus = 'paid' | 'partially_paid' | 'issued'` (based on actualPaid vs. grandTotal)
+   - The `payments` row records `actualPaid`, not grandTotal.
+   - The `transaction_ledger` records `actualPaid`.
+   - Customer `outstanding` is incremented by `remainingDue` if > 0.
+
+3. **Session Completion Must NOT Collapse PACKAGE Mode Total to Zero** (`DoctorAccountView.tsx`, `BookingDetailsModal.tsx`):
+   - For PACKAGE mode bookings, `effectiveBasePrice = 0` and there is typically no `effectiveLaserSessionCharge` (standard redemption, no deficit). The naive formula `sessionTotal = 0 + 0 + 0` is WRONG.
+   - The session total floor must be the MAXIMUM of:
+     - Raw computed session charges (additional services, products, deficit)
+     - The booked package price parsed from booking notes: `[Purchasing New Pulses Package]: Name (PRICE EGP)`
+     - The original booking commitment: `amountPaid + amountLeft` from the reservation record
+   - Formula: `sessionComputedTotal = max(sessionComputedRaw, bookedPackagePrice, amountPaid + amountLeft)`
+
+4. **Booking Notes Package Price Parsing**:
+   - The booked package purchase price can be reliably recovered from booking notes using this regex:
+     ```
+     /\[(?:Purchasing New Pulses Package|Laser Package Purchase & Redemption)\]:[^(]+\((\d+(?:\.\d+)?)\s*EGP/i
+     ```
+   - This regex is stable because the booking note format is always: `[Purchasing New Pulses Package]: <Name> (<price> EGP · <pulses> pulses)`
+
+5. **Payment Mode Label Must Be Correct**:
+   - When `isLaserPackage` is `true` (any of: `laserPaymentMode === "PACKAGE"`, notes contain `"pulses package"` / `"[Purchasing New Pulses Package]"` / `"package redemption"`), the Payment Mode badge must display **"Pulses Package"** / **"باقة نبضات"** (with a purple Zap icon).
+   - "Standard Service" is ONLY shown when neither `isLaserPerPulse` nor `isLaserPackage` is true.
+
+6. **`isInvoicePaid` Evaluation**:
+   - `isInvoicePaid = (sessionPaid >= totalPrice && totalPrice > 0) || (sessionLeft <= 0 && sessionPaid > 0)`
+   - The `rawLeft <= 0` condition alone MUST NOT determine paid status, because it can be a stale/incorrect DB value from a prior buggy session completion. Use the recomputed `totalPrice` (which includes the booked package price) as the authoritative floor.
+
+---
+
+## Historical / Previous Booking Rules
+
+### 1. Zero Invoice & Zero Paid Status (`invoice = 0 && paid = 0`)
+**Enforced in:** `CustomerProfileDrawer.tsx`, `AdminBookingsView.tsx`, `BookingDetailsModal.tsx`, `POST /api/reservations/previous`, `PATCH /api/reservations/previous`
+- When a previous/historical booking is entered with 0 invoice value and 0 actual paid (e.g. historical follow-up, package redemption session with 0 invoice increment), it MUST be displayed as **"Paid"** / **"مسدد بالكامل"** with 0 left, NOT "Unpaid".
+- A 0-invoice booking has zero outstanding financial liability.
+
+### 2. Historical Pulses Packages Quota & Live Balance Invariant
+**Enforced in:** `AdminAddPreviousBookingView.tsx`, `POST /api/reservations/previous`, `PATCH /api/reservations/previous`
+- **Pulses Used starts at 0 for every new session**: When adding a new previous booking (whether purchasing a new package or linking an existing customer package), `Pulses Used` starts at `0`.
+- **Pulses Remaining is Uneditable (Read-Only)**: The `Pulses Left (Remaining)` field is strictly read-only and automatically computed based on the pulses used in that session.
+- **Dynamic Session Boundary**:
+  - For a new previous booking: `maxPulsesAllowed = packageLiveRemaining`. `packagePulsesRemaining = Math.max(0, packageLiveRemaining - pulsesUsed)`.
+  - For editing an existing historical booking: `maxPulsesAllowed = initialBookingPulsesUsed + packageLiveRemaining`. `packagePulsesRemaining = Math.max(0, packageLiveRemaining + (initialBookingPulsesUsed - pulsesUsed))`.
+- **Customer Package Cumulative Tracking**: In `customer_packages`, `pulses_remaining` is set to the remaining pulses balance, and `pulses_used` is saved as the cumulative total consumed across all sessions: `catalogTotalPulses > 0 ? catalogTotalPulses - pulsesRemaining : pulsesUsed`.
+
+### 3. Multi-Package Previous Booking Support & Split Pulse Redemptions
+**Enforced in:** `AdminAddPreviousBookingView.tsx`, `POST /api/reservations/previous`, `PATCH /api/reservations/previous`
+- **Multiple Packages in a Single Session**: Staff can attach multiple packages (any combination of existing patient packages and new catalog package purchases) to a single historical session.
+- **Independent Tracking per Package**: Each attached package maintains independent quotas, pulses used inputs bounded by its respective `maxPulsesAllowed`, read-only calculated pulses remaining, and quick presets.
+- **Split Consumption Scenario**: If a patient uses 400 pulses total, but their existing package has only 200 pulses remaining, 200 pulses are consumed from Package 1 (leaving 0 remaining and transitioning to `fully_used`), and a newly purchased package (e.g. 1000 pulses) consumes the remaining 200 pulses (leaving 800 pulses remaining in Package 2).
+- **Invoice Calculation Invariant**:
+  - `totalInvoice = servicePrice + sum(newCatalogPackagePrices) + productPrice`.
+  - Existing packages add `0 EGP` to the session invoice because their financial settlement occurred in their historical purchase transaction.
+- **Backend Consistency**:
+  - `POST` / `PATCH` `/api/reservations/previous` processes `packages: Array<AttachedPackageItem>`.
+  - Line items are created in `reservation_products` for each package attached.
+  - Formatted reception notes capture usage for every attached package: `Package: <Name>. [Package Usage]: <Used> / <Total> pulses used (<Remaining> pulses remaining).`
+### 4. Superadmin Patient Wallet Balance Adjustment & Ledger Invariant
+**Enforced in:** `AdjustWalletModal.tsx`, `CustomerFormModal.tsx`, `CustomerProfileDrawer.tsx`, `POST /api/customers`, `src/lib/wallet.ts`
+- **Role Gating**: Only `superadmin` role is authorized to manually adjust or override a patient's existing stored wallet balance. Non-superadmin roles have the wallet field disabled (read-only) in customer edit forms and do not have access to adjustment modal triggers.
+- **Adjustment Modes**:
+  1. *Set Exact Balance*: Directly assigns a new balance target and automatically calculates the delta (`newBalance - currentBalance`).
+  2. *Add / Deduct (+/-)*: Applies an incremental or decremental delta to the existing balance (`newBalance = currentBalance + delta`).
+- **Ledger Invariant**: Any direct staff adjustment calls `setAbsoluteWalletBalance` which writes an atomic delta record to `wallet_txns` with transaction type `admin_adjustment` or `manual_correction`, keeping `customers.wallet_balance` and `wallet_txns` ledger history perfectly synchronized.
+
+### 5. Patient Phone Number & WhatsApp Country Code Engine
+**Enforced in:** `CustomerFormModal.tsx`, `AdminAddPreviousBookingView.tsx`, `POST /api/customers`
+- **Country Code Selector**: Patient mobile and WhatsApp number inputs feature compact country code dropdown selectors with flags, dialing codes (e.g., `+20` Egypt, `+966` Saudi Arabia, `+971` UAE, `+965` Kuwait, `+1` USA, etc.), and clean clear-button triggers.
+- **Dynamic Formatting & Normalization**:
+  - Automatically parses incoming raw numbers with country prefix detection.
+  - Formats local Egyptian numbers to `01XXXXXXXXX` and international numbers to `+<countryCode><digits>`.
+  - Performs country-aware validation (`01[0125]\d{8}` for Egypt `+20`, 6–15 digits for international).
+
+### 6. Multi-Service Booking & Intake Session Engine
+**Enforced in:** `AdminNewBookingView.tsx`, `AdminAddPreviousBookingView.tsx`, `POST /api/reservations`, `POST /api/reservations/previous`, `PATCH /api/reservations/previous`
+- **Multi-Service Selection in New Bookings**:
+  - Staff can attach multiple services to an appointment session.
+  - The primary service is designated as `serviceId`, and additional services are tracked in `additionalServiceIds`.
+  - The appointment duration is automatically aggregated across all selected services: `totalDurationMinutes = sum(service.duration_minutes)`.
+  - Cumulative base pricing is automatically summed: `baseServicePrice = sum(service.price)`.
+  - Selected services are formatted cleanly as interactive badge chips with durations, prices, and remove buttons.
+- **Multi-Service Selection in Previous / Historical Bookings**:
+  - Staff can search and select multiple services using searchable autocomplete.
+  - Selected services are rendered as removable badge chips with individual pricing.
+  - Session invoice calculation sums all attached services + catalog packages + products: `invoiceValue = sum(services.price) + sum(catalogPackages.price) + product.price`.
+  - `POST` / `PATCH` `/api/reservations/previous` records all selected services in `reservation.service_ids` and writes corresponding `reservation_products` line items (`service` and `additional_service`).
+- **Product and Package Catalog Retrieval**:
+  - `AdminAddPreviousBookingView` fetches `/api/inventory/products` and `/api/packages` with authenticated staff headers (`getAuthHeaders()`), populating the catalog dropdowns with live prices and stock.
+
+### 7. Multi-Product Previous Booking & Inventory Sales Engine
+**Enforced in:** `AdminAddPreviousBookingView.tsx`, `POST /api/reservations/previous`, `PATCH /api/reservations/previous`, `src/lib/historicalInvoice.ts`
+- **Multi-Product Selection Interface**:
+  - Staff can select one or more retail inventory products (`selectedProducts: ProductItem[]`) sold during a historical session.
+  - Searchable dropdown supports instantaneous product searching, filtering out out-of-stock or deleted items while preserving already-selected items.
+  - Selected products appear as interactive badge chips with name, unit price, and 1-click removal (`X`).
+  - Invoice total automatically recalculates: `invoiceValue = sum(services.price) + sum(catalogPackages.price) + sum(products.selling_price)`.
+- **Backend Itemization & Inventory Integration**:
+  - Accepts `products: ProductItem[]`, `productIds: string[]`, or legacy single `productId`/`productName`.
+  - Batch resolves products from `inventory_products`.
+  - Inserts distinct row for each attached product into `reservation_products` with `product_type: 'product'`, storing unit price and product ID.
+  - Records individual sale rows in `product_sales` table linked to the customer and historical date.
+  - Formats clinical notes and ledger invoices with `Products: <Product 1> (<Price 1> EGP), <Product 2> (<Price 2> EGP)`.
+- **System Test Suite**:
+  - Verified under `TC-095` in the Admin Settings System Test Suite.
+
+### 8. Patient Directory Total Spend & Name Sorting Engine
+**Enforced in:** `src/components/admin/patients/PatientsDirectoryView.tsx`, `src/app/admin/page.tsx`
+- **Total Spend Column**:
+  - Positioned between `Bookings` and `Wallet`, establishing the unified 3-metric financial sequence (`Total Spend` -> `Wallet` -> `Outstanding`).
+  - Renders the lifetime total spent amount (`c.spent` / `c.spent_amount`) formatted in currency (`EGP` / `ج.م`).
+  - Supports sorting by Total Spend with `High to Low` and `Low to High` options.
+- **Customer Name Sorting**:
+  - `CUSTOMER` column header features an interactive sort droplist.
+  - Supports sorting by Name (`Name (A to Z)` / `الاسم (أ إلى ي)` and `Name (Z to A)` / `الاسم (ي إلى أ)`) using locale-aware comparison.
+- **System Test Suite**:
+  - Verified under `TC-096` in the Admin Settings System Test Suite.
+
+### 9. Resilient Staff Auth & Mobile Context Preservation Engine
+**Enforced in:** `src/app/admin/page.tsx`, `src/app/api/auth/me/route.ts`
+- **Context Switch & Native Picker Resilience**:
+  - Opening native mobile OS date pickers (or switching browser tabs/apps) does not wipe active Supabase authentication sessions.
+  - Session hydration automatically restores `sessionStorage` flag when valid cached Supabase credentials exist.
+- **Resilient `/api/auth/me` Account Resolution**:
+  - Automatically verifies staff by `auth_user_id` or email fallback with auto-linking of `auth_user_id`.
+  - Only explicit `401` / `403` status responses initiate sign-out; transient network hiccups (500, network timeouts) do not destroy authenticated sessions.
+- **System Test Suite**:
+  - Verified under `TC-097` in the Admin Settings System Test Suite.
+
+### 10. Clinical Ongoing & Ending Session Financial Isolation & Privacy Rule
+**Enforced in:** `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/components/admin/doctor/modals/DoctorSessionDrawer.tsx`, `src/components/admin/doctor/modals/DoctorPatientHistoryDrawer.tsx`
+- **Clinical View Financial Masking**: All monetary amounts, pricing rates, currency symbols (`EGP`), and financial invoice summary breakdowns are completely removed from:
+  1. **Doctor Ongoing Session View** (`DoctorOngoingSessionTab.tsx`): Doctors record clinical intake, hardware pulse counts, and consumable items used without viewing price per pulse, extra pulse charges, or session invoice breakdowns.
+  2. **Doctor Session & History Drawers** (`DoctorSessionDrawer.tsx` & `DoctorPatientHistoryDrawer.tsx`): Primary service header prices, service select dropdown prices, total invoice logs, and billed monetary amounts are removed; only delivered pulse counts and consumables used are displayed.
+  3. **Receptionist Ending Session View** (`BookingDetailsModal.tsx` in `viewMode === 'end_session'`): Receptionists record medical intake, delivered pulses, and consumed products without displaying base prices, product prices, or the final session invoice card.
+- **Financial Calculation Preservation**: All background calculations (`handleConfirmEndSession`, invoice math, inventory stock deduction, and database updates) remain fully functional and intact, with financial settlement reserved strictly for the Checkout workflow (`CheckoutModal.tsx`).
+- **Superadmin Only Session Type Modification**: Changing session type is strictly restricted to `superadmin` role (`hasPermission("superadmin")`).
+- **Postpone, Cancel, and No Show Action Suppression on Check-in**: When a patient is checked in (`booking.status === 'checked_in'`), the Postpone, Cancel, and No Show actions in `BookingDetailsModal.tsx` are hidden to prevent invalid status conflicts.
+- **System Test Suite**: Verified under `TC-099` & `TC-100` in the Admin Settings System Test Suite.
+
+### 11. Financial Ledger Integrity, Payment Methods & Interactive Till Engine Rule
+**Enforced in:** `src/app/api/transactions/route.ts`, `src/app/api/invoices/route.ts`, `src/app/api/reservations/route.ts`, `src/app/admin/page.tsx`, `src/components/admin/transactions/TransactionsView.tsx`, `src/components/admin/transactions/NewManualTransactionView.tsx`
+- **Cairo Timezone Bounds & DST Dynamic Detection**: Cairo ISO day bounds for today's net payments (`getCairoIsoBounds`) dynamically detect standard/daylight saving time (UTC+2 or UTC+3) so till transactions are queried accurately throughout the year.
+- **Float Precision & Micro-Balance Filter**: Customer balances in `customers` table and transaction aggregations round to 2 decimal places (`Math.round(val * 100) / 100`), suppressing floating-point arithmetic residue (< 0.01) from display corruption.
+- **Interactive Metric Cards & Breakdown Modal**: Transactions top 3 overview cards (Today's Payments, Outstanding Debt, and Wallet Balances) are interactive and clickable, opening a search-enabled drilldown modal displaying patient names, phone numbers, individual payment methods, reference IDs, and formatted amounts.
+- **Auto-Generated Reference Numbering (DEC-106)**: A manual transaction saved with a blank reference gets `RCT-<n>`, where `<n>` is the same number as its own `TXN-<n>` id (drawn from `transaction_seq`). It never draws from `invoice_no_seq`, which numbers real invoices only. The form shows an "Auto on save" placeholder; there is no pre-fetch of a number and the earlier `GET /api/invoices?action=next_no` endpoint was removed.
+- **Checkout Payment Methods & Reference**: The checkout modal (`handleConfirmCheckout`) supports selectable payment methods (`cash`, `card`, `instapay`, `vodafone_cash`, `bank_transfer`) with transaction/reference number capture, propagating the chosen method to `payments` and `transactions` tables.
+- **Checkout Settlement Isolation**: Prevents duplicate auto-calls to `/api/customers/settle-debt` during checkout of partially paid bookings, preserving the accurate remaining `amount_left` and avoiding over-crediting of debt.
+- **Unassigned Manual Transactions Inclusion**: Querying transactions by branch preserves unassigned/manual transactions (`branch_id IS NULL`) alongside the selected branch so manual till entries are never dropped.
+- **System Test Suite**: Verified under `TC-101` in the Admin Settings System Test Suite.
+
+### 12. Booking Creation, Checkout Ledger Dual-Write & Debt Settlement Engine Rule
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/app/api/customers/settle-debt/route.ts`, `src/app/api/transactions/route.ts`, `src/components/admin/bookings/AdminNewBookingView.tsx`
+- **Services Schema Cat Alignment**: Selects `cat` (not `category`) in `writeCheckoutInvoice` and `PATCH /api/reservations`, preventing Postgres `42703` column errors, ensuring `derivedTotalCost` is accurately derived, and allowing checkout invoices and automatic transactions to persist reliably.
+- **Immediate Booking Payment Ledger Logging**: When an initial deposit or payment (`amountPaid > 0`) is made during booking creation (`POST /api/reservations`), `recordTransaction` is automatically invoked with `type: 'payment'`, `source: 'automatic'`, and the chosen payment method, immediately registering in Today's Payments (الخزينة) and the Financial Transactions table.
+- **Booking Creation Payment Method Selection**: `AdminNewBookingView.tsx` dynamically displays payment method buttons (Cash, Card, InstaPay, Vodafone Cash, Bank Transfer) and an optional transaction reference input whenever `amountPaidNow > 0`.
+- **Debt Settlement Automatic Ledger Recording**: When a patient settles debt via `POST /api/customers/settle-debt`, each allocated settlement automatically writes an `outstanding_payment` transaction with the specified payment method and reference number, immediately reducing patient debt and increasing today's net payments.
+- **System Test Suite**: Verified under `TC-102` in the Admin Settings System Test Suite.
+
+### 13. Cash Drawer / Till Transaction Isolation & Multi-Installment Checkout Settlement Rule
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/lib/transactionLedger.ts`, `src/app/admin/page.tsx`, `src/components/admin/transactions/TransactionsView.tsx`
+- **Elimination of Phantom Service Charge Transactions**: Services rendered and line items belong on invoices (`invoices`, `invoice_lines`), not as cash drawer movements. The automatic recording of `type: 'service_charge'` in `writeCheckoutInvoice` is eliminated so non-cash invoice generation never generates misleading green positive transactions in the transactions till table.
+- **Service Charge Display Neutrality**: Any legacy or manual `service_charge` transactions in `TransactionsView.tsx` render neutrally in indigo (`EGP X,XXX`) without a `+` symbol or green color, clearly distinguishing non-cash billing value from actual cash-in movements.
+- **Multiple Payment Installments at Checkout**: When a booking balance is paid over multiple installments on the same day (e.g. deposit, followed by remaining balance settlement via Checkout modal), each payment creates a separate, distinct transaction (`type: 'payment'` or `type: 'outstanding_payment'`) with its own timestamp, payment method, and amount.
+- **Checkout Modal Input Fallback**: In `AdminPage` Checkout Modal, if the user leaves the payment input unedited (displaying the placeholder for `netDue`), `amountPaidNum` falls back to `netDue` rather than 0, preventing accidental 0 EGP payment submissions and ensuring subsequent balance payments are captured.
+- **Resilient Invoice Payment Appending**: In `appendPaymentToExistingInvoice`, queries the most recent issued invoice using `.order('created_at', { ascending: false }).limit(1)` rather than `.maybeSingle()`, preventing `PGRST116` errors if multiple invoices exist, with an explicit fallback to directly record an `outstanding_payment` transaction so cash movements are never lost.
+- **Strict Default Values in Transaction Ledger**: `recordTransaction` defaults `payment_method` to `'cash'`, `status` to `'completed'`, and `source` to `'automatic'` so no transaction row is inserted with missing required ledger fields.
+
+### 14. Unique Payment Sequence References & Manual Booking Invoice Normalization Rule
+**Enforced in:** `src/app/api/reservations/route.ts`, `src/app/api/invoices/route.ts`, `src/app/api/customers/settle-debt/route.ts`, `src/lib/transactionLedger.ts`, `src/lib/printUtils.ts`, `src/app/admin/page.tsx`
+- **Unique Payment Reference Generation**: Every cash movement and payment against an invoice or reservation (initial booking deposit, checkout balance settlement, debt settlement, or manual transaction) MUST have its own unique sequence reference (`INV-XXXXXX`) generated atomically via `next_invoice_no()`. Multiple payments against the same invoice or reservation MUST NEVER duplicate reference numbers in `payments` or `transactions`.
+- **Authoritative Manual Booking Invoice Creation**: When a manual booking is created (`POST /api/reservations` with `isManual: true`), an authoritative invoice row (`invoices`) and itemized service lines (`invoice_lines`) are immediately created with an atomic sequential `INV-XXXXXX` number. If an initial payment is recorded, a payment row (`payments`) and ledger transaction (`recordTransaction`) are created referencing this invoice number.
+- **Invoice Number Normalization & Legacy Fallback Elimination**: The legacy prefix `REV-INV-${id.slice(0, 8)}` and UUID-slice fallbacks (`INV-${id.slice(0, 8)}`) are strictly eliminated across modal previews, receipts, and PDF prints (`printUtils.ts`, `admin/page.tsx`). All surfaces display official sequential `INV-XXXXXX` numbers.
+- **Lazy Auto-Creation for Un-invoiced Bookings**: In `GET /api/invoices?reservationId=X`, if a valid booking does not yet have an invoice row, the route automatically creates the standard sequential `INV-XXXXXX` invoice, itemized lines, and payment records on-the-fly, returning a valid ledger invoice and eliminating null/fallback scenarios.
+- **System Test Suite**: Verified under `TC-103` in the Admin Settings System Test Suite.
+
+### 15. Payment Status Calculation & Multi-Session Debt Settlement Engine Rule
+**Enforced in:** `src/components/admin/bookings/AdminBookingsView.tsx`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/reception/ReceptionDashboardView.tsx`, `src/components/admin/patients/CustomerProfileDrawer.tsx`, `src/components/admin/patients/SettleDebtModal.tsx`, `src/app/api/customers/settle-debt/route.ts`, `src/app/admin/page.tsx`
+- **Strict Payment Status Threshold**:
+  - A booking or session is strictly labeled **"Unpaid"** whenever `amountPaid < 1` (even if status is `completed`, `checked_in`, etc., as long as `amountLeft > 0`).
+  - **"Partially Paid"** strictly starts at `amountPaid >= 1` EGP with remaining debt (`amountLeft > 0`).
+  - **"Paid"** is assigned when remaining debt is zero (`amountLeft <= 0`) or for zero-cost completed/historical bookings.
+  - Applied consistently across All Appointments table (`AdminBookingsView.tsx`), Booking Details drawer badge (`BookingDetailsModal.tsx`), Reception Dashboard bookings table (`ReceptionDashboardView.tsx`), and Patient Profile Booking History (`CustomerProfileDrawer.tsx`).
+- **Settle Balance Gating**:
+  - The "Settle Balance" button in the patient financial summary card (`CustomerProfileDrawer.tsx`) is strictly hidden unless the patient has outstanding debt (`customer.outstanding > 0`) and the user has `customers.action_settle_balance` permission.
+  - `SettleDebtModal.tsx` contains a zero-debt guard alert informing staff if the patient has no outstanding balance.
+- **Per-Session Itemized Debt Breakdown & Selection**:
+  - `GET /api/customers/settle-debt?customerId=...` retrieves the patient's balance and an itemized breakdown of all unpaid sessions (`amount_left > 0`), including session date, time slot, resolved service names, doctor name, invoice number, total price, amount paid, and remaining debt.
+  - When called with no `customerId`, `GET /api/customers/settle-debt` returns `{ success: true, status: 'operational' }` for diagnostic pings by the System Test Suite.
+  - `SettleDebtModal.tsx` provides an interactive session picker displaying all unpaid sessions. Selecting a session auto-fills the settlement amount with that session's exact remaining balance. Selecting "All Sessions" auto-fills total outstanding debt.
+  - `POST /api/customers/settle-debt` accepts an optional `reservationId`. When provided and not `'all'`, it targets only that specific reservation, validating that `amount <= amount_left`, updating the reservation's `amount_paid` and `amount_left`, appending a payment with an atomic `INV-XXXXXX` reference, logging an `outstanding_payment` transaction in the financial ledger, and reducing the customer's `outstanding` and increasing `spent_amount`. If omitted or `'all'`, it falls back to FIFO oldest-first settlement across unpaid bookings.
+- **System Test Suite**: Verified under `TC-104` in the Admin Settings System Test Suite.
+
+### 16. Doctor Prescription Persistence, Non-UUID Safety & Real-Time Booking Details Synchronization Rule
+**Enforced in:** `src/app/api/prescriptions/route.ts`, `src/components/admin/bookings/BookingDetailsModal.tsx`, `src/components/admin/doctor/tabs/DoctorOngoingSessionTab.tsx`, `src/app/admin/page.tsx`
+- **Postgres Non-UUID Safety (`22P02`)**:
+  - In `POST /api/prescriptions`, synthetic/non-UUID reservation IDs (e.g., `'1780826201251-408'` or local test IDs) are guarded with UUID regex (`/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`).
+  - Synthetic non-UUID IDs are preserved in `basePrescriptionData.booking_id`, the API response, and local fallback storage (`data/prescriptions.json`), but are cleanly omitted when querying Supabase `reservations` or inserting into `prescriptions.booking_id` to prevent fatal Postgres syntax error `22P02`.
+  - Postgres errors `22P02` and `23503` (Foreign Key violation) are caught with automatic fallback to insert without `booking_id`.
+- **Composite Customer & Date Fallback Query**:
+  - `GET /api/prescriptions` supports `customerId` and `date` parameters. If a query by `bookingId` returns no matches (e.g. prescription created with unlinked synthetic booking ID), the route automatically falls back to finding the customer's prescription for that session date.
+- **Real-Time Cross-Component Broadcast Sync**:
+  - `BookingDetailsModal.tsx` subscribes to `revera-prescription-change` and `revera-booking-change` window events. When a doctor writes or updates a prescription in `DoctorOngoingSessionTab.tsx`, open Booking Details modals immediately reload and display the recorded prescription without requiring drawer close or page reload.
+- **End Session Form Pre-Population**:
+  - When opening the End Session view in `BookingDetailsModal.tsx`, previously recorded prescription details (diagnosis, medications, instructions, follow-up) automatically pre-fill the form, and saving carries forward the existing prescription ID for clean versioning rather than creating disconnected duplicate records.
+- **Doctor Session Unsaved Auto-Save**:
+  - When the doctor clicks "Complete Treatment" in `DoctorOngoingSessionTab.tsx`, any unsaved prescription data entered in the form is automatically persisted before completing the booking.
+- **System Test Suite**: Verified under `TC-105` in the Admin Settings System Test Suite.
+
+---
+
+## Rules added after the 2026-07-30 pass (DEC-113 to DEC-121, RISK-128)
+**Added 2026-10-21 from DECISIONS.md; the code references are in each decision.**
+
+1. **A role chooses its workspace** (DEC-113): `roles.workspace` is `standard` or `doctor`. Only a doctor-workspace role lands on the doctor screens; names and the department label decide nothing. Superadmin and accounts flagged `is_also_doctor` can switch between the admin view and the doctor view; other admins cannot (DEC-114).
+2. **Who counts as a doctor** is "the role's workspace is doctor, or `is_also_doctor` is true" (`isDoctorEmployee`). That drives the providers sync and the payroll split: such people are paid only through Doctor Payroll and are left out of staff payroll, so nobody is paid twice.
+3. **Shift overlap check** (DEC-115): an In-Clinic shift and an Online Consultation shift may overlap at the same branch (a doctor can take online consultations while available in the clinic). Overlaps between two in-clinic shifts, two online shifts, or any shifts at different branches still warn.
+4. **Inactive accounts** (DEC-117): `employee_accounts.is_active = false` means no access at all. The server refuses it in `requireStaffAccess`, `verifyHrAccess` and `/api/auth/me` (`code: account_inactive`), and a signed-in person is returned to login on their next request. Superadmin accounts cannot be switched off from the Employees screen.
+5. **Money on a booking row** (DEC-119): the row stores `amount_paid` and `amount_left` only. Paid = `amount_paid`; Outstanding = `amount_left`; Service Price = paid + left (for an "Add Previous Booking" entry the invoice value written in its notes wins). A blank balance shows a dash, never 0. Cancelled, rejected and no-show bookings show no service price and Outstanding 0. A package-covered session billed 0 reads "Covered by package".
+6. **A previous booking is shown at the price it was charged** (DEC-120): its Invoice Value is authoritative and is spread over the service lines in proportion to catalog prices (equally if the catalog gives no basis, the last line absorbing rounding). Each service appears once even though "Add Previous Booking" stores the extra services twice. Online and New Booking bookings still price from the catalog and stored amounts.
+7. **Patient Total Spend and Outstanding** (DEC-121): Total Spend is the sum of `amount_paid` over delivered bookings (approved, confirmed, completed, started). The patients list and the profile card show the larger of the stored `customers` figure and the figure calculated from bookings; Outstanding is the larger of the stored value and the sum of `amount_left` over completed bookings.
+8. **Staff see only their own profile data** (RISK-128): `/api/profile*` return the caller's own employee row, attendance and pay summary. Target progress sums `amount_paid` on the caller's own bookings in completed, confirmed, approved and started status (a doctor's: assigned to them; staff: created by them). The provider row is matched strictly (id, phone, national id or exact name; exactly one match or none).
+9. **The browser never reads tables with the public key** (RISK-128): every table has RLS on with no open policy, so any read from the browser returns nothing; reads go through authenticated API routes.
+
