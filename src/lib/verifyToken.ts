@@ -133,7 +133,7 @@ function strOrNull(v: unknown): string | null {
 const SUBJECT_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 function expectedIssuer(options: VerifyOptions): string | null {
-  const base = (options.supabaseUrl ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim().replace(/\/+$/, "");
+  const base = (options.supabaseUrl ?? (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "")).trim().replace(/\/+$/, "");
   return base ? `${base}/auth/v1` : null;
 }
 
