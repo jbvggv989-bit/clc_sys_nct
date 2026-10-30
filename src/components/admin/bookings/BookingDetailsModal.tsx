@@ -671,7 +671,7 @@ function BookingDetailsModal({
       : 'لا توجد أدوية مسجلة';
 
     const msg = 
-`*REVERA CLINICS | روشتة طبية إلكترونية*
+`*clc-sys CLINICS | روشتة طبية إلكترونية*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *المريض / Patient:* ${patientName}
 📅 *التاريخ / Date:* ${rxDate}

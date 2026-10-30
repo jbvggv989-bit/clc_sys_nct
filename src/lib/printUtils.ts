@@ -414,7 +414,7 @@ export function printPrescription(rx: any, booking?: any) {
           <div>
             <h1 class="logo-title">${CLIENT.name}</h1>
             <p class="subtitle">Sheikh Zayed / New Cairo Clinics</p>
-            <p class="contact">Phone: ${CLIENT.phoneDisplay} | Email: inquiries@reveraclinics.com</p>
+            <p class="contact">Phone: ${CLIENT.phoneDisplay} | Email: inquiries@clc-sys.com</p>
           </div>
           <div class="rx-badge">
             <h2>PRESCRIPTION</h2>

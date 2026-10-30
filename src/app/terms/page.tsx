@@ -32,8 +32,8 @@ const DEFAULT_TERMS: TermItem[] = [
     sort_order: 1,
     title_en: "Acceptance of Terms",
     title_ar: "قبول الشروط",
-    content_en: "By using Revera Clinic's website or services, you agree to be bound by these Terms & Conditions and all applicable laws and regulations.",
-    content_ar: "باستخدامك لموقع أو خدمات عيادة ريفيرا، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها.",
+    content_en: "By using clc-sys Clinic's website or services, you agree to be bound by these Terms & Conditions and all applicable laws and regulations.",
+    content_ar: "باستخدامك لموقع أو خدمات عيادة clc-sys، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها.",
     is_active: true
   },
   {
@@ -92,8 +92,8 @@ const DEFAULT_TERMS: TermItem[] = [
     sort_order: 7,
     title_en: "Limitation of Liability",
     title_ar: "تحديد المسؤولية",
-    content_en: "Revera Clinic is not liable for any indirect or incidental damages resulting from the use of our services. Our total liability shall not exceed the amount paid for the service.",
-    content_ar: "عيادة ريفيرا غير مسؤولة عن أي أضرار غير مباشرة أو عرضية ناتجة عن استخدام خدماتنا. لا تتجاوز مسؤوليتنا الإجمالية المبلغ المدفوع مقابل الخدمة.",
+    content_en: "clc-sys Clinic is not liable for any indirect or incidental damages resulting from the use of our services. Our total liability shall not exceed the amount paid for the service.",
+    content_ar: "عيادة clc-sys غير مسؤولة عن أي أضرار غير مباشرة أو عرضية ناتجة عن استخدام خدماتنا. لا تتجاوز مسؤوليتنا الإجمالية المبلغ المدفوع مقابل الخدمة.",
     is_active: true
   },
   {
@@ -140,8 +140,8 @@ export default function TermsPage() {
   }, []);
 
   const contactPhone = "0100 123 4567";
-  const contactEmail = "support@reveraclinic.com";
-  const contactWeb = "www.reveraclinic.com";
+  const contactEmail = "support@clc-sys.com";
+  const contactWeb = "www.clc-sys.com";
 
   return (
     <div className="min-h-screen bg-[#F6F8F6] text-[var(--cr-dark)] py-8 px-4 sm:px-8 font-sans" dir={isAr ? "rtl" : "ltr"}>
@@ -251,7 +251,7 @@ export default function TermsPage() {
 
         {/* Bottom Footer */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 pt-4 border-t border-gray-200/60 font-medium">
-          <p>{isAr ? "© 2025 عيادة ريفيرا. جميع الحقوق محفوظة." : `© 2025 ${CLIENT.nameShort} Clinic. All rights reserved.`}</p>
+          <p>{isAr ? "© 2025 عيادة clc-sys. جميع الحقوق محفوظة." : `© 2025 ${CLIENT.nameShort} Clinic. All rights reserved.`}</p>
           <div className="flex items-center gap-1.5 text-gray-600 font-semibold">
             <Lock size={14} className="text-[#2D522D]" />
             <span>{isAr ? "آمن ومشفّر" : "Secure & Encrypted"}</span>

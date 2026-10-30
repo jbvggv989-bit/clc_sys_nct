@@ -28,7 +28,7 @@ function IconFacebook() {
 
 const SOCIAL_LINKS = [
   { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61587039173147", Icon: IconFacebook },
-  { label: "Instagram", href: "https://www.instagram.com/reveraclinics/", Icon: IconInstagram },
+  { label: "Instagram", href: "https://www.instagram.com/clcsys/", Icon: IconInstagram },
 ];
 
 export function SiteFooter() {
@@ -580,7 +580,7 @@ export function SiteFooter() {
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
                     <a
-                      href="mailto:info@reveraclinics.com"
+                      href="mailto:info@clc-sys.com"
                       style={{
                         fontSize: "14px",
                         color: "rgba(255,255,255,0.85)",
@@ -589,7 +589,7 @@ export function SiteFooter() {
                       }}
                       className="hover:underline"
                     >
-                      info@reveraclinics.com
+                      info@clc-sys.com
                     </a>
                   </div>
                 </div>

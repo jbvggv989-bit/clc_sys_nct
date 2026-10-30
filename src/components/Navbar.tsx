@@ -222,7 +222,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={CLIENT.logoPath} alt={CLIENT.name} className="h-10 lg:h-[72px] w-auto" />
+            <span className="text-3xl lg:text-4xl font-black tracking-widest text-[var(--cr-primary)] font-sans select-none">TEST</span>
           </Link>
 
           {/* Desktop nav links */}

@@ -4335,3 +4335,26 @@ The brand identity palette was updated from olive green (`#414E36`) and gold (`#
    - Updated page loader spinner stroke in `globals.css` from legacy `#C4AE7C` to `var(--cr-accent)`.
 3. **Verification**:
    - Full production build (`npm run build`) verified clean with zero TypeScript or compiler errors.
+
+
+## DEC-143: Rebrand Name to clc-sys and Logo Presentation to TEST
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+The user requested rebranding all brand names from "Revera" / "ريفيرا" to "clc-sys" and replacing all clinic logos across the website and admin with a prominent bolded word "TEST".
+
+**Decision:**
+1. **Central Client Config (`src/config/client.ts`)**:
+   - Updated `name` to `"clc-sys Clinics"` and `nameShort` to `"clc-sys"`.
+   - Updated WhatsApp greetings, receipts, and URLs to reference `clc-sys`.
+   - Updated `storagePrefix` to `"clcsys"`.
+2. **Translations Catalogs (`src/lib/translations.ts`, `src/components/admin/translations.ts`)**:
+   - Replaced all public and admin English references from `"Revera Clinics"` / `"Revera"` to `"clc-sys Clinics"` / `"clc-sys"`.
+   - Replaced all Arabic references from `"عيادات ريفيرا"` / `"ريفيرا"` to `"عيادات clc-sys"` / `"clc-sys"`.
+3. **Logo Transformation to Big Bold TEST**:
+   - Re-generated all public logo image assets (`public/images/main_logo.png`, `logo.png`, `footer-logo.png`, `footer_main_logo.png`, `main_footer_logo.png`, `logo-face.png`, `assets/logo23.png`, and `landing/revera-mark.png`) to display high-resolution, bold text `"TEST"`.
+   - Updated `Navbar.tsx`, `Preloader.tsx`, `DoctorSidebar.tsx`, `BookingPageClient.tsx`, `AuthModal.tsx`, `BookingModal.tsx`, `TermsModal.tsx`, and `admin/page.tsx` to render big bold `"TEST"` typography directly.
+4. **Verification**:
+   - Verified `npm run build` succeeds cleanly with zero compiler or TypeScript errors.

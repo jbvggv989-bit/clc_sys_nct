@@ -510,7 +510,7 @@ const DEFAULT_HERO_SLIDES = [
 
 const DEFAULT_HERO_SLIDES_AR = [
   {
-    welcome: "مرحباً بكم في عيادات ريفيرا",
+    welcome: "مرحباً بكم في عيادات clc-sys",
     heading: "حوّل جمالك بشكل طبيعي!",
     description: "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية مصممة لمساعدتك على تحقيق أهدافك في الجمال والصحة من خلال تقنيات طبية متقدمة.",
     bookBtn: "احجز موعدًا",
@@ -519,7 +519,7 @@ const DEFAULT_HERO_SLIDES_AR = [
     image: "/images/hero/slide-1.jpg"
   },
   {
-    welcome: "مرحباً بكم في عيادات ريفيرا",
+    welcome: "مرحباً بكم في عيادات clc-sys",
     heading: "رعاية طبية متقدمة يمكنك الوثوق بها!",
     description: "اكتشف خدمات شاملة في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان المصممة لاحتياجاتك الفريدة. مع أكثر من 15 عاماً من الخبرة المهنية، نحن هنا لإرشادك نحو الجمال الدائم والعافية.",
     bookBtn: "احجز موعدًا",
@@ -528,7 +528,7 @@ const DEFAULT_HERO_SLIDES_AR = [
     image: "/images/hero/slide-2.jpg"
   },
   {
-    welcome: "مرحباً بكم في عيادات ريفيرا",
+    welcome: "مرحباً بكم في عيادات clc-sys",
     heading: "رحلتك نحو الجمال والصحة تبدأ هنا!",
     description: "عيادات متخصصة تحت إشراف طبي كامل تقدم خدمات في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان لجميع الأعمار.",
     bookBtn: "احجز موعدًا",
@@ -3677,7 +3677,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
   
   // Deposit Settings State
   const [instapayName, setInstapayName] = useState(`${CLIENT.nameShort} Clinic`);
-  const [instapayAddress, setInstapayAddress] = useState("revera@instapay");
+  const [instapayAddress, setInstapayAddress] = useState("clcsys@instapay");
   const [instapayLink, setInstapayLink] = useState("https://www.instapay.eg");
   const [walletEnabled, setWalletEnabled] = useState(true);
   const [walletName, setWalletName] = useState(`${CLIENT.name} Cash`);
@@ -3692,9 +3692,9 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
   const [notifWhatsApp, setNotifWhatsApp] = useState(true);
   const [notifEmailConfirm, setNotifEmailConfirm] = useState(false);
   const [notifSmsTemplate, setNotifSmsTemplate] = useState(`Hello {name}, your appointment for {service} is confirmed on {date} at {time}. See you at ${CLIENT.name}!`);
-  const [notifSmsTemplateAr, setNotifSmsTemplateAr] = useState("مرحباً {name}، تم تأكيد موعدك لخدمة {service} بتاريخ {date} الساعة {time}. نراك في ريفيرا كلينيك!");
+  const [notifSmsTemplateAr, setNotifSmsTemplateAr] = useState("مرحباً {name}، تم تأكيد موعدك لخدمة {service} بتاريخ {date} الساعة {time}. نراك في clc-sys كلينيك!");
   const [notifReminderHours, setNotifReminderHours] = useState(24);
-  const [notifStaffEmail, setNotifStaffEmail] = useState("admin@reveraclinics.com");
+  const [notifStaffEmail, setNotifStaffEmail] = useState("admin@clc-sys.com");
   const [savingNotificationSettings, setSavingNotificationSettings] = useState(false);
 
   // ── Queue Settings State ──
@@ -4429,20 +4429,20 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           ]);
           setFaqsAr(data.aboutPage?.faqsAr || [
             {
-              question: "١. ما الخدمات التي تقدمها ريفيرا؟",
-              answer: "ريفيرا عيادة متميزة متخصصة في علاجات الجلدية والتجميل، وصحة المرأة والنساء والتوليد، والعلاج الطبيعي وإعادة التأهيل، وتقويم العظام والتغذية العلاجية. كل خدمة تُقدَّم بدقة طبية وتجربة فاخرة مصممة لكِ."
+              question: "١. ما الخدمات التي تقدمها clc-sys؟",
+              answer: "clc-sys عيادة متميزة متخصصة في علاجات الجلدية والتجميل، وصحة المرأة والنساء والتوليد، والعلاج الطبيعي وإعادة التأهيل، وتقويم العظام والتغذية العلاجية. كل خدمة تُقدَّم بدقة طبية وتجربة فاخرة مصممة لكِ."
             },
             {
-              question: "٢. لمن صُمِّمت ريفيرا؟",
-              answer: "ريفيرا مصممة للمرأة التي تقدّر الأناقة والخصوصية والنتائج الحقيقية. عميلاتنا يبحثن عن الأفضل — لا الأرخص — ويتوقعن تجربة طبية تليق بمعاييرهن."
+              question: "٢. لمن صُمِّمت clc-sys؟",
+              answer: "clc-sys مصممة للمرأة التي تقدّر الأناقة والخصوصية والنتائج الحقيقية. عميلاتنا يبحثن عن الأفضل — لا الأرخص — ويتوقعن تجربة طبية تليق بمعاييرهن."
             },
             {
               question: "٣. كيف تعمل خطة علاجي؟",
               answer: "تبدأ رحلتكِ باستشارة شاملة نُقيّم فيها صحتكِ وأهدافكِ الجمالية وأسلوب حياتكِ. بناءً على ذلك، يضع أطباؤنا خطة علاج شخصية متكاملة — لا نموذجاً جاهزاً — تتطور مع تقدمكِ واحتياجاتكِ."
             },
             {
-              question: "٤. ما الذي يجعل ريفيرا مختلفة؟",
-              answer: "ريفيرا وجهة، لا مجرد عيادة. الفرق في الإحساس: بيئة خاصة وهادئة، وأطباء يستمعون، ومستوى رعاية يمكنكِ رؤيته والشعور به في كل لحظة — من موعدكِ الأول إلى متابعتكِ الأخيرة."
+              question: "٤. ما الذي يجعل clc-sys مختلفة؟",
+              answer: "clc-sys وجهة، لا مجرد عيادة. الفرق في الإحساس: بيئة خاصة وهادئة، وأطباء يستمعون، ومستوى رعاية يمكنكِ رؤيته والشعور به في كل لحظة — من موعدكِ الأول إلى متابعتكِ الأخيرة."
             }
           ]);
           setHowItWorksHeading(data.howItWorks?.heading || "Simple steps to beauty transformations");
@@ -4460,8 +4460,8 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
 
           setWcuYearsLabelAr(data.whyChooseUs?.yearsLabelAr || "١٥+ عاماً من التميز");
           setWcuHeadingAr(data.whyChooseUs?.headingAr || "حيث تلتقي الخبرة الطبية بتجربة فاخرة");
-          setWcuDescriptionAr(data.whyChooseUs?.descriptionAr || "في ريفيرا، كل تفصيل مقصود — بدءاً من استشارتك الأولى وحتى لحظة خروجك متحوّلة. نقدم رعاية مدعومة بالعلم مع الثقة الهادئة لوجهة طبية خاصة.");
-          setWcuQuoteAr(data.whyChooseUs?.quoteAr || '"نحن لا نعالج فقط — بل نُحوّل الثقة. كل جلسة في ريفيرا مصممة حولكِ: أهدافكِ، بشرتكِ، رحلتكِ."');
+          setWcuDescriptionAr(data.whyChooseUs?.descriptionAr || "في clc-sys، كل تفصيل مقصود — بدءاً من استشارتك الأولى وحتى لحظة خروجك متحوّلة. نقدم رعاية مدعومة بالعلم مع الثقة الهادئة لوجهة طبية خاصة.");
+          setWcuQuoteAr(data.whyChooseUs?.quoteAr || '"نحن لا نعالج فقط — بل نُحوّل الثقة. كل جلسة في clc-sys مصممة حولكِ: أهدافكِ، بشرتكِ، رحلتكِ."');
           setWcuContactLabelAr(data.whyChooseUs?.contactLabelAr || "تواصلي معنا:");
           setWcuPhoneAr(data.whyChooseUs?.phoneAr || CLIENT.phoneDisplay);
 
@@ -4482,7 +4482,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           }
           if (data.deposit) {
             setInstapayName(data.deposit.instapayName || `${CLIENT.nameShort} Clinic`);
-            setInstapayAddress(data.deposit.instapayAddress || "revera@instapay");
+            setInstapayAddress(data.deposit.instapayAddress || "clcsys@instapay");
             setInstapayLink(data.deposit.instapayLink || "https://www.instapay.eg");
             setWalletEnabled(data.deposit.walletEnabled ?? true);
             setWalletName(data.deposit.walletName || `${CLIENT.name} Cash`);
@@ -4493,7 +4493,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             }
           } else {
             setInstapayName(`${CLIENT.nameShort} Clinic`);
-            setInstapayAddress("revera@instapay");
+            setInstapayAddress("clcsys@instapay");
             setInstapayLink("https://www.instapay.eg");
             setWalletEnabled(true);
             setWalletName(`${CLIENT.name} Cash`);
@@ -5038,7 +5038,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       image: "/images/hero/slide-1.jpg"
     };
     const newArSlide = {
-      welcome: "مرحباً بكم في عيادات ريفيرا",
+      welcome: "مرحباً بكم في عيادات clc-sys",
       heading: "عنوان الشريحة الجديدة",
       description: "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية.",
       bookBtn: "احجز موعدًا",
@@ -6088,11 +6088,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
         <div className="w-full max-w-md rounded-[32px] bg-[var(--color-brand-light)] p-8 shadow-[0_20px_60px_rgba(31,37,26,0.15)] text-center space-y-4">
           <div className="mx-auto relative h-16 w-16 overflow-hidden rounded-2xl bg-[var(--cr-primary)] p-2.5 shadow-md">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={CLIENT.logoPath}
-              alt={CLIENT.name}
-              className="w-full h-full object-contain brightness-0 invert"
-            />
+            <span className="text-2xl font-black tracking-wider text-white font-sans flex items-center justify-center h-full">TEST</span>
           </div>
           <p className="text-xs uppercase tracking-[0.3em] text-[var(--color-brand-secondary)]/80 font-bold mb-1">
             {CLIENT.name} Staff Portal
@@ -6182,14 +6178,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
         >
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white shadow-md p-1.5">
-                <Image
-                  src={CLIENT.logoPath}
-                  alt={CLIENT.name}
-                  fill
-                  style={{ objectFit: "contain", padding: "2px" }}
-                />
-              </div>
+              <div className="flex h-10 px-3 items-center justify-center shrink-0 rounded-xl bg-white shadow-md"><span className="text-xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span></div>
               <div className="flex flex-col justify-center">
                 <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--color-brand-light)]/60 leading-none mb-0.5">
                   {CLIENT.name}
@@ -11121,7 +11110,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             const finalLeft = rawLeft ?? 0;
             const walletUsed = Math.max(0, totalCost - finalPaid - finalLeft);
             const branch = branches.find((b: any) => b.id === invoiceBooking.branchId);
-            const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "Revera Zayed Clinic";
+            const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "clc-sys Zayed Clinic";
             const invoiceNo = inv.invoice_no || (invoiceBooking as any).invoiceNo || (invoiceBooking as any).invoice_no || `INV-${String(invoiceBooking.id || '').slice(0, 6).toUpperCase()}`;
 
             return (
@@ -11153,10 +11142,10 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                     {/* Top Header */}
                     <div className="flex justify-between items-start gap-4 pb-3.5 border-b border-[var(--cr-primary)]/20">
                       <div>
-                        <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>REVERA CLINICS</h1>
+                        <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>clc-sys CLINICS</h1>
                         <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5 font-semibold">Sheikh Zayed / New Cairo</p>
                         <p className="text-[11px] text-gray-400 mt-0.5">Phone: {CLIENT.phoneDisplay}</p>
-                        <p className="text-[11px] text-gray-400">Email: inquiries@reveraclinics.com</p>
+                        <p className="text-[11px] text-gray-400">Email: inquiries@clc-sys.com</p>
                       </div>
                       <div className="text-right">
                         <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-[var(--cr-accent)]" style={{ fontFamily: "Marcellus, serif" }}>INVOICE</h2>
@@ -11595,7 +11584,7 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
           const finalLeft = rawLeft ?? 0;
           const walletUsed = Math.max(0, totalCost - finalPaid - finalLeft);
           const branch = branches.find(b => b.id === invoiceBooking.branchId);
-          const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "Revera Zayed Clinic";
+          const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "clc-sys Zayed Clinic";
           const invoiceNo = (invoiceBooking as any).invoiceNo || (invoiceBooking as any).invoice_no || `INV-${String(invoiceBooking.id || '').slice(0, 6).toUpperCase()}`;
 
           return (
@@ -11627,10 +11616,10 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
                   {/* Top Header */}
                   <div className="flex justify-between items-start gap-4 pb-3.5 border-b border-[var(--cr-primary)]/20">
                     <div>
-                      <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>REVERA CLINICS</h1>
+                      <h1 className="text-lg sm:text-xl font-bold tracking-wider text-[var(--cr-primary)]" style={{ fontFamily: "Marcellus, serif" }}>clc-sys CLINICS</h1>
                       <p className="text-xs text-[var(--color-brand-secondary)] mt-0.5 font-semibold">Sheikh Zayed / New Cairo</p>
                       <p className="text-[11px] text-gray-400 mt-0.5">Phone: {CLIENT.phoneDisplay}</p>
-                      <p className="text-[11px] text-gray-400">Email: inquiries@reveraclinics.com</p>
+                      <p className="text-[11px] text-gray-400">Email: inquiries@clc-sys.com</p>
                     </div>
                     <div className="text-right">
                       <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-[var(--cr-accent)]" style={{ fontFamily: "Marcellus, serif" }}>INVOICE</h2>

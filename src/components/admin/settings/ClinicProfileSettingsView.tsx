@@ -9,10 +9,10 @@ interface ClinicProfileSettingsViewProps {
 
 export default function ClinicProfileSettingsView({ authenticatedJsonHeaders }: ClinicProfileSettingsViewProps) {
   const [clinicName, setClinicName] = useState<string>(CLIENT.name);
-  const [clinicNameAr, setClinicNameAr] = useState("ريفيرا كلينك");
+  const [clinicNameAr, setClinicNameAr] = useState("clc-sys كلينك");
   const [clinicLocation, setClinicLocation] = useState("Sheikh Zayed City, Giza");
   const [clinicLocationAr, setClinicLocationAr] = useState("مدينة الشيخ زايد، الجيزة");
-  const [clinicEmail, setClinicEmail] = useState("info@reveraclinics.com");
+  const [clinicEmail, setClinicEmail] = useState("info@clc-sys.com");
   const [clinicPhone, setClinicPhone] = useState("+20 2 3796 2200");
   const [clinicWhatsapp, setClinicWhatsapp] = useState<string>(CLIENT.phoneTel);
   const [savingClinicProfile, setSavingClinicProfile] = useState(false);

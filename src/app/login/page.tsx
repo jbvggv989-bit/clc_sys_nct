@@ -232,7 +232,7 @@ export default function UnifiedStaffLoginPage() {
                   type="text"
                   required
                   autoFocus
-                  placeholder="e.g. dr.name@revera.com or REV-1001"
+                  placeholder="e.g. dr.name@clc-sys.com or REV-1001"
                   value={identifier}
                   onChange={(e) => {
                     setIdentifier(e.target.value);

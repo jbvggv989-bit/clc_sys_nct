@@ -22,7 +22,7 @@ export const translations: Record<"en" | "ar", Translation> = {
     hero: {
       slides: [
         {
-          welcome: "Welcome to Revera Clinics",
+          welcome: "Welcome to clc-sys Clinics",
           heading: "Transform Your Beauty Naturally!",
           description:
             "Expert dermatology and cosmetic surgery services with personalized care designed to help you achieve your beauty and health goals through advanced medical techniques.",
@@ -31,7 +31,7 @@ export const translations: Record<"en" | "ar", Translation> = {
           reviewCount: "(1000+ review)",
         },
         {
-          welcome: "Welcome to Revera Clinics",
+          welcome: "Welcome to clc-sys Clinics",
           heading: "Advanced Medical Care You Can Trust!",
           description:
             "Discover comprehensive dermatology, cosmetic surgery, laser treatments, and physical therapy services tailored to your unique needs. With over 15 years of professional expertise, we're here to guide you toward lasting beauty and wellness.",
@@ -40,7 +40,7 @@ export const translations: Record<"en" | "ar", Translation> = {
           reviewCount: "(1000+ review)",
         },
         {
-          welcome: "Welcome to Revera Clinics",
+          welcome: "Welcome to clc-sys Clinics",
           heading: "Your Beauty & Health Journey Starts Here!",
           description:
             "Specialized clinics under full medical supervision offering services in dermatology, cosmetic surgery, laser treatments, and physical therapy care for all ages.",
@@ -51,11 +51,11 @@ export const translations: Record<"en" | "ar", Translation> = {
       ],
     },
     about: {
-      tag: "About Revera",
+      tag: "About clc-sys",
       subtitle: "Refined aesthetics. Elevated standards.",
       heading: "A destination built for you",
       description:
-        "Revera is a premium aesthetic polyclinic in New Cairo — where science-backed medicine meets a deeply personal luxury experience. We specialize in dermatology, women's health, physical therapy, and wellness, delivering exceptional care tailored exclusively to you.",
+        "clc-sys is a premium aesthetic polyclinic in New Cairo — where science-backed medicine meets a deeply personal luxury experience. We specialize in dermatology, women's health, physical therapy, and wellness, delivering exceptional care tailored exclusively to you.",
       services: [
         "Dermatology & Aesthetic Treatments",
         "Gynecology & Women's Health",
@@ -120,9 +120,9 @@ export const translations: Record<"en" | "ar", Translation> = {
       tag: "why choose us",
       heading: "Where medical expertise meets a luxury experience",
       description:
-        "At Revera, every detail is intentional — from your first consultation to the moment you walk out transformed. We deliver science-backed care with the calm confidence of a private medical destination.",
+        "At clc-sys, every detail is intentional — from your first consultation to the moment you walk out transformed. We deliver science-backed care with the calm confidence of a private medical destination.",
       quote:
-        '"We don\'t treat conditions — we transform confidence. Every session at Revera is designed around you: your goals, your skin, your journey."',
+        '"We don\'t treat conditions — we transform confidence. Every session at clc-sys is designed around you: your goals, your skin, your journey."',
       contactLabel: "Reach us:",
       phone: "(+20) 01035595691",
     },
@@ -163,28 +163,28 @@ export const translations: Record<"en" | "ar", Translation> = {
       tag: "Our Mission",
       heading: "A destination built on trust and transformation",
       quote:
-        '"Every woman who walks through our doors deserves to feel seen, heard, and transformed. At Revera, we don\'t offer generic treatments — we craft personalized experiences grounded in medical excellence and delivered with genuine care. Your confidence is our measure of success."',
-      doctorName: "Revera Clinics",
+        '"Every woman who walks through our doors deserves to feel seen, heard, and transformed. At clc-sys, we don\'t offer generic treatments — we craft personalized experiences grounded in medical excellence and delivered with genuine care. Your confidence is our measure of success."',
+      doctorName: "clc-sys Clinics",
       doctorTitle: "Refined Aesthetics. Elevated Standards.",
       doctorInfo: "New Cairo · Egypt",
       reviews: [
         {
-          text: '"Dr. Sarah is absolutely wonderful — her technique is precise and her guidance throughout the treatment was exceptional. The results surpassed all my expectations. I\'m still continuing with her at Revera and it just keeps getting better!"',
+          text: '"Dr. Sarah is absolutely wonderful — her technique is precise and her guidance throughout the treatment was exceptional. The results surpassed all my expectations. I\'m still continuing with her at clc-sys and it just keeps getting better!"',
           author: "Samar Sayed",
           role: "Client",
         },
         {
-          text: '"I am truly grateful to Dr. Arwa for her dedication and expertise. I had been struggling with skin concerns for years, and the transformation I\'ve experienced at Revera Clinics has completely changed how I feel about myself!"',
+          text: '"I am truly grateful to Dr. Arwa for her dedication and expertise. I had been struggling with skin concerns for years, and the transformation I\'ve experienced at clc-sys Clinics has completely changed how I feel about myself!"',
           author: "Aya Mahmoud",
           role: "Client",
         },
         {
-          text: '"Revera Clinics is incredibly professional, skilled, and experienced. Dr. Rana delivers the most effective and advanced dermatology treatments I have ever received."',
+          text: '"clc-sys Clinics is incredibly professional, skilled, and experienced. Dr. Rana delivers the most effective and advanced dermatology treatments I have ever received."',
           author: "Sarah Ahmed",
           role: "Client",
         },
         {
-          text: '"Very professional and attentive. Dr. Omaima was extremely welcoming and thorough in explaining every step of my treatment plan. The results were beyond amazing. I cannot recommend Revera Clinics enough!"',
+          text: '"Very professional and attentive. Dr. Omaima was extremely welcoming and thorough in explaining every step of my treatment plan. The results were beyond amazing. I cannot recommend clc-sys Clinics enough!"',
           author: "Omar Abdel Meguid",
           role: "Client",
         },
@@ -243,7 +243,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       labels: { service: "Service", date: "Date", time: "Time", provider: "Provider" },
     },
     auth: {
-      title: "Welcome to Revera",
+      title: "Welcome to clc-sys",
       subtitle: "Enter your phone number to get started",
       phonePlaceholder: "Phone Number",
       phoneHint: "Egyptian phone number (11 digits, starts with 01)",
@@ -261,10 +261,10 @@ export const translations: Record<"en" | "ar", Translation> = {
     },
     aboutPage: {
       pageTitle: "About Us",
-      aboutTag: "About Revera",
+      aboutTag: "About clc-sys",
       aboutHeading: "Refined aesthetics. Elevated standards.",
       aboutDescription:
-        "Revera is a premium aesthetic polyclinic in New Cairo — a destination where science-backed medicine meets a deeply personal luxury experience. We specialize in dermatology, women's health, physical therapy, and wellness, delivering exceptional care tailored exclusively to you.",
+        "clc-sys is a premium aesthetic polyclinic in New Cairo — a destination where science-backed medicine meets a deeply personal luxury experience. We specialize in dermatology, women's health, physical therapy, and wellness, delivering exceptional care tailored exclusively to you.",
       aboutList: [
         "Dermatology & Aesthetic Treatments",
         "Gynecology & Women's Health",
@@ -274,10 +274,10 @@ export const translations: Record<"en" | "ar", Translation> = {
       servicesTag: "our approach",
       servicesHeading: "Medicine and elegance, in perfect harmony",
       servicesDescription:
-        "We believe that excellence in care and the luxury of experience are not opposites. At Revera, every consultation, every treatment, and every follow-up is designed around your goals — not a protocol.",
+        "We believe that excellence in care and the luxury of experience are not opposites. At clc-sys, every consultation, every treatment, and every follow-up is designed around your goals — not a protocol.",
       skinCareTitle: "Personalized Medical Care",
       skinCareDescription:
-        "Your skin, your body, and your wellness are unique. Every treatment plan at Revera is built from your specific needs, current condition, and aesthetic goals — never a one-size-fits-all approach.",
+        "Your skin, your body, and your wellness are unique. Every treatment plan at clc-sys is built from your specific needs, current condition, and aesthetic goals — never a one-size-fits-all approach.",
       hairCareTitle: "Transformative Results",
       hairCareDescription:
         "Visible, honest results are at the heart of what we do. From your first session to your final follow-up, we track your progress and refine your care to ensure the transformation you deserve.",
@@ -285,7 +285,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       phone: "(+20) 01035595691",
       whatWeDoHeading: "A complete wellness experience",
       whatWeDoDescription:
-        "From your first consultation to your final follow-up, Revera covers every aspect of your aesthetic and medical wellbeing — beautifully and thoroughly.",
+        "From your first consultation to your final follow-up, clc-sys covers every aspect of your aesthetic and medical wellbeing — beautifully and thoroughly.",
       whatWeDoList: [
         "Dermatology & Aesthetic Treatments",
         "Gynecology & Women's Health",
@@ -293,7 +293,7 @@ export const translations: Record<"en" | "ar", Translation> = {
         "Osteopathy & Therapeutic Nutrition",
       ],
       storiesTag: "our difference",
-      storiesHeading: "What sets Revera apart",
+      storiesHeading: "What sets clc-sys apart",
       storiesList: [
         "Luxury Experience at Every Touchpoint",
         "Science-Backed, Doctor-Led Care",
@@ -305,14 +305,14 @@ export const translations: Record<"en" | "ar", Translation> = {
       faqHeading: "Questions? We have answers.",
       faqs: [
         {
-          question: "1. What services does Revera offer?",
+          question: "1. What services does clc-sys offer?",
           answer:
-            "Revera is a premium polyclinic specializing in dermatology and aesthetic treatments, gynecology and women's health, physical therapy and rehabilitation, and osteopathy and therapeutic nutrition. Every service is delivered with medical precision and a luxury experience tailored to you.",
+            "clc-sys is a premium polyclinic specializing in dermatology and aesthetic treatments, gynecology and women's health, physical therapy and rehabilitation, and osteopathy and therapeutic nutrition. Every service is delivered with medical precision and a luxury experience tailored to you.",
         },
         {
-          question: "2. Who is Revera designed for?",
+          question: "2. Who is clc-sys designed for?",
           answer:
-            "Revera is designed for women who value elegance, privacy, and visible results. Our clients seek the best — not the cheapest — and expect a medical experience that matches their standards.",
+            "clc-sys is designed for women who value elegance, privacy, and visible results. Our clients seek the best — not the cheapest — and expect a medical experience that matches their standards.",
         },
         {
           question: "3. How does my treatment plan work?",
@@ -320,9 +320,9 @@ export const translations: Record<"en" | "ar", Translation> = {
             "Your journey begins with a comprehensive consultation where we assess your health, aesthetic goals, and lifestyle. From this, our doctors build a fully personalized treatment plan — never a template — that evolves with your progress and needs.",
         },
         {
-          question: "4. What makes Revera different from other clinics?",
+          question: "4. What makes clc-sys different from other clinics?",
           answer:
-            "Revera is a destination, not a clinic. The difference is in the feeling: a private, unhurried environment, doctors who listen, and a standard of care that you can see and feel at every touchpoint — from your first appointment to your last follow-up.",
+            "clc-sys is a destination, not a clinic. The difference is in the feeling: a private, unhurried environment, doctors who listen, and a standard of care that you can see and feel at every touchpoint — from your first appointment to your last follow-up.",
         },
       ],
     },
@@ -365,7 +365,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       phone: "(+20) 01035595691",
       phoneZayed: "(+20) 01023122323",
       emailTitle: "Email",
-      email: "info@reveraclinics.com",
+      email: "info@clc-sys.com",
       formHeading: "Have any questions?",
       fields: {
         firstName: "First Name",
@@ -399,7 +399,7 @@ export const translations: Record<"en" | "ar", Translation> = {
     hero: {
       slides: [
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
+          welcome: "مرحباً بكم في عيادات clc-sys",
           heading: "حوّل جمالك بشكل طبيعي!",
           description:
             "خدمات متخصصة في طب الجلدية والجراحة التجميلية مع رعاية شخصية مصممة لمساعدتك على تحقيق أهدافك في الجمال والصحة من خلال تقنيات طبية متقدمة.",
@@ -408,7 +408,7 @@ export const translations: Record<"en" | "ar", Translation> = {
           reviewCount: "(1000+ تقييم)",
         },
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
+          welcome: "مرحباً بكم في عيادات clc-sys",
           heading: "رعاية طبية متقدمة يمكنك الوثوق بها!",
           description:
             "اكتشف خدمات شاملة في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان المصممة لاحتياجاتك الفريدة. مع أكثر من 15 عامًا من الخبرة المهنية، نحن هنا لإرشادك نحو الجمال الدائم والعافية.",
@@ -417,7 +417,7 @@ export const translations: Record<"en" | "ar", Translation> = {
           reviewCount: "(1000+ تقييم)",
         },
         {
-          welcome: "مرحباً بكم في عيادات ريفيرا",
+          welcome: "مرحباً بكم في عيادات clc-sys",
           heading: "رحلتك نحو الجمال والصحة تبدأ هنا!",
           description:
             "عيادات متخصصة تحت إشراف طبي كامل تقدم خدمات في طب الجلدية والجراحة التجميلية وعلاجات الليزر وطب الأسنان لجميع الأعمار.",
@@ -428,11 +428,11 @@ export const translations: Record<"en" | "ar", Translation> = {
       ],
     },
     about: {
-      tag: "عن ريفيرا",
+      tag: "عن clc-sys",
       subtitle: "جماليات راقية. معايير متميزة.",
       heading: "وجهة مصممة لكِ",
       description:
-        "ريفيرا عيادة تجميل ورعاية متميزة في القاهرة الجديدة — تجمع بين الطب المبني على العلم وتجربة فاخرة شخصية حقيقية. نتخصص في الجلدية والتجميل وصحة المرأة والعلاج الطبيعي والعافية، لنقدم رعاية استثنائية مصممة حصراً لكِ.",
+        "clc-sys عيادة تجميل ورعاية متميزة في القاهرة الجديدة — تجمع بين الطب المبني على العلم وتجربة فاخرة شخصية حقيقية. نتخصص في الجلدية والتجميل وصحة المرأة والعلاج الطبيعي والعافية، لنقدم رعاية استثنائية مصممة حصراً لكِ.",
       services: [
         "علاجات الجلدية والتجميل",
         "النساء والتوليد وصحة المرأة",
@@ -497,9 +497,9 @@ export const translations: Record<"en" | "ar", Translation> = {
       tag: "لماذا تختارينا",
       heading: "حيث تلتقي الخبرة الطبية بتجربة فارهة",
       description:
-        "في ريفيرا، كل تفصيل مقصود — من استشارتكِ الأولى حتى لحظة خروجكِ متجددة. نقدم رعاية طبية مبنية على العلم بهدوء وثقة وجهة طبية خاصة.",
+        "في clc-sys، كل تفصيل مقصود — من استشارتكِ الأولى حتى لحظة خروجكِ متجددة. نقدم رعاية طبية مبنية على العلم بهدوء وثقة وجهة طبية خاصة.",
       quote:
-        '"نحن لا نعالج فقط — بل نُحوّل الثقة. كل جلسة في ريفيرا مصممة حولكِ: أهدافكِ، بشرتكِ، رحلتكِ."',
+        '"نحن لا نعالج فقط — بل نُحوّل الثقة. كل جلسة في clc-sys مصممة حولكِ: أهدافكِ، بشرتكِ، رحلتكِ."',
       contactLabel: "تواصلي معنا:",
       phone: "(+20) 01035595691",
     },
@@ -540,8 +540,8 @@ export const translations: Record<"en" | "ar", Translation> = {
       tag: "رسالتنا",
       heading: "وجهة مبنية على الثقة والتحوّل",
       quote:
-        '"كل امرأة تدخل أبوابنا تستحق أن تُرى وتُسمع وتتحوّل. في ريفيرا، لا نقدم علاجات عامة — بل نصمم تجارب شخصية راقية مبنية على التميز الطبي وتُقدَّم بعناية حقيقية. ثقتكِ بنفسكِ هي مقياس نجاحنا."',
-      doctorName: "عيادات ريفيرا",
+        '"كل امرأة تدخل أبوابنا تستحق أن تُرى وتُسمع وتتحوّل. في clc-sys، لا نقدم علاجات عامة — بل نصمم تجارب شخصية راقية مبنية على التميز الطبي وتُقدَّم بعناية حقيقية. ثقتكِ بنفسكِ هي مقياس نجاحنا."',
+      doctorName: "عيادات clc-sys",
       doctorTitle: "جماليات راقية. معايير متميزة.",
       doctorInfo: "القاهرة الجديدة · مصر",
       reviews: [
@@ -551,17 +551,17 @@ export const translations: Record<"en" | "ar", Translation> = {
           role: "عميلة",
         },
         {
-          text: '"أنا بشكر د. أروى على المجهود الرائع اللي بذلته معايا، كنت بعاني من مشاكل في البشرة ومكنتش متخيلة إني هوصل للنتيجة دي. الحمد لله بمجهودات د. أروى في عيادات ريفيرا حصل تغيير كبير في بشرتي وثقتي بنفسي!"',
+          text: '"أنا بشكر د. أروى على المجهود الرائع اللي بذلته معايا، كنت بعاني من مشاكل في البشرة ومكنتش متخيلة إني هوصل للنتيجة دي. الحمد لله بمجهودات د. أروى في عيادات clc-sys حصل تغيير كبير في بشرتي وثقتي بنفسي!"',
           author: "آية محمود",
           role: "عميلة",
         },
         {
-          text: '"عيادات ريفيرا محترفة جداً وذات مهارة وخبرة عالية. تقدم الدكتورة رنا أكثر علاجات الجلدية فعالية وتطوراً."',
+          text: '"عيادات clc-sys محترفة جداً وذات مهارة وخبرة عالية. تقدم الدكتورة رنا أكثر علاجات الجلدية فعالية وتطوراً."',
           author: "سارة أحمد",
           role: "عميلة",
         },
         {
-          text: '"محترفة جداً ومتمكنة. كانت الدكتورة أميمة مرحبة جداً ومفيدة في شرح كل خطوة من خطوات خطة علاجي. كانت النتائج مذهلة. أنصح بشدة بعيادات ريفيرا!"',
+          text: '"محترفة جداً ومتمكنة. كانت الدكتورة أميمة مرحبة جداً ومفيدة في شرح كل خطوة من خطوات خطة علاجي. كانت النتائج مذهلة. أنصح بشدة بعيادات clc-sys!"',
           author: "عمر عبد المجيد",
           role: "عميل",
         },
@@ -621,10 +621,10 @@ export const translations: Record<"en" | "ar", Translation> = {
     },
     aboutPage: {
       pageTitle: "من نحن",
-      aboutTag: "عن ريفيرا",
+      aboutTag: "عن clc-sys",
       aboutHeading: "جماليات راقية. معايير متميزة.",
       aboutDescription:
-        "ريفيرا عيادة تجميل ورعاية متميزة في القاهرة الجديدة — وجهة تجمع بين الطب المبني على العلم وتجربة فاخرة شخصية حقيقية. نتخصص في الجلدية والتجميل وصحة المرأة والعلاج الطبيعي والعافية، لنقدم رعاية استثنائية مصممة حصراً لكِ.",
+        "clc-sys عيادة تجميل ورعاية متميزة في القاهرة الجديدة — وجهة تجمع بين الطب المبني على العلم وتجربة فاخرة شخصية حقيقية. نتخصص في الجلدية والتجميل وصحة المرأة والعلاج الطبيعي والعافية، لنقدم رعاية استثنائية مصممة حصراً لكِ.",
       aboutList: [
         "علاجات الجلدية والتجميل",
         "النساء والتوليد وصحة المرأة",
@@ -634,10 +634,10 @@ export const translations: Record<"en" | "ar", Translation> = {
       servicesTag: "منهجنا",
       servicesHeading: "الطب والأناقة في تناغم تام",
       servicesDescription:
-        "نؤمن بأن التميز في الرعاية وفخامة التجربة ليسا نقيضين. في ريفيرا، كل استشارة وكل جلسة وكل متابعة مصممة حول أهدافكِ — ليس حول بروتوكول جاهز.",
+        "نؤمن بأن التميز في الرعاية وفخامة التجربة ليسا نقيضين. في clc-sys، كل استشارة وكل جلسة وكل متابعة مصممة حول أهدافكِ — ليس حول بروتوكول جاهز.",
       skinCareTitle: "رعاية طبية شخصية",
       skinCareDescription:
-        "بشرتكِ وجسدكِ وصحتكِ فريدة. كل خطة علاج في ريفيرا مبنية على احتياجاتكِ الخاصة وحالتكِ الراهنة وأهدافكِ الجمالية — لا أسلوب موحد لدينا.",
+        "بشرتكِ وجسدكِ وصحتكِ فريدة. كل خطة علاج في clc-sys مبنية على احتياجاتكِ الخاصة وحالتكِ الراهنة وأهدافكِ الجمالية — لا أسلوب موحد لدينا.",
       hairCareTitle: "نتائج تحويلية حقيقية",
       hairCareDescription:
         "النتائج الحقيقية والواضحة هي جوهر ما نقدمه. من جلستكِ الأولى وحتى متابعتكِ الأخيرة، نتابع تقدمكِ ونطوّر رعايتكِ لنضمن لكِ التحوّل الذي تستحقينه.",
@@ -645,7 +645,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       phone: "(+20) 01035595691",
       whatWeDoHeading: "تجربة عافية متكاملة",
       whatWeDoDescription:
-        "من استشارتكِ الأولى إلى متابعتكِ الأخيرة، تغطي ريفيرا كل جانب من جوانب رفاهيتكِ الجمالية والطبية — بعناية وبأسلوب راقٍ.",
+        "من استشارتكِ الأولى إلى متابعتكِ الأخيرة، تغطي clc-sys كل جانب من جوانب رفاهيتكِ الجمالية والطبية — بعناية وبأسلوب راقٍ.",
       whatWeDoList: [
         "علاجات الجلدية والتجميل",
         "النساء والتوليد وصحة المرأة",
@@ -653,7 +653,7 @@ export const translations: Record<"en" | "ar", Translation> = {
         "تقويم العظام والتغذية العلاجية",
       ],
       storiesTag: "ما يميزنا",
-      storiesHeading: "ما يجعل ريفيرا مختلفة",
+      storiesHeading: "ما يجعل clc-sys مختلفة",
       storiesList: [
         "تجربة فاخرة في كل لحظة",
         "رعاية طبية مبنية على العلم",
@@ -665,14 +665,14 @@ export const translations: Record<"en" | "ar", Translation> = {
       faqHeading: "أسئلة؟ لدينا إجابات.",
       faqs: [
         {
-          question: "١. ما الخدمات التي تقدمها ريفيرا؟",
+          question: "١. ما الخدمات التي تقدمها clc-sys؟",
           answer:
-            "ريفيرا عيادة متميزة متخصصة في علاجات الجلدية والتجميل، وصحة المرأة والنساء والتوليد، والعلاج الطبيعي وإعادة التأهيل، وتقويم العظام والتغذية العلاجية. كل خدمة تُقدَّم بدقة طبية وتجربة فاخرة مصممة لكِ.",
+            "clc-sys عيادة متميزة متخصصة في علاجات الجلدية والتجميل، وصحة المرأة والنساء والتوليد، والعلاج الطبيعي وإعادة التأهيل، وتقويم العظام والتغذية العلاجية. كل خدمة تُقدَّم بدقة طبية وتجربة فاخرة مصممة لكِ.",
         },
         {
-          question: "٢. لمن صُمِّمت ريفيرا؟",
+          question: "٢. لمن صُمِّمت clc-sys؟",
           answer:
-            "ريفيرا مصممة للمرأة التي تقدّر الأناقة والخصوصية والنتائج الحقيقية. عميلاتنا يبحثن عن الأفضل — لا الأرخص — ويتوقعن تجربة طبية تليق بمعاييرهن.",
+            "clc-sys مصممة للمرأة التي تقدّر الأناقة والخصوصية والنتائج الحقيقية. عميلاتنا يبحثن عن الأفضل — لا الأرخص — ويتوقعن تجربة طبية تليق بمعاييرهن.",
         },
         {
           question: "٣. كيف تعمل خطة علاجي؟",
@@ -680,9 +680,9 @@ export const translations: Record<"en" | "ar", Translation> = {
             "تبدأ رحلتكِ باستشارة شاملة نُقيّم فيها صحتكِ وأهدافكِ الجمالية وأسلوب حياتكِ. بناءً على ذلك، يضع أطباؤنا خطة علاج شخصية متكاملة — لا نموذجاً جاهزاً — تتطور مع تقدمكِ واحتياجاتكِ.",
         },
         {
-          question: "٤. ما الذي يجعل ريفيرا مختلفة؟",
+          question: "٤. ما الذي يجعل clc-sys مختلفة؟",
           answer:
-            "ريفيرا وجهة، لا مجرد عيادة. الفرق في الإحساس: بيئة خاصة وهادئة، وأطباء يستمعون، ومستوى رعاية يمكنكِ رؤيته والشعور به في كل لحظة — من موعدكِ الأول إلى متابعتكِ الأخيرة.",
+            "clc-sys وجهة، لا مجرد عيادة. الفرق في الإحساس: بيئة خاصة وهادئة، وأطباء يستمعون، ومستوى رعاية يمكنكِ رؤيته والشعور به في كل لحظة — من موعدكِ الأول إلى متابعتكِ الأخيرة.",
         },
       ],
     },
@@ -725,7 +725,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       phone: "(+20) 01035595691",
       phoneZayed: "(+20) 01023122323",
       emailTitle: "البريد الإلكتروني",
-      email: "info@reveraclinics.com",
+      email: "info@clc-sys.com",
       formHeading: "هل لديك أسئلة؟",
       fields: {
         firstName: "الاسم الأول",
@@ -737,7 +737,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       submitBtn: "إرسال الآن",
     },
     auth: {
-      title: "مرحباً بك في ريفيرا",
+      title: "مرحباً بك في clc-sys",
       subtitle: "أدخل رقم هاتفك للبدء",
       phonePlaceholder: "رقم الهاتف",
       phoneHint: "رقم هاتف مصري (11 رقمًا، يبدأ بـ 01)",

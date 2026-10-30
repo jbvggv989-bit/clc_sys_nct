@@ -26,7 +26,7 @@ export function BookingPageClient({ initialServiceId }: BookingPageClientProps) 
     >
       <header className="flex items-center justify-between px-4 sm:px-8 py-4">
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src={CLIENT.logoPath} alt={CLIENT.name} width={36} height={36} style={{ objectFit: "contain" }} />
+          <span className="text-2xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span>
           <span className="font-semibold text-sm sm:text-base" style={{ color: "var(--cr-primary)" }}>
             {CLIENT.name}
           </span>

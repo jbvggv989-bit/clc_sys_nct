@@ -44,8 +44,8 @@ const DEFAULT_TERMS_SEED = [
     sort_order: 1,
     title_en: "Acceptance of Terms",
     title_ar: "قبول الشروط",
-    content_en: "By using Revera Clinic's website or services, you agree to be bound by these Terms & Conditions and all applicable laws and regulations.",
-    content_ar: "باستخدامك لموقع أو خدمات عيادة ريفيرا، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها.",
+    content_en: "By using clc-sys Clinic's website or services, you agree to be bound by these Terms & Conditions and all applicable laws and regulations.",
+    content_ar: "باستخدامك لموقع أو خدمات عيادة clc-sys، فإنك توافق على الالتزام بهذه الشروط والأحكام وجميع القوانين واللوائح المعمول بها.",
     is_active: true
   },
   {

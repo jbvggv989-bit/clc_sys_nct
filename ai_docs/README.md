@@ -1,6 +1,6 @@
 # ai_docs — Revera Clinics Agent Knowledge Base
 
-> **Last Updated:** 2026-10-30 (DEC-142: Color Palette Rebrand to Navy Blue, Pure White, Teal, and Slate Blue)
+> **Last Updated:** 2026-10-30 (DEC-143: Rebrand Name to clc-sys and Logo to TEST)
 > **Branch:** dev (these docs do not belong on main/production)
 > **Maintained by:** Project manager. Updated whenever architecture, decisions, or risks change.
 

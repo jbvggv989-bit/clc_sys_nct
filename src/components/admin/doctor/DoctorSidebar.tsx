@@ -83,14 +83,7 @@ export default function DoctorSidebar({
           {/* Logo Header */}
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white shadow-md p-1.5">
-                <Image
-                  src={CLIENT.logoPath}
-                  alt={CLIENT.name}
-                  fill
-                  style={{ objectFit: "contain", padding: "2px" }}
-                />
-              </div>
+              <div className="flex h-10 px-3 items-center justify-center shrink-0 rounded-xl bg-white shadow-md"><span className="text-xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span></div>
               <div className="flex flex-col justify-center min-w-0">
                 <p className="text-[9px] uppercase tracking-[0.2em] text-[var(--color-brand-light)]/60 leading-none mb-0.5">
                   {CLIENT.name}

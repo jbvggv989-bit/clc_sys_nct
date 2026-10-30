@@ -33,7 +33,7 @@ export function Preloader() {
         <svg className="arc arc2" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <circle cx="80" cy="80" r="60" strokeWidth="2" strokeDasharray="160 400" transform="rotate(10 80 80)" />
         </svg>
-        <img src={CLIENT.logoPath} alt="logo" className="preloader-logo" />
+        <span className="text-4xl sm:text-5xl font-black tracking-widest text-[var(--cr-accent)] font-sans select-none animate-pulse">TEST</span>
       </div>
     </div>
   );

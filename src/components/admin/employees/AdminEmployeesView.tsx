@@ -1052,7 +1052,7 @@ export default function AdminEmployeesView({
           <div class="clinic-info">
             <strong>${CLIENT.nameShort} Clinic Cairo</strong><br/>
             El-Ghad St, Pyramids, Giza<br/>
-            Tel: +20 100 000 0000 | info@revera.com
+            Tel: +20 100 000 0000 | info@clc-sys.com
           </div>
           <div style="font-size: 11px; color: var(--color-brand-secondary);">
             Generated on: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}

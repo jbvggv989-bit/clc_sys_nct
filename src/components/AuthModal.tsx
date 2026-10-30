@@ -623,7 +623,7 @@ export function AuthModal() {
               style={{ backgroundColor: "var(--cr-secondary)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={CLIENT.logoPath} alt={CLIENT.nameShort} width={28} height={28} style={{ objectFit: "contain" }} />
+              <span className="text-xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span>
             </div>
             <h3 className="text-lg font-semibold" style={{ color: "var(--cr-primary)" }}>
               {t.auth.title}

@@ -584,7 +584,7 @@ export default function ProfilePage() {
 
                       // Map branch name
                       const branch = branches.find((b) => b.id === booking.branchId);
-                      const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "Revera Zayed Clinic";
+                      const branchName = branch ? (isRTL ? branch.name_ar : branch.name_en) : "clc-sys Zayed Clinic";
 
                       return (
                         <div

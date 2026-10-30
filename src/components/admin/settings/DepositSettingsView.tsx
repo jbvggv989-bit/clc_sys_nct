@@ -88,7 +88,7 @@ export default function DepositSettingsView({
                 type="text"
                 value={instapayAddress}
                 onChange={(e) => setInstapayAddress(e.target.value)}
-                placeholder="revera@instapay"
+                placeholder="clcsys@instapay"
                 className="w-full rounded-2xl border border-[var(--cr-primary)]/15 bg-[var(--color-brand-light)] px-4 py-3 text-sm text-[var(--cr-dark)] placeholder:text-[#B0BCA7] outline-none focus:border-[var(--cr-primary)] transition"
               />
             </div>

@@ -127,7 +127,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [serviceHours, setServiceHours] = useState<any[]>([]);
   const [instapayName, setInstapayName] = useState<string>(CLIENT.name);
-  const [instapayAddress, setInstapayAddress] = useState("revera@instapay");
+  const [instapayAddress, setInstapayAddress] = useState("clcsys@instapay");
   const [instapayLink, setInstapayLink] = useState("https://www.instapay.eg");
   const [walletEnabled, setWalletEnabled] = useState(true);
   const [walletName, setWalletName] = useState("Vodafone Cash / Mobile Wallet");
@@ -1054,7 +1054,7 @@ export function BookingModal({ variant = "modal", initialServiceId = null }: Boo
               style={{ backgroundColor: "var(--cr-secondary)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={CLIENT.logoPath} alt={CLIENT.nameShort} width={28} height={28} style={{ objectFit: "contain" }} />
+              <span className="text-xl font-black tracking-wider text-[var(--cr-primary)] font-sans">TEST</span>
             </div>
             <h3 className="text-lg font-semibold" style={{ color: "var(--cr-primary)" }}>
               {t.booking.title}
