@@ -57,7 +57,6 @@ import {
   ArrowDown,
   ArrowUpDown,
   Camera,
-  BarChart3,
   Bell,
   Box,
   CalendarDays,
@@ -102,7 +101,6 @@ import {
   Terminal,
   Activity,
   ShoppingBag,
-  CircleDollarSign,
   Presentation,
   TrendingUp,
   CircleUser,
@@ -150,7 +148,6 @@ import RoomsManagerView from "@/components/RoomsManagerView";
 import SupplierManagementScreen from "@/components/admin/inventory/SupplierManagementScreen";
 import { PackageAdminPanel } from "@/components/admin/packages/PackageAdminPanel";
 import { PromotionsAdminPanel } from "@/components/admin/marketing/PromotionsAdminPanel";
-import { FinanceSection } from "@/components/admin/Finance/FinanceSection";
 import { DoctorServiceCommissionEditor, ServiceCommissionEntry, DefaultCommissionType } from "@/components/admin/services/DoctorServiceCommissionEditor";
 import DoctorAccountView from "@/components/admin/DoctorAccountView";
 import ReceptionDashboardView from "@/components/admin/reception/ReceptionDashboardView";
@@ -167,8 +164,6 @@ import AdminServicesView from "@/components/admin/services/AdminServicesView";
 import AdminInventoryView from "@/components/admin/inventory/AdminInventoryView";
 import AdminEmployeesView from "@/components/admin/employees/AdminEmployeesView";
 import AdminHrView from "@/components/admin/hr/AdminHrView";
-import CustomerSupportView from "@/components/admin/support/CustomerSupportView";
-import { ReportsSection } from "@/components/admin/reports/ReportsSection";
 import type { InventoryProductsTabRef } from "@/components/admin/inventory/InventoryProductsTab";
 import TermsManagerView from "@/components/TermsManagerView";
 import { useAlertConfirm } from "@/contexts/AlertConfirmContext";
@@ -254,9 +249,7 @@ const SIDEBAR_ITEMS = [
   { label: "HR", icon: ClipboardList },
   { label: "Marketing", icon: Megaphone, submenu: true },
   { label: "Transactions", icon: ReceiptText },
-  { label: "Customer Support", icon: MessageSquare },
-  { label: "Reports", icon: BarChart3 },
-  { label: "Finance", icon: CircleDollarSign },
+
   { label: "Settings", icon: Settings, submenu: true },
   { label: "Logout", icon: LogOut },
 ];
@@ -984,9 +977,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       "hr": "HR",
       "transactions": "Transactions",
       "marketing": "Marketing",
-      "support": "Customer Support",
-      "reports": "Reports",
-      "finance": "Finance",
       "settings": "Settings",
       "clinical": "Clinical"
     };
@@ -1017,18 +1007,12 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
         "HR": "hr",
         "Transactions": "transactions",
         "Marketing": "marketing",
-        "Customer Support": "support",
-        "Reports": "reports",
-        "Finance": "finance",
         "Settings": "settings"
       };
       const prefix = parentScreenMap[item.label];
       if (prefix && (adminPermissions.includes(prefix) || adminPermissions.some(p => p.startsWith(prefix + ".")))) return true;
       if (prefix && hasPermission(prefix)) return true;
 
-      // DEC-097: Reports item is visible if user has any legacy finance permission (finance.view_pnl, finance.view_margins,
-      // finance.view_capacity) so that users who could see these reports inside Finance still see the Reports sidebar item.
-      if (item.label === "Reports" && (hasPermission('finance.view_pnl') || hasPermission('finance.view_margins') || hasPermission('finance.view_capacity'))) return true;
 
       // Legacy roles (created before the granular permission keys existed) store coarse labels like
       // "Customers" and "Providers". Three of those five happen to equal a sidebar label exactly
@@ -2127,9 +2111,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       "HR": "hr",
       "Transactions": "transactions",
       "Marketing": "marketing",
-      "Customer Support": "support",
-      "Reports": "reports",
-      "Finance": "finance",
       "Settings": "settings",
       "Clinical": "clinical"
     };
@@ -2141,8 +2122,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
       if (hasPermission(prefix)) return true;
     }
 
-    // DEC-097: Allow access to Reports if user has any legacy finance permission (for backward compatibility)
-    if (nav === "Reports" && (hasPermission('finance.view_pnl') || hasPermission('finance.view_margins') || hasPermission('finance.view_capacity'))) return true;
 
     return false;
   }, [adminRole, adminPermissions, hasPermission]);
@@ -3660,7 +3639,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
   const [faqsAr, setFaqsAr] = useState<Array<{ question: string; answer: string }>>([]);
   const [translatingField, setTranslatingField] = useState<string | null>(null);
 
-  const [reportsCustomerSearch, setReportsCustomerSearch] = useState("");
   const [smsTemplateSearch, setSmsTemplateSearch] = useState("");
   const [smsLogSearch, setSmsLogSearch] = useState("");
   const [settingsUserSearch, setSettingsUserSearch] = useState("");
@@ -6930,24 +6908,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             <PackageAdminPanel session={session} />
           )}
 
-          {/* ── CUSTOMER SUPPORT VIEW ── */}
-          {activeNav === "Customer Support" && (
-            <CustomerSupportView
-              lang={lang}
-              hasPermission={hasPermission}
-            />
-          )}
-
-          {/* ── REPORTS & ANALYTICS VIEW ── */}
-          {activeNav === "Reports" && (
-            <ReportsSection
-              accessToken={session?.access_token}
-              branches={branches.map((b) => ({ id: b.id, name_en: b.name_en, name_ar: b.name_ar }))}
-              lang={lang}
-              canViewFinancialReports={hasPermission('reports.view_financial_reports') || hasPermission('finance.view_pnl') || hasPermission('finance.view_margins')}
-              canViewAnalytics={hasPermission('reports.view_analytics') || hasPermission('finance.view_capacity')}
-            />
-          )}
 
           {/* ── TRANSACTIONS VIEW ── */}
           {activeNav === "Transactions" && (
@@ -7029,14 +6989,6 @@ export default function AdminPage({ portalRole = 'admin' }: { portalRole?: strin
             )
           )}
 
-          {/* ── FINANCE VIEW ── */}
-          {activeNav === "Finance" && (
-            <FinanceSection
-              accessToken={session?.access_token}
-              branches={branches.map((b) => ({ id: b.id, name_en: b.name_en, name_ar: b.name_ar }))}
-              lang={lang}
-            />
-          )}
 
           {/* ── ALL PRESCRIPTIONS VIEW ── */}
 

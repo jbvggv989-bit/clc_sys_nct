@@ -4513,3 +4513,24 @@ The user requested removing all location mentions and phone numbers across the f
   - `src/app/login/page.tsx`: Added pre-flight check displaying a clear actionable message to configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel Project Settings.
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-151: Permanently Remove Customer Support, Reports, and Finance Sections
+
+- **Date:** 2026-10-30
+- **Context:**
+  The user requested permanently removing three admin portal navigation sections:
+  1. Customer Support
+  2. Reports
+  3. Finance
+- **Changes:**
+  - `src/app/admin/page.tsx`:
+    - Removed `Customer Support`, `Reports`, and `Finance` from `SIDEBAR_ITEMS`.
+    - Removed `support`, `reports`, and `finance` mappings from permission access resolution maps.
+    - Removed JSX view rendering blocks for `CustomerSupportView`, `ReportsSection`, and `FinanceSection`.
+    - Removed unused imports and unneeded component state.
+  - `src/lib/adminSection.ts`: Removed `Customer Support`, `Reports`, and `Finance` from `PERSISTABLE_SECTIONS`.
+  - `src/components/admin/settings/RoleManagementView.tsx`: Removed permission groupings for `Customer Support`, `Reports & Analytics`, and `Finance`.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).

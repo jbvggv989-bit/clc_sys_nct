@@ -165,38 +165,7 @@ const PERMISSION_STRUCTURE = [
       { key: "marketing.manage_discounts", label: "Manage Discounts & Offers" }
     ]
   },
-  {
-    category: "Customer Support",
-    prefix: "support",
-    items: [
-      { key: "support.view_tickets", label: "View Support Tickets" },
-      { key: "support.manage_tickets", label: "Respond & Resolve Tickets" },
-      { key: "support.resolve_tickets", label: "Close & Archive Tickets" }
-    ]
-  },
-  {
-    category: "Reports & Analytics",
-    prefix: "reports",
-    items: [
-      { key: "reports.view_analytics", label: "View Operational Reports (capacity & utilisation)" },
-      { key: "reports.view_financial_reports", label: "View Financial Reports (trend, margins, doctor/branch profit, packages, service mix, no-show cost, new vs returning)" },
-      { key: "reports.export_reports", label: "Export Business Data Reports" }
-    ]
-  },
-  {
-    category: "Finance",
-    prefix: "finance",
-    items: [
-      { key: "finance.view_pnl", label: "View P&L Statement" },
-      { key: "finance.view_margins", label: "View Service/Doctor/Branch Margins" },
-      { key: "finance.view_cashflow", label: "View Cash Flow Statement" },
-      { key: "finance.manage_expenses", label: "Manage Expenses & Recurring Expenses" },
-      { key: "finance.manage_assets", label: "Manage Fixed Assets & Depreciation" },
-      { key: "finance.manage_loans", label: "Manage Loans & Debt" },
-      { key: "finance.view_capacity", label: "View Capacity & Service Mix" },
-      { key: "finance.export", label: "Export Financial Statements" }
-    ]
-  },
+
   {
     category: "Settings & System Control",
     prefix: "settings",
@@ -325,12 +294,7 @@ export default function RoleManagementView({
       "transactions": t.permissionCategories?.["Financial Transactions"] || "Transactions",
       "Marketing": t.permissionCategories?.["Marketing & Campaigns"] || "Marketing",
       "marketing": t.permissionCategories?.["Marketing & Campaigns"] || "Marketing",
-      "Support": t.permissionCategories?.["Customer Support"] || "Support",
-      "support": t.permissionCategories?.["Customer Support"] || "Support",
-      "Reports": t.permissionCategories?.["Reports & Analytics"] || "Reports",
-      "reports": t.permissionCategories?.["Reports & Analytics"] || "Reports",
-      "Finance": t.permissionCategories?.["Finance"] || "Finance",
-      "finance": t.permissionCategories?.["Finance"] || "Finance",
+
       "Dashboard": t.permissionCategories?.["Dashboard & Reception"] || "Dashboard",
       "dashboard": t.permissionCategories?.["Dashboard & Reception"] || "Dashboard",
       "Clinical": t.permissionCategories?.["Doctor Portal & Clinical Intake"] || "Clinical",

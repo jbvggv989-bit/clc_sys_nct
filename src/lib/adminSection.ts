@@ -5,8 +5,7 @@ export const DEFAULT_SECTION = "Dashboard";
 // actions rather than places, so they are deliberately absent.
 export const PERSISTABLE_SECTIONS: readonly string[] = [
   "Dashboard", "Bookings", "Patients", "Doctors", "Services", "Inventory", "Products", "Employees",
-  "HR", "Marketing", "Promotions", "Packages", "Transactions", "Customer Support", "Reports",
-  "Finance", "Settings", "Profile",
+  "HR", "Marketing", "Promotions", "Packages", "Transactions", "Settings", "Profile",
   "Clinic Profile", "Service Hours", "Branches", "Rooms", "Booking Settings", "Terms & Conditions",
   "Deposit Settings", "Inactivity Settings", "Notification Settings", "Queue Settings",
   "Pages Settings", "Medical Records", "Role Management", "System Test Suite",
