@@ -575,14 +575,14 @@ export function SiteFooter() {
                   <>
                     تطوير بواسطة{" "}
                     <span style={{ color: "var(--color-brand-sand)", fontWeight: 700 }}>
-                      IOX Solutions
+                      GRAD-TEAM
                     </span>
                   </>
                 ) : (
                   <>
                     Powered by{" "}
                     <span style={{ color: "var(--color-brand-sand)", fontWeight: 700 }}>
-                      IOX Solutions
+                      GRAD-TEAM
                     </span>
                   </>
                 )}

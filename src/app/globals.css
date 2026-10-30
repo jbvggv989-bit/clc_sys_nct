@@ -473,15 +473,15 @@
   stroke-linecap: round;
 }
 .arc1 {
-  width: 380px;
-  height: 380px;
+  width: 400px;
+  height: 400px;
   max-width: 85vw;
   max-height: 85vw;
   animation: spin-slow 2.6s linear infinite;
 }
 .arc2 {
-  width: 300px;
-  height: 300px;
+  width: 320px;
+  height: 320px;
   max-width: 68vw;
   max-height: 68vw;
   animation: spin-reverse 1.9s linear infinite;

@@ -215,7 +215,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       email: "E-mail:",
       address: "Address:",
       copyright: "Copyright © 2026 All Rights Reserved.",
-      poweredBy: "Powered by Octpoii",
+      poweredBy: "Powered by GRAD-TEAM",
       serviceHours: [
         { day: "Sunday", dayAr: "الأحد", isOpen: true, openTime: "09:00", closeTime: "20:00" },
         { day: "Monday", dayAr: "الإثنين", isOpen: true, openTime: "09:00", closeTime: "20:00" },
@@ -592,7 +592,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       email: "البريد الإلكتروني:",
       address: "العنوان:",
       copyright: "حقوق النشر © 2026 جميع الحقوق محفوظة.",
-      poweredBy: "تشغيل بواسطة Octpoii",
+      poweredBy: "تطوير بواسطة GRAD-TEAM",
       serviceHours: [
         { day: "Sunday", dayAr: "الأحد", isOpen: true, openTime: "09:00", closeTime: "20:00" },
         { day: "Monday", dayAr: "الإثنين", isOpen: true, openTime: "09:00", closeTime: "20:00" },

@@ -4463,3 +4463,18 @@ The user requested removing all location mentions and phone numbers across the f
    - Invoice PDF templates (`AdminEmployeesView.tsx` and `useCustomerProfile.ts`): Removed phone numbers from invoice header lines.
 6. **Verification**:
    - Verified through full Next.js production build (`npm run build`) with zero compiler or TypeScript errors.
+
+---
+
+### DEC-148: Update Attribution to GRAD-TEAM & Enhance Splash Preloader Rings
+
+- **Date:** 2026-10-30
+- **Context:**
+  1. The user requested updating the site attribution from "IOX Solutions" / "Octpoii" to "GRAD-TEAM" in both English and Arabic translations.
+  2. The splash preloader rings needed increased clearance around the bold "TEST" brand mark to prevent arc line intersections across varying display widths.
+- **Changes:**
+  - `src/components/SiteFooter.tsx`: Updated credit text to "Powered by GRAD-TEAM" (English) and "تطوير بواسطة GRAD-TEAM" (Arabic).
+  - `src/lib/translations.ts`: Updated `en.footer.poweredBy` to `"Powered by GRAD-TEAM"` and `ar.footer.poweredBy` to `"تطوير بواسطة GRAD-TEAM"`.
+  - `src/components/Preloader.tsx` & `src/app/globals.css`: Expanded outer and inner arc radiuses (`r=180` and `r=140`) on expanded 400x400 / 320x320 SVG viewBoxes, giving generous spacing around "TEST".
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).
