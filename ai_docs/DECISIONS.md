@@ -4434,3 +4434,32 @@ Following the primary color palette rebrand (DEC-142), legacy olive green, sage,
 3. **Verification**:
    - Automated codebase scan verified 0 remaining occurrences of legacy olive/sage hexes and rgb patterns.
    - Verified clean Next.js production build (`npm run build`) with zero compiler or TypeScript errors.
+
+
+## DEC-147: Remove Phone Numbers and Location References Across System
+
+**Date:** 2026-10-30
+**Status:** Decided & implemented
+
+**Context:**
+The user requested removing all location mentions and phone numbers across the footer, navbar, and the entire public website.
+
+**Decision:**
+1. **Navbar (`src/components/Navbar.tsx`)**:
+   - Removed the phone number CTA link and icon from both the desktop header row and mobile menu.
+2. **Footer (`src/components/SiteFooter.tsx`)**:
+   - Removed the phone contact row (New Cairo & Sheikh Zayed telephone numbers) and the branch address row.
+   - Refactored the contact section into a single, clean centered E-Mail card (`info@clc-sys.com`).
+3. **About & Landing Sections**:
+   - `AboutSection.tsx` & `AboutPageIntro.tsx`: Removed the phone call block, retaining clean consultation messaging and "Book Appointment" actions.
+   - `WhyChooseUs.tsx`: Removed the circular phone button and phone number display row.
+   - `LaserLanding.tsx`: Removed the `#location` map section and the bottom phone/address contact line.
+4. **Contact Page & Terms Modals**:
+   - `ContactPageContent.tsx`: Replaced physical location and telephone cards with digital engagement channels (Email, 24/7 Online Booking, and Patient Inquiries).
+   - `TermsModal.tsx` & `/terms`: Removed phone pill from contact section sub-info.
+5. **Config, Translations & Invoice Templates**:
+   - `src/config/client.ts`: Set `phoneDisplay`, `phoneTel`, `addressAr`, `googleMapsUrl`, `googleMapsEmbedUrl`, and `googleMapsDirectionsUrl` to empty strings, and cleaned WhatsApp greeting text.
+   - `src/lib/translations.ts` & `data/page_settings.json`: Removed all phone numbers, "in New Cairo" / "في القاهرة الجديدة" location text, and updated doctor info subtitles.
+   - Invoice PDF templates (`AdminEmployeesView.tsx` and `useCustomerProfile.ts`): Removed phone numbers from invoice header lines.
+6. **Verification**:
+   - Verified through full Next.js production build (`npm run build`) with zero compiler or TypeScript errors.

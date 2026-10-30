@@ -240,11 +240,7 @@ export default function TermsModal({ isOpen, onClose, defaultLang = "en" }: Term
                   {/* Contact Us Sub-info inside Contact section */}
                   {isContactSection && (
                     <div className="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#36A6A0] pt-2">
-                      <a href={`tel:${contactPhone}`} className="flex items-center gap-1.5 hover:underline bg-[#F0FDFA] px-3 py-1.5 rounded-full border border-[#CCEDEB]">
-                        <Phone size={13} />
-                        <span>{contactPhone}</span>
-                      </a>
-                      <span className="text-gray-300 hidden sm:inline">|</span>
+                      
                       <a href={`mailto:${contactEmail}`} className="flex items-center gap-1.5 hover:underline bg-[#F0FDFA] px-3 py-1.5 rounded-full border border-[#CCEDEB]">
                         <Mail size={13} />
                         <span>{contactEmail}</span>

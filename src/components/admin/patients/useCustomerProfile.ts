@@ -802,7 +802,7 @@ export function useCustomerProfile({
           <div class="clinic-info">
             <strong>${CLIENT.nameShort} Clinic Cairo</strong><br/>
             El-Ghad St, Pyramids, Giza<br/>
-            Tel: +20 100 000 0000 | info@clc-sys.com
+            info@clc-sys.com
           </div>
           <div class="signature-area">
             <div class="signature-line"></div>

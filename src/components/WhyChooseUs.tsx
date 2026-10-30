@@ -341,62 +341,7 @@ export function WhyChooseUs() {
                 {t.whyChooseUs.quote}
               </p>
 
-              {/* Contact Info Row */}
-              <div
-                className="wcu-contact-row"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "14px",
-                  justifyContent: "flex-start",
-                }}
-              >
-                {/* Circular Phone Button */}
-                <a
-                  href={`tel:${t.whyChooseUs.phone.replace(/\s/g, "")}`}
-                  style={{
-                    display: "flex",
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "50%",
-                    backgroundColor: "var(--cr-dark)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--color-brand-accent, var(--cr-accent))",
-                    transition: "transform 0.3s ease, background-color 0.3s ease",
-                    flexShrink: 0,
-                  }}
-                  className="hover:scale-108"
-                >
-                  <Phone size={18} fill="currentColor" stroke="none" />
-                </a>
-
-                {/* Contact Labels */}
-                <div
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    color: "var(--cr-primary, var(--cr-dark))",
-                    display: "flex",
-                    gap: "6px",
-                  }}
-                >
-                  <span style={{ color: "var(--color-brand-secondary)" }}>
-                    {t.whyChooseUs.contactLabel}
-                  </span>
-                  <a
-                    href={`tel:${t.whyChooseUs.phone.replace(/\s/g, "")}`}
-                    style={{
-                      color: "var(--cr-primary, var(--cr-dark))",
-                      textDecoration: "none",
-                      transition: "color 0.2s ease",
-                    }}
-                    className="hover:text-brand-secondary hover:underline"
-                  >
-                    <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">{t.whyChooseUs.phone}</span>
-                  </a>
-                </div>
-              </div>
+              
             </div>
           </div>
         </div>

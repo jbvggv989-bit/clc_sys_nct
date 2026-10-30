@@ -319,49 +319,7 @@ export function AboutPageIntro() {
 
               {/* CTA row: Phone + Book Appointment */}
               <div className="api-cta-row">
-                {/* Phone block */}
-                <div className="api-phone-block">
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "50%",
-                      backgroundColor: "rgba(54,166,160,0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <img src="/images/icon-phone.svg" alt="phone" style={{ width: 20, height: 20 }} />
-                  </div>
-                  <div style={{ textAlign: isRTL ? "right" : "left" }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: "var(--color-brand-secondary)",
-                      }}
-                    >
-                      {t.aboutPage.needHelp}
-                    </p>
-                    <a
-                      href={`tel:${t.aboutPage.phone.replace(/\s/g, "")}`}
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        transition: "color 0.2s ease",
-                      }}
-                      className="text-[var(--cr-primary)] hover:text-[var(--color-brand-secondary)]"
-                    >
-                      <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">{t.aboutPage.phone}</span>
-                    </a>
-                  </div>
-                </div>
+                
 
                 {/* Book Appointment button */}
                 <button

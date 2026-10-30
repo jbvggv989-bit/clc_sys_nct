@@ -498,105 +498,9 @@ export function SiteFooter() {
               </div>
             </div>
 
-            {/* ── Contact Info Section (divided into Row 1: Contact/E-Mail, Row 2: Address) ── */}
-            <div className="ft-contact-section">
-              {/* Row 1: Phone and E-Mail */}
-              <div className="ft-contact-subrow">
-                {/* Contact phone */}
-                <div className="ft-contact-item">
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "var(--color-brand-sand)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {isRTL ? "اتصل بنا:" : "Contact:"}
-                  </span>
-                  <div className="ft-contact-row-content">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--color-brand-sand)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                    </svg>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <a
-                        href={`tel:${CLIENT.phoneTel}`}
-                        style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", textDecoration: "none", fontWeight: 500 }}
-                        className="hover:underline"
-                      >
-                        <span>{isRTL ? "القاهرة الجديدة: " : "New Cairo: "}</span>
-                        <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">{CLIENT.phoneDisplay}</span>
-                      </a>
-                      <a
-                        href="tel:+201023122323"
-                        style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", textDecoration: "none", fontWeight: 500 }}
-                        className="hover:underline"
-                      >
-                        <span>{isRTL ? "الشيخ زايد: " : "Sheikh Zayed: "}</span>
-                        <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">(+20) 01023122323</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vertical Divider */}
-                <div className="ft-contact-divider" />
-
-                {/* E-Mail */}
-                <div className="ft-contact-item">
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      color: "var(--color-brand-sand)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {isRTL ? "البريد الإلكتروني:" : "E-Mail:"}
-                  </span>
-                  <div className="ft-contact-row-content">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--color-brand-sand)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                      <polyline points="22,6 12,13 2,6" />
-                    </svg>
-                    <a
-                      href="mailto:info@clc-sys.com"
-                      style={{
-                        fontSize: "14px",
-                        color: "rgba(255,255,255,0.85)",
-                        textDecoration: "none",
-                        fontWeight: 500,
-                      }}
-                      className="hover:underline"
-                    >
-                      info@clc-sys.com
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Address (full width below phone/email) */}
-              <div className="ft-contact-item">
+            {/* ── Contact Info Section (E-Mail) ── */}
+            <div className="ft-contact-section" style={{ display: "flex", justifyContent: "center" }}>
+              <div className="ft-contact-item" style={{ alignItems: "center" }}>
                 <span
                   style={{
                     fontSize: "13px",
@@ -606,7 +510,7 @@ export function SiteFooter() {
                     letterSpacing: "0.05em",
                   }}
                 >
-                  {isRTL ? "العنوان:" : "Address:"}
+                  {isRTL ? "البريد الإلكتروني:" : "E-Mail:"}
                 </span>
                 <div className="ft-contact-row-content">
                   <svg
@@ -619,22 +523,26 @@ export function SiteFooter() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
                   </svg>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
-                      {isRTL ? "القاهرة الجديدة: مركز أوزون الطبي، C261" : "New Cairo: Ozone Medical Center, C261"}
-                    </span>
-                    <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", fontWeight: 500 }}>
-                      {isRTL ? "الشيخ زايد: عيادات النداء، بيفرلي هيلز 209" : "Sheikh Zayed: Elnada Clinics, Beverly Hills 209"}
-                    </span>
-                  </div>
+                  <a
+                    href="mailto:info@clc-sys.com"
+                    style={{
+                      fontSize: "14px",
+                      color: "rgba(255,255,255,0.85)",
+                      textDecoration: "none",
+                      fontWeight: 500,
+                    }}
+                    className="hover:underline"
+                  >
+                    info@clc-sys.com
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* ── Bottom Bar: Copyright & Powered By ── */}
+                {/* ── Bottom Bar: Copyright & Powered By ── */}
             <div
               className="ft-bottom-bar"
               style={{

@@ -302,31 +302,7 @@ export function Navbar() {
               gap: user ? "12px" : "24px",
             }}
           >
-            {/* Phone */}
-            {!user && (
-              <a
-                href={`tel:${CLIENT.phoneTel}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  color: "var(--cr-primary)",
-                  textDecoration: "none",
-                  fontSize: "15px",
-                  fontWeight: 500,
-                  transition: "opacity 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.opacity = "0.7";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.opacity = "1";
-                }}
-              >
-                <Phone size={18} strokeWidth={1.5} />
-                <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">{CLIENT.phoneDisplay}</span>
-              </a>
-            )}
+            
 
             {/* Language dropdown */}
             <div className="lang-dropdown-container" style={{ position: "relative" }}>
@@ -867,22 +843,7 @@ export function Navbar() {
                 {t.nav.makeAppointment}
               </button>
 
-              {/* Mobile phone */}
-              <a
-                href={`tel:${CLIENT.phoneTel}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  color: "var(--cr-primary)",
-                  textDecoration: "none",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                <Phone size={18} strokeWidth={1.5} />
-                <span dir="ltr" className="ltr-num inline-block [direction:ltr] [unicode-bidi:isolate]">{CLIENT.phoneDisplay}</span>
-              </a>
+              
 
               {/* Mobile language selector */}
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>

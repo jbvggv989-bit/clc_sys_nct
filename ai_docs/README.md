@@ -1,6 +1,6 @@
 # ai_docs — Revera Clinics Agent Knowledge Base
 
-> **Last Updated:** 2026-10-30 (DEC-146: Purge Legacy Olive Green and Sage Palette Remnants)
+> **Last Updated:** 2026-10-30 (DEC-147: Remove Phone Numbers and Location References Across System)
 > **Branch:** dev (these docs do not belong on main/production)
 > **Maintained by:** Project manager. Updated whenever architecture, decisions, or risks change.
 

@@ -273,32 +273,7 @@ export function LaserLanding({ variant }: { variant: LandingVariant }) {
           </div>
         </section>
 
-        <section className="lp-section lp-location" id="location">
-          <div className="lp-wrap lp-location-grid">
-            <div className="lp-location-copy">
-              <span className="lp-kicker">فين العيادة؟</span>
-              <h2>فرع التجمع الخامس<br /><em>سهل توصله.</em></h2>
-              <p className="lp-location-name" dir="ltr">{CLIENT.name} – Tagamoa Branch</p>
-              <p>{CLIENT.addressAr}</p>
-              <div className="lp-location-actions">
-                <a className="lp-wa" href={CLIENT.googleMapsDirectionsUrl} target="_blank" rel="noreferrer" data-lp-event="map_click" data-lp-placement="directions">
-                  <MapPin size={18} aria-hidden="true" />
-                  <span>اتجاهات على الخريطة</span>
-                </a>
-                <CallCta placement="location">اتصل قبل ما تيجي</CallCta>
-              </div>
-            </div>
-            <div className="lp-map">
-              <iframe
-                src={CLIENT.googleMapsEmbedUrl}
-                title={`موقع ${CLIENT.nameAr} فرع التجمع الخامس على خريطة Google`}
-                loading="lazy"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </section>
+        
 
         <section className="lp-final">
           <div className="lp-wrap">
@@ -310,14 +285,7 @@ export function LaserLanding({ variant }: { variant: LandingVariant }) {
               <WhatsAppCta placement="final" message={c.msg.final}>{c.finalCta}</WhatsAppCta>
               <CallCta placement="final">{c.finalCallLabel}</CallCta>
             </div>
-            <div className="lp-contact-line">
-              <a href={CLIENT.googleMapsUrl} target="_blank" rel="noreferrer" data-lp-event="map_click" data-lp-placement="final">
-                <MapPin size={15} aria-hidden="true" /> {CLIENT.addressAr}
-              </a>
-              <a className="lp-phone" href={`tel:${CLIENT.phoneTel}`} data-lp-event="call_click" data-lp-placement="contact_line">
-                <Phone size={15} aria-hidden="true" /> <bdi dir="ltr">{CLIENT.phoneDisplay}</bdi>
-              </a>
-            </div>
+            
           </div>
         </section>
       </main>

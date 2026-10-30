@@ -55,14 +55,14 @@ export const translations: Record<"en" | "ar", Translation> = {
       subtitle: "Clinical excellence. Compassionate care.",
       heading: "A destination built for your health",
       description:
-        "clc-sys is a modern multi-specialty healthcare center in New Cairo — where evidence-based medicine meets patient-centered clinical care. We integrate internal medicine, diagnostics, outpatient surgery, and rehabilitation to deliver personalized health solutions.",
+        "clc-sys is a modern multi-specialty healthcare center — where evidence-based medicine meets patient-centered clinical care. We integrate internal medicine, diagnostics, outpatient surgery, and rehabilitation to deliver personalized health solutions.",
       services: [
         "Internal Medicine & Specialist Care",
         "Advanced Diagnostics & Imaging",
         "Physical Therapy & Rehabilitation",
       ],
       needHelp: "Book a Consultation",
-      phone: "(+20) 01035595691",
+      phone: "",
       readMore: "more about us",
     },
     results: {
@@ -124,7 +124,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       quote:
         '"We don\'t just treat symptoms — we care for people. Every treatment at clc-sys is designed around your unique health journey, precision diagnosis, and long-term vitality."',
       contactLabel: "Reach us:",
-      phone: "(+20) 01035595691",
+      phone: "",
     },
     howItWorks: {
       tag: "how it works",
@@ -166,7 +166,7 @@ export const translations: Record<"en" | "ar", Translation> = {
         '"Every patient who walks through our doors deserves personalized attention, clinical precision, and genuine compassion. At clc-sys, we coordinate multi-specialty expertise so you receive the highest standard of modern healthcare. Your health is our highest priority."',
       doctorName: "clc-sys Clinics",
       doctorTitle: "Multi-Specialty Medical Center",
-      doctorInfo: "New Cairo · Egypt",
+      doctorInfo: "clc-sys Medical",
       reviews: [
         {
           text: '"The diagnostic accuracy and care I received at clc-sys were exceptional. The consultants took the time to review my history and provided a clear, effective recovery plan."',
@@ -264,7 +264,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       aboutTag: "About clc-sys",
       aboutHeading: "Clinical excellence. Compassionate care.",
       aboutDescription:
-        "clc-sys is a premier multi-specialty healthcare center in New Cairo — where evidence-based medicine meets modern patient-centered care. We integrate internal medicine, diagnostics, outpatient surgery, and rehabilitation to deliver holistic healthcare for every patient.",
+        "clc-sys is a premier multi-specialty healthcare center — where evidence-based medicine meets modern patient-centered care. We integrate internal medicine, diagnostics, outpatient surgery, and rehabilitation to deliver holistic healthcare for every patient.",
       aboutList: [
         "Internal Medicine & Specialist Clinics",
         "Advanced Diagnostics & Laboratory",
@@ -282,7 +282,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       hairCareDescription:
         "Our board-certified consultants apply verified medical protocols and advanced therapies to guide you smoothly through treatment, recovery, and long-term health maintenance.",
       supportLabel: "Consultation Available",
-      phone: "(+20) 01035595691",
+      phone: "",
       whatWeDoHeading: "Full spectrum healthcare for the entire family",
       whatWeDoDescription:
         "From preventative checkups to advanced specialist consultations and post-operative rehab, clc-sys covers every dimension of your health needs.",
@@ -359,11 +359,11 @@ export const translations: Record<"en" | "ar", Translation> = {
       reachOutDescription:
         "Have questions about our clinics, specialists, or diagnostic services? Contact clc-sys today to schedule your consultation or speak with our medical coordination team.",
       locationTitle: "Location",
-      locationText: "Ozone Medical Center, C261, New Cairo",
-      locationTextZayed: "Elnada Clinics, Beverly Hills 209, Sheikh Zayed",
+      locationText: "",
+      locationTextZayed: "",
       contactTitle: "Contact Us",
-      phone: "(+20) 01035595691",
-      phoneZayed: "(+20) 01023122323",
+      phone: "",
+      phoneZayed: "",
       emailTitle: "Email",
       email: "info@clc-sys.com",
       formHeading: "Have any questions?",
@@ -432,14 +432,14 @@ export const translations: Record<"en" | "ar", Translation> = {
       subtitle: "تميز إكلينيكي ورعاية متكاملة.",
       heading: "وجهة مصممة لصحتك وعافيتك",
       description:
-        "clc-sys مجمع طبي متكامل متعدد التخصصات في القاهرة الجديدة — يجمع بين الطب المبني على الأدلة العلمية وأعلى مستويات الرعاية الإكلينيكية. نتميز في الباطنة العامة، التشخيص الدقيق، الجراحة اليومية، والتأهيل، لنقدم رعاية صحية مخصصة لك ولعائلتك.",
+        "clc-sys مجمع طبي متكامل متعدد التخصصات — يجمع بين الطب المبني على الأدلة العلمية وأعلى مستويات الرعاية الإكلينيكية. نتميز في الباطنة العامة، التشخيص الدقيق، الجراحة اليومية، والتأهيل، لنقدم رعاية صحية مخصصة لك ولعائلتك.",
       services: [
         "عيادات الباطنة والتخصصات الطبية",
         "التشخيص المتطور والأشعة",
         "العلاج الطبيعي وإعادة التأهيل",
       ],
       needHelp: "احجز استشارتك",
-      phone: "(+20) 01035595691",
+      phone: "",
       readMore: "اعرف أكثر",
     },
     results: {
@@ -501,7 +501,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       quote:
         '"نحن لا نعالج الأعراض فحسب — بل نعتني بالإنسان. كل خطة علاجية في clc-sys مصممة خصيصاً لدعم صحتك وعافيتك على المدى الطويل وفق أدق المعايير الطبية."',
       contactLabel: "تواصل معنا:",
-      phone: "(+20) 01035595691",
+      phone: "",
     },
     howItWorks: {
       tag: "كيف يعمل",
@@ -543,7 +543,7 @@ export const translations: Record<"en" | "ar", Translation> = {
         '"كل مريض يدخل أبوابنا يستحق عناية خاصة، دقة إكلينيكية، واهتماماً حقيقياً. في clc-sys، نجمع بين تخصصات طبية متعددة لنقدم لك أعلى معايير الرعاية الصحية الحديثة. صحتك هي أولويتنا القصوى."',
       doctorName: "عيادات clc-sys",
       doctorTitle: "مركز طبي متعدد التخصصات",
-      doctorInfo: "القاهرة الجديدة · مصر",
+      doctorInfo: "مجمع clc-sys الطبي",
       reviews: [
         {
           text: '"دقة التشخيص والرعاية الطبية في clc-sys كانت استثنائية. استمع الاستشاريون لكل تفاصيل حالتي وقدموا لي خطة علاجية متكاملة حققت نتائج ممتازة."',
@@ -624,7 +624,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       aboutTag: "عن clc-sys",
       aboutHeading: "تميز إكلينيكي ورعاية متكاملة.",
       aboutDescription:
-        "clc-sys مركز طبي متكامل متعدد التخصصات في القاهرة الجديدة — حيث تلتقي العلوم الطبية الحديثة بالرعاية الإنسانية الشاملة. ندمج عيادات الباطنة العامة والتخصصية والتشخيص والجراحة اليومية وإعادة التأهيل لتقديم رعاية متكاملة لكل مريض.",
+        "clc-sys مركز طبي متكامل متعدد التخصصات — حيث تلتقي العلوم الطبية الحديثة بالرعاية الإنسانية الشاملة. ندمج عيادات الباطنة العامة والتخصصية والتشخيص والجراحة اليومية وإعادة التأهيل لتقديم رعاية متكاملة لكل مريض.",
       aboutList: [
         "عيادات الباطنة والتخصصات الطبية",
         "التشخيص المتطور والمختبرات",
@@ -642,7 +642,7 @@ export const translations: Record<"en" | "ar", Translation> = {
       hairCareDescription:
         "يتبع استشاريونا المعتمدون أحدث البروتوكولات العلاجية العالمية لضمان سلامتك وسرعة تعافيك واستدامة صحتك.",
       supportLabel: "الاستشارة متاحة",
-      phone: "(+20) 01035595691",
+      phone: "",
       whatWeDoHeading: "رعاية صحية شاملة لجميع أفراد الأسرة",
       whatWeDoDescription:
         "من الفحوصات الدورية الوقائية إلى الاستشارات الطبية المتخصصة وإعادة التأهيل، يقدم clc-sys حلولاً صحية متكاملة.",
@@ -719,11 +719,11 @@ export const translations: Record<"en" | "ar", Translation> = {
       reachOutDescription:
         "هل لديك استفسارات حول عياداتنا أو الاستشاريين أو الفحوصات؟ تواصل معنا اليوم لحجز موعدك أو التحدث مع فريق التنسيق الطبي.",
       locationTitle: "الموقع",
-      locationText: "مركز أوزون الطبي، C261، القاهرة الجديدة",
-      locationTextZayed: "عيادات النداء، بيفرلي هيلز 209، الشيخ زايد",
+      locationText: "",
+      locationTextZayed: "",
       contactTitle: "اتصل بنا",
-      phone: "(+20) 01035595691",
-      phoneZayed: "(+20) 01023122323",
+      phone: "",
+      phoneZayed: "",
       emailTitle: "البريد الإلكتروني",
       email: "info@clc-sys.com",
       formHeading: "هل لديك أسئلة؟",
