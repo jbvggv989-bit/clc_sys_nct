@@ -298,8 +298,6 @@ export function LaserLanding({ variant }: { variant: LandingVariant }) {
           </div>
           <div className="lp-footer-links">
             <Link href="/">الموقع الرئيسي</Link>
-            <a href={CLIENT.googleMapsUrl} target="_blank" rel="noreferrer">Google Maps</a>
-            <a href={CLIENT.instagramUrl} target="_blank" rel="noreferrer"><InstagramGlyph /> Instagram</a>
             <Link href="/privacy">سياسة الخصوصية</Link>
           </div>
         </div>

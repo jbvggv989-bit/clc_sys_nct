@@ -4547,3 +4547,22 @@ The user requested removing all location mentions and phone numbers across the f
   - Regenerated all logo image files (`public/images/main_logo.png`, `public/images/logo.png`, `public/images/landing/revera-mark.png`, `public/images/footer-logo.png`, etc.) to feature the bold **TEST** wordmark.
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-153: Update WhatsApp Number & Neutralize Social Links
+
+- **Date:** 2026-10-30
+- **Context:**
+  1. The user requested changing the WhatsApp floating button target phone number to `+201021609546`.
+  2. The user requested neutralizing all social media links (Instagram, Facebook) so they do not navigate anywhere when clicked for now.
+- **Changes:**
+  - `src/config/client.ts`:
+    - Updated `CLIENT.whatsappNumber` to `"201021609546"`.
+    - Updated `CLIENT.instagramUrl` to `"#"` (neutralized).
+  - `src/components/SiteFooter.tsx`:
+    - Set `SOCIAL_LINKS` href to `"#"` and added `onClick={(e) => { if (href === "#" || !href) e.preventDefault(); }}` to prevent navigation or new tabs.
+  - `src/components/landing/LaserLanding.tsx`:
+    - Neutralized Instagram link with `onClick={(e) => e.preventDefault()}`.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).

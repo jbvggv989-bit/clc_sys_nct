@@ -27,8 +27,8 @@ function IconFacebook() {
 }
 
 const SOCIAL_LINKS = [
-  { label: "Facebook", href: "https://www.facebook.com/profile.php?id=61587039173147", Icon: IconFacebook },
-  { label: "Instagram", href: "https://www.instagram.com/clcsys/", Icon: IconInstagram },
+  { label: "Facebook", href: "#", Icon: IconFacebook },
+  { label: "Instagram", href: "#", Icon: IconInstagram },
 ];
 
 export function SiteFooter() {
@@ -375,8 +375,9 @@ export function SiteFooter() {
                     <a
                       key={label}
                       href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        if (href === "#" || !href) e.preventDefault();
+                      }}
                       aria-label={label}
                       className="ft-social-btn"
                     >

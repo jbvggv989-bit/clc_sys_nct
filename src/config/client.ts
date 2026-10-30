@@ -14,7 +14,7 @@ export const CLIENT = {
   // Contact Information
   phoneDisplay: "",
   phoneTel: "",
-  whatsappNumber: "201035595691",
+  whatsappNumber: "201021609546",
   whatsappGreeting: "Hello clc-sys, I'd love to schedule a consultation. Please let me know your earliest availability. Thank you.",
   whatsappBookingGreeting: (serviceName: string) =>
     `Hello clc-sys, I'm interested in booking "${serviceName}". Please let me know your availability. Thank you.`,
@@ -59,7 +59,7 @@ Attached is my payment transaction receipt photo.`,
   googleMapsEmbedUrl:
     "",
   googleMapsDirectionsUrl: "",
-  instagramUrl: "https://www.instagram.com/clcsys/",
+  instagramUrl: "#",
   addressAr: "",
   // Google Tag Manager container for the ad landing pages (public id; NEXT_PUBLIC_GTM_ID overrides it)
   gtmId: "GTM-5ZXBL7LR",
