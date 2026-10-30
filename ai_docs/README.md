@@ -1,6 +1,6 @@
 # ai_docs — Revera Clinics Agent Knowledge Base
 
-> **Last Updated:** 2026-10-30 (DEC-151: Permanently Remove Customer Support, Reports, and Finance Sections)
+> **Last Updated:** 2026-10-30 (DEC-152: Regenerate Favicon and Brand Mark Assets to Bold TEST)
 > **Branch:** dev (these docs do not belong on main/production)
 > **Maintained by:** Project manager. Updated whenever architecture, decisions, or risks change.
 

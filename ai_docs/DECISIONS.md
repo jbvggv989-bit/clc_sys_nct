@@ -4534,3 +4534,16 @@ The user requested removing all location mentions and phone numbers across the f
   - `src/components/admin/settings/RoleManagementView.tsx`: Removed permission groupings for `Customer Support`, `Reports & Analytics`, and `Finance`.
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-152: Regenerate Favicon and Brand Mark Assets to Bold TEST
+
+- **Date:** 2026-10-30
+- **Context:**
+  The browser tab favicon and legacy asset files still displayed the previous green leaf logo mark.
+- **Changes:**
+  - Regenerated `src/app/icon.png` and `public/favicon.ico` (multi-size 16 to 256px) featuring a rounded Navy Blue background (`#142B4A`), subtle Teal outline (`#36A6A0`), and bold **TEST** typography.
+  - Regenerated all logo image files (`public/images/main_logo.png`, `public/images/logo.png`, `public/images/landing/revera-mark.png`, `public/images/footer-logo.png`, etc.) to feature the bold **TEST** wordmark.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).
