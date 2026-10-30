@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { getRoleSlug, getRoleDisplayName } from "@/lib/roleUtils";
 import { Lock, Mail, Eye, EyeOff, ShieldCheck, ArrowLeft } from "lucide-react";
 import { CLIENT } from "@/config/client";
@@ -36,6 +36,10 @@ export default function UnifiedStaffLoginPage() {
     let isMounted = true;
 
     async function checkExistingSession() {
+      if (!isSupabaseConfigured && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        if (isMounted) setCheckingSession(false);
+        return;
+      }
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
@@ -122,6 +126,12 @@ export default function UnifiedStaffLoginPage() {
         }
       } catch (err) {
         console.error("Customer verification check error:", err);
+      }
+
+      if (!isSupabaseConfigured && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        setError("Missing Supabase configuration. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your Vercel Environment Variables.");
+        setLoading(false);
+        return;
       }
 
       // Authenticate with Supabase

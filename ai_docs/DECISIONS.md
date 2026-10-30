@@ -4500,3 +4500,16 @@ The user requested removing all location mentions and phone numbers across the f
   - Purged all remaining `rgba(65, 78, 54, ...)`, `rgba(90, 106, 81, ...)`, and `rgba(90, 61, 52, ...)` across all components.
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-150: Supabase Client Fallback & Friendly Configuration Error Handling
+
+- **Date:** 2026-10-30
+- **Context:**
+  When deployed to Vercel without environment variables configured, `src/lib/supabaseClient.ts` exported `null as any`. Calling `supabase.auth.signInWithPassword` in the login form crashed with `Cannot read properties of null (reading 'auth')`.
+- **Changes:**
+  - `src/lib/supabaseClient.ts`: Provided fallback initialized client and exported `isSupabaseConfigured` flag to eliminate null reference crashes.
+  - `src/app/login/page.tsx`: Added pre-flight check displaying a clear actionable message to configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel Project Settings.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).
