@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import type { Language, Direction, Translation } from "@/types";
 import { translations } from "@/lib/translations";
-import { WhatsappButton } from "@/components/WhatsappButton";
 import { isAdLandingPath } from "@/lib/landingPaths";
 import { getPublicPageSettings } from "@/lib/publicPageSettings";
 
@@ -264,7 +263,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return (
     <LanguageContext.Provider value={value}>
       {children}
-      <WhatsappButton />
       {alertMessage && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md animate-fadeInFast">
           <div 

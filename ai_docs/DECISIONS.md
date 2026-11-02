@@ -4566,3 +4566,16 @@ The user requested removing all location mentions and phone numbers across the f
     - Neutralized Instagram link with `onClick={(e) => e.preventDefault()}`.
 - **Rule Verification:**
   - Verified with `npm run build` (0 TypeScript / compiler errors).
+
+---
+
+### DEC-154: Remove Floating WhatsApp Button
+
+- **Date:** 2026-11-02
+- **Context:**
+  The user requested permanently removing the floating WhatsApp button from the bottom corner of the website.
+- **Changes:**
+  - `src/contexts/LanguageContext.tsx`: Removed `<WhatsappButton />` rendering and its import.
+  - `src/components/WhatsappButton.tsx`: Stubbed component to return `null`.
+- **Rule Verification:**
+  - Verified with `npm run build` (0 TypeScript / compiler errors).
